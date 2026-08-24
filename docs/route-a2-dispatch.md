@@ -1,4 +1,6 @@
-# 路线 A2: Triton → FlagOS dispatch
+# 路线 A2
+
+[← 返回文档中心](index.md): Triton → FlagOS dispatch
 
 ## 适用场景
 

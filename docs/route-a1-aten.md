@@ -1,4 +1,6 @@
-# 路线 A1: Triton → torch aten dispatcher
+# 路线 A1
+
+[← 返回文档中心](index.md): Triton → torch aten dispatcher
 
 ## 适用场景
 

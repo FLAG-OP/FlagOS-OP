@@ -1,5 +1,11 @@
 # 设备 Profile 与芯片泛化
 
+[← 返回文档中心](index.md)
+
+> 芯片差异全部收敛到一份 YAML；测试代码零硬编码。
+> 字段是[设备 profile](#fields)机制的核心，也是[黄金](testing.md#golden)
+> 与[kernel 层](testing.md#kernel-level)跨设备可比的基础。
+
 ## 设计
 
 芯片差异全部收敛到 `configs/devices/<芯片名>.yaml`，
@@ -16,6 +22,12 @@
 | `framework.*` | vLLM 引擎参数（TP/显存/序列数/模型路径/seed） |
 | `framework.quirks.*` | 设备怪癖开关（见下） |
 | `vendor_delegate` | audit 委托的厂商 kernel（"pkg.func"）；null→reference |
+| `vendor_kernels` | [kernel 层](testing.md#kernel-level)直测的厂商 kernel 清单（含 `expected_ok: false` 负例与 `build: csrc` JIT 项） |
+
+<a id="fields"></a>
+## 字段速查
+
+（见上表）
 
 ## quirks 说明
 
@@ -24,11 +36,15 @@
 - `require_two_visible_devices: true` — 单卡路径有厂商 reshape_and_cache
   通道异常史，固定 TP=2
 
+<a id="onboard"></a>
 ## 新芯片接入（3 步）
 
 1. 复制 `_template.yaml` 为 `<芯片名>.yaml` 并填写字段
 2. `python3 run.py --all --device <芯片名>` 跑 6 格矩阵
-3. 有厂商 C++ kernel 时按 `routes/b_vendor/csrc/BUILD.md` 编译接入
+3. 有厂商 C++ kernel 时按 [BUILD.md](../routes/b_vendor/csrc/BUILD.md) 编译接入，
+   并在 `vendor_kernels` 声明（含[哨兵负例](testing.md#sentinel)）
+4. 建议立即: 生成[黄金](testing.md#golden) + 跑一次[漂移实验](testing.md#drift)
+   + 用[哨兵检查](testing.md#sentinel)建立你自己的[已知问题清单](known-issues.md)
 
 ## 自动探测顺序
 

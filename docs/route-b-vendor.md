@@ -1,9 +1,19 @@
-# 路线 B: 厂商语言 → vendor backend
+# 路线 B
+
+[← 返回文档中心](index.md): 厂商语言 → vendor backend
 
 ## 适用场景
 
 用厂商 SDK / C++ / 芯片专用语言写的 kernel（经厂商 Python 绑定
 或 `.so` 暴露；参考实例 P800 上为昆仑芯 XPU 栈的 `xtorch_ops`）。
+
+<a id="kernelspec"></a>
+## 泛化接口 KernelSpec
+
+`common/kernel_spec.py` 定义厂商 kernel 直测的声明式描述
+（name / op 语义锚点 / out_mode / adapter / expected_ok / build），
+从[设备 profile](device-profiles.md#fields) 的 `vendor_kernels` 段加载。
+配套 `sentinel_check()` 见[测试体系](testing.md#sentinel)。
 
 ## vendor backend 三要素
 
@@ -23,7 +33,12 @@ class MyVendorBackend(Backend):
 kind=BackendImplKind.VENDOR, vendor="myvendor",
 priority=BackendPriority.VENDOR)`（100）
 
+<a id="csrc"></a>
 ## 真实厂商 kernel 接入（以参考实例 P800 为例）
+
+含 JIT 编译闭环: `tests/kernel_level/test_b.py` 经
+`torch.utils.cpp_extension.load()` 编译 csrc → 加载 → 直测，
+详见 [kernel 层文档](testing.md#kernel-level)。
 
 1. `routes/b_vendor/csrc/` 写 C++ kernel（pybind11 模板）
 2. 厂商工具链编译产出 `.so`（参考 BUILD.md；内置算子库见 `/env/output/`）
