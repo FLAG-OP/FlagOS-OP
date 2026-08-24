@@ -21,3 +21,5 @@
 | 加一种新芯片 | `docs/device-profiles.md` |
 | 排查数值问题 | `docs/known-issues.md` |
 | 校准断言前缀 | `scripts/drift_study.py` |
+| 生成算子开发报告骨架 | `scripts/gen_report_scaffold.py --op <名> --route <X> --device <profile>` |
+| 收集环境快照 | `scripts/env_snapshot.py --device <profile>` |

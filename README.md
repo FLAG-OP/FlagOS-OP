@@ -51,7 +51,9 @@ flagos-op-templates/
 │   ├── op_level/             注册/分发/拦截层
 │   └── framework_level/      真实推理层
 ├── golden/                   黄金输出（多快照+共识前缀，回归锚点）
-└── scripts/                  一键脚本 / 黄金构建 / 漂移实验 / 输入生成 / 报告
+├── templates/                算子开发报告模板
+├── reports/                  生成的报告骨架（gitignore）
+└── scripts/                  一键脚本 / 黄金构建 / 漂移实验 / 输入生成 / 环境快照 / 报告骨架
 ```
 
 ## 文档
@@ -59,6 +61,9 @@ flagos-op-templates/
 完整中文文档在 [docs/](docs/index.md): 快速开始 / 体系结构 /
 三条路线详解 / 测试体系 / 设备接入 / 已知问题。
 每格样例见 [examples/](examples/README.md)。
+完成算子开发后用报告模板沉淀:
+`python3 scripts/gen_report_scaffold.py --op <算子名> --route <X> --device <profile>`
+（环境配置与验证结果自动填充，见 [templates/](templates/README.md)）。
 
 ## 新芯片接入（3 步）
 
