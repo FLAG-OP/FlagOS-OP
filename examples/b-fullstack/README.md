@@ -41,3 +41,8 @@ Stage 3/3  L4: 真实前向调用 2240 次 · 5/6 前2token一致 · 黄金匹�
 
 这就是"算子在各层级自定义后在各层级验证"的完整模板——
 把 `silu_and_mul` 换成你的算子、把 csrc 换成你的 kernel 即可复用。
+
+## 配套开发报告
+
+本样例的完整开发报告（按 `templates/op-development-report.md` 撰写，
+环境配置自动生成、验证数据来自实测）: [report.md](report.md)
