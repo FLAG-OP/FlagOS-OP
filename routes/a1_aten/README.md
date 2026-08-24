@@ -26,13 +26,13 @@ lib.impl("gelu", my_triton_gelu, dispatch_key)  # key 来自设备 profile
 ## 测试入口
 
 ```bash
-python3 run.py --route a1 --level op --device p800-kunlunxin
-python3 run.py --route a1 --level framework --device p800-kunlunxin
+python3 run.py --route a1 --level op --device <profile名>   # 示例: p800-kunlunxin
+python3 run.py --route a1 --level framework --device <profile名>
 ```
 
 ## 注意事项
 
-1. dispatch key 来自 profile（P800 上 XPU 伪装 CUDA → `CUDA`）。
+1. dispatch key 来自设备 profile（如 CUDA / PrivateUse1 / CPU）。
 2. 同一 (算子, dispatch key) 重复注册会覆盖——与 `flag_gems.enable()`
    同进程使用时注意白名单避免冲突。
 3. CPU 张量不受影响（只注册了设备 key），可用于精度参考。

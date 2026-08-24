@@ -35,9 +35,12 @@
 ## 黄金输出（golden outputs）
 
 ```bash
-python3 scripts/build_golden.py --device cpu                 # transformers CPU 权威参考
-python3 scripts/build_golden.py --device p800-kunlunxin      # vLLM reference 路径 ×3 快照
-python3 scripts/compare_golden.py --devices p800-kunlunxin,cpu
+python3 scripts/build_golden.py --device cpu        # transformers CPU 权威参考
+python3 scripts/build_golden.py --device <加速卡>   # vLLM reference 路径 ×N 快照
+python3 scripts/compare_golden.py --devices <加速卡>,cpu
+# 示例（参考 profile）:
+#   build_golden.py --device p800-kunlunxin
+#   compare_golden.py --devices p800-kunlunxin,cpu
 ```
 
 - 黄金 = N 次独立运行快照集合 + 逐位置多数票共识前缀
@@ -49,10 +52,11 @@ python3 scripts/compare_golden.py --devices p800-kunlunxin,cpu
 ## 漂移实验
 
 ```bash
-python3 scripts/drift_study.py --device p800-kunlunxin --runs 8 --mode reference
-python3 scripts/drift_study.py --device p800-kunlunxin --runs 4 --mode vendor
+python3 scripts/drift_study.py --device <profile名> --runs 8 --mode reference
+python3 scripts/drift_study.py --device <profile名> --runs 4 --mode vendor
 ```
 
 量化跨进程非确定性（逐位置一致率 / 两两首分歧 / 全员一致前缀），
-用于校准断言前缀。本机结论: 受控条件下 reference 8 连跑 + vendor
-4 连跑全部 100% 确定；历史偶发后期 token 漂移为低概率条件相关事件。
+用于校准断言前缀。参考实例结论: 受控条件下 reference 8 连跑 +
+vendor 4 连跑全部 100% 确定；偶发后期 token 漂移为低概率条件相关
+事件——每接入新芯片建议复跑一次建立基线。

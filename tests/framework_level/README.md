@@ -26,8 +26,8 @@
 ```bash
 # 跨设备黄金锚点（多快照 → 多数票共识前缀）
 python3 scripts/build_golden.py --device cpu                 # transformers CPU 权威参考
-python3 scripts/build_golden.py --device p800-kunlunxin --snapshots 3
-python3 scripts/compare_golden.py --devices p800-kunlunxin,cpu
+python3 scripts/build_golden.py --device <加速卡profile>    # 示例: p800-kunlunxin
+python3 scripts/compare_golden.py --devices <加速卡profile>,cpu
 ```
 
 - 黄金 = N 次独立运行的快照集合 + 逐位置多数票共识前缀

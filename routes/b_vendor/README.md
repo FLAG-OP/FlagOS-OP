@@ -29,11 +29,11 @@ OpImpl(op_name="my_op", impl_id="vendor.myvendor",
 | `backend/register_ops.py` | vendor 注册模板 |
 
 audit 的 silu_and_mul 委托由设备 profile 的 `vendor_delegate` 字段驱动
-（p800 → `xtorch_ops.swiglu`；无厂商库芯片 → reference.torch）。
+（由设备 profile 的 `vendor_delegate` 字段驱动；未声明或厂商库缺失时自动退化 reference.torch）。
 
 ## 测试入口
 
 ```bash
-python3 run.py --route b --level op --device p800-kunlunxin
-python3 run.py --route b --level framework --device p800-kunlunxin
+python3 run.py --route b --level op --device <profile名>   # 示例: p800-kunlunxin
+python3 run.py --route b --level framework --device <profile名>
 ```

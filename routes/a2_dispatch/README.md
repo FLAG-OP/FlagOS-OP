@@ -22,6 +22,6 @@ export VLLM_FL_PLUGIN_MODULES=routes.a2_dispatch.plugin.register_ops
 ## 测试入口
 
 ```bash
-python3 run.py --route a2 --level op --device p800-kunlunxin
-python3 run.py --route a2 --level framework --device p800-kunlunxin
+python3 run.py --route a2 --level op --device <profile名>   # 示例: p800-kunlunxin
+python3 run.py --route a2 --level framework --device <profile名>
 ```

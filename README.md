@@ -1,14 +1,21 @@
 # FlagOS 算子开发模板库（矩阵化 · 芯片泛化）
 
-基于: FlagGems 4.2.1rc0 / vllm-plugin-FL 0.1.0 / vLLM 0.13.0 / Triton
-默认 case: 2×P800 (Kunlunxin XPU)，其他芯片通过设备 profile 接入。
+一套**设备无关**的 FlagOS 自定义算子开发与验证模板：三条实现路线 ×
+三层验证层级构成 9 格矩阵，芯片差异全部收敛到设备 profile。
+任何 AI 加速卡接入只需写一份 YAML，测试代码零硬编码。
+
+- 依赖形态: FlagGems + vllm-plugin-FL + vLLM + Triton（版本随环境，
+  参考验证环境: FlagGems 4.2.1rc0 / vllm-plugin-FL 0.1.0 / vLLM 0.13.0）
+- **参考实例**: `configs/devices/p800-kunlunxin.yaml`（2×P800，
+  本库 9/9 矩阵 + 跨层一致性的首个完整验证 case）；`cpu.yaml` /
+  `nvidia.yaml` 为另外两个内置 profile
 
 ## 矩阵总览（3 路线 × 3 层级 = 9 格）
 
 | | kernel 层（硬件语言直测） | op 层（注册/分发/拦截） | framework 层（真实推理） |
 |---|---|---|---|
-| **A1** Triton→aten | Triton gelu 直测 | aten 注册+拦截 | aten::silu 恒等计数注入 vLLM |
-| **A2** Triton→dispatch | Triton gelu_and_mul 直测 | dispatch 注册+策略切换 | vendor:triton-template 注入 |
+| **A1** Triton→aten | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 vLLM |
+| **A2** Triton→dispatch | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
 | **B** 厂商语言→vendor | **厂商 kernel 直测+C++ JIT 编译闭环+哨兵检查** | vendor 注册/选择 | audit vendor 拦截 |
 
 另有 `--consistency`: 同算子 L0 直调 ↔ L2 dispatch 张量级一致矩阵。
@@ -16,16 +23,13 @@
 ## 快速开始
 
 ```bash
-# 全矩阵（9 格 + consistency，本机 P800 约 20 分钟）
-./scripts/run_all.sh
+# 全矩阵（9 格 + consistency；时长视设备而定，GPU case 约 20 分钟）
+DEVICE=<profile名> ./scripts/run_all.sh
 
-# 单格
+# 单格（示例用参考 profile，替换为你的芯片即可）
 python3 run.py --route a1 --level op --device p800-kunlunxin
 
-# 薄封装（等价单格; DEVICE 环境变量切芯片）
-DEVICE=p800-kunlunxin ./scripts/run_b_fw.sh
-
-# 列出设备 profile 与矩阵
+# 列出可用设备 profile 与矩阵
 python3 run.py --list
 ```
 
@@ -34,98 +38,73 @@ python3 run.py --list
 ```
 flagos-op-templates/
 ├── run.py                    统一矩阵入口
-├── configs/devices/          设备 profile（p800-kunlunxin / nvidia / _template）
+├── configs/devices/          设备 profile（参考实例 p800 + cpu/nvidia/_template）
 ├── docs/                     中文文档（入门/架构/路线/测试/泛化/已知问题）
-├── common/                   device.py(profile加载+探测) / ref_impls.py
-├── routes/
+├── common/                   设备抽象 / kernel spec / 输入模板 / 参考实现
+├── routes/                   三条路线正式实现
 │   ├── a1_aten/              Triton → torch dispatcher
 │   ├── a2_dispatch/          Triton → FlagOS dispatch 插件
 │   └── b_vendor/             厂商语言 → vendor backend（csrc + audit）
-├── examples/                 6 个矩阵格的可运行样例（算子层自包含）
+├── examples/                 9 个矩阵格的可运行样例（kernel/op 层自包含）
 ├── tests/
-│   ├── op_level/             算子层测试（每路线一个，签名 run(profile))
-│   └── framework_level/      框架层测试（真实 vLLM 推理验证）
-├── scripts/                  run_all.sh + 6 个薄封装
+│   ├── kernel_level/         kernel 直测层 + 跨层一致性
+│   ├── op_level/             注册/分发/拦截层
+│   └── framework_level/      真实推理层
 ├── golden/                   黄金输出（多快照+共识前缀，回归锚点）
-└── results/                  每格结果 JSON（gitignore）
+└── scripts/                  一键脚本 / 黄金构建 / 漂移实验 / 输入生成 / 报告
 ```
 
 ## 文档
 
 完整中文文档在 [docs/](docs/index.md): 快速开始 / 体系结构 /
-三条路线详解 / 测试体系 / 设备接入 / 已知问题清单。
+三条路线详解 / 测试体系 / 设备接入 / 已知问题。
 每格样例见 [examples/](examples/README.md)。
 
 ## 新芯片接入（3 步）
 
 1. 复制 `configs/devices/_template.yaml` 为 `<芯片名>.yaml`，填写：
    vendor / torch_device / visible_devices / dispatch_key /
-   framework 引擎参数 / vendor_delegate（无厂商库填 null）
-2. `python3 run.py --all --device <芯片名>` 跑 6 格矩阵
-3. 有厂商 C++ kernel 时替换 `routes/b_vendor/csrc/` 并按 BUILD.md 编译
-
-> 泛化已验证: `--device nvidia` profile（cuda:0）在本机经 CUDA 兼容层
-> 同样跑通 op 级格子——同一套代码、不同 profile、不同物理设备。
+   framework 引擎参数 / vendor_delegate / vendor_kernels 清单
+2. `python3 run.py --all --device <芯片名>` 跑 9 格矩阵 + consistency
+3. 有厂商 C++ kernel 时按 `routes/b_vendor/csrc/BUILD.md` 编译接入
 
 ## 设备 profile 关键字段
 
 | 字段 | 作用 |
 |---|---|
-| `device.torch_device` | 算子层测试设备串（cuda:1 / xpu:0 / npu:0 ...） |
+| `device.torch_device` | kernel/op 层测试设备串（cuda:0 / xpu:1 / npu:0 ...） |
 | `device.dispatch_key` | A1 aten 注册 key（CUDA / PrivateUse1 ...） |
-| `framework.*` | 框架级 vLLM 引擎参数 + quirks |
-| `framework.quirks.keep_default_prefer` | P800 保护路径：禁止覆盖 VLLM_FL_PREFER |
+| `framework.*` | 框架级 vLLM 引擎参数 + quirks（设备怪癖开关） |
 | `vendor_delegate` | audit 委托的厂商 kernel（"pkg.func"）；null→reference |
+| `vendor_kernels` | kernel 层直测的厂商 kernel 声明清单（含负例标注） |
 
-## 本机已知注意事项
+## 通用注意事项（适用所有设备栈）
 
-1. **不要设 `VLLM_FL_PREFER=flagos`**（P800）: FlagGems 的 rms_norm Triton
-   dispatch 实现在真实 vLLM 前向中会失败；容器默认非法值恰好让所有
-   算子回落 vendor.kunlunxin，是生产可用路径。框架级测试只用
-   `VLLM_FL_PER_OP` 精确钉住目标算子。
-2. **插件入口函数名**: 代码实际查找 `register` / `vllm_fl_register`
-   （README 文档写的 `register_builtins` 仅适用内置 backend）。
-3. **P800 单卡路径** 曾出现厂商 reshape_and_cache 通道异常，
-   profile 固定 TP=2。
-4. **框架层输出断言分两种**: 数值恒等路径（aten 恒等覆盖 / audit
-   reference 委托，基线与插件同钉 reference）要求前 8 token 完全一致
-   （实测本栈跨进程 16+ token 偶发非确定性，全量一致不可靠）；自定义
-   数值实现（Triton）允许混沌分叉，用前 2 token 一致率断言。
-5. **⚠️ 厂商 kernel 已知问题**: `xtorch_ops.swiglu` 在本机独立 eager
-   调用下**不写输出张量**（哨兵测试: torch.full 预填后调用，全部元素
-   保持原值；返回 int 0）。即 vendor.kunlunxin 的 silu_and_mul 实现在
-   此栈上不可靠——生产 vLLM 表面正常疑似依赖 allocator 复用旧激活
-   内存。故 B 框架级测试使用 reference 委托，厂商委托仅保留手动验证
-   入口。此问题建议向芯片厂商反馈。
-6. **测试输入模板化**: `inputs/spec.yaml` 声明式定义输入
-   （fixed/length_sweep/edge_cases 文本类 + token_based 算子类），
-   `scripts/gen_inputs.py` 生成 `prompts.txt` 与 `token_inputs.json`，
-   同一 spec 在任何硬件生成完全相同的输入（黄金可比的前提）。
-7. **跨设备黄金输出**: `scripts/build_golden.py` 按设备生成黄金
-   （多快照+多数票共识前缀，`golden/<device>_golden.json` 应入库）:
-   - `--device cpu` → HuggingFace transformers 直接 CPU 推理
-     （权威语义参考，确定性，完全绕过 vLLM/厂商栈）
-   - `--device nvidia` → vLLM 引擎（需真实 N 卡，profile 已就绪）
-   - `--device p800-kunlunxin` → vLLM reference 路径 ×3 快照
-   `scripts/compare_golden.py --devices p800-kunlunxin,cpu` 输出跨设备
-   前缀一致矩阵。A1/B 框架测试自动比对同设备黄金；exact 断言前缀
-   按黄金实测稳定前缀**自适应**（不人工拍 8）。
+1. **插件入口函数名**: dispatch 代码实际查找 `register` /
+   `vllm_fl_register`（官方文档写的 `register_builtins` 仅适用内置
+   backend）。
+2. **框架层输出断言分两种**: 数值恒等路径（aten 恒等覆盖 / audit
+   reference 委托）要求逐 prompt 前缀完全一致，前缀长度按该设备黄金
+   实测稳定长度**自适应**；自定义数值实现允许混沌分叉（随机权重+
+   贪心解码会放大数值微差），用前 2 token 一致率断言。
+3. **测试输入模板化**: `inputs/spec.yaml` 声明式定义输入，
+   同一 spec 在任何硬件生成完全相同的输入——跨设备黄金可比的前提。
+4. **跨设备黄金输出**: `build_golden.py` 按设备生成黄金（CPU 经
+   HuggingFace transformers 为权威语义参考；加速卡走 vLLM），
+   `compare_golden.py` 输出跨设备前缀一致矩阵。
+5. **性能基准用短采样**（≤100 次）: 逐次新分配大输出的长循环会触发
+   分配器池增长，均值失真一两个数量级。
+6. **vLLM v1 前向在子进程**: 主进程 torch.library 注册不传播，
+   aten 路线框架级需 sitecustomize 注入桥（本库已内置）。
 
-8. **⚠️ embedding 静默越界**: 随机模型 tokenizer 词表(151669)大于
-   embedding(128256)，文本输入产生越界 token id——vLLM/XPU 路径的
-   embedding 查找**不做边界检查**（静默读越界内存），CPU transformers
-   则正确报 IndexError。模板已统一为 tokenize 后按词表钳制的 token
-   输入（`PROMPTS_AS_TOKENS=1`），双端输入一致且合法。
+## 参考实例的实测记录
 
-9. **漂移确认实验结论**（`scripts/drift_study.py`，结果在
-   `results/drift_*.json`）: 受控顺序条件下，reference 路径 8 连跑 +
-   vendor 路径 4 连跑（各 6 prompt × 32 token）**全部 100% 确定**；
-   此前观察到的偶发后期 token 漂移为低概率条件相关事件。防御性设计
-   （前 8 token 断言 + 黄金多数票共识）已覆盖残余风险。
+P800 case 的设备特有问题（厂商 kernel 缺陷 / 栈怪癖 / 数值行为）全部
+沉淀在 [docs/known-issues.md](docs/known-issues.md)——每接入一种新芯片，
+建议用同样方法（哨兵检查 / drift_study / 黄金比对）建立该设备自己的
+问题清单。通用机制能抓到的问题类型:
 
-### 10. ⚠️ 厂商 kernel 按物理设备分化（gelu_tanh_and_mul）
-XPU1(=cuda:0) 上正常（vs 参考 err≈0.125，确定）；XPU2(=cuda:1) 上
-非确定且输出 inf/17+。kernel 层哨兵检查已稳定抓出（负例验证）。
-
-### 11. xtorch_ops.silu 不写输出
-与 swiglu 同类：out 参数模式调用后输出全零未写入（sentinel 0/65536）。
+- 厂商 kernel 不写输出（哨兵检查）
+- kernel 按物理设备分化的正确性差异（逐设备直测）
+- 栈升级导致的数值行为漂移（黄金回归）
+- 跨进程非确定性（漂移实验）

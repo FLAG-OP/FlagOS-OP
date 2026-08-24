@@ -13,6 +13,6 @@
 容差: fp32 1e-5, bf16/fp16 1e-2（先 .float() 再比）
 
 ```bash
-python3 run.py --route a2 --level op --device p800-kunlunxin
-python3 tests/op_level/test_a2.py p800-kunlunxin   # 直接调用
+python3 run.py --route a2 --level op --device <profile名>
+python3 tests/op_level/test_a2.py <profile名>   # 直接调用
 ```

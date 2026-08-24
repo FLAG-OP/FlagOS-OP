@@ -32,7 +32,7 @@ flagos-op-templates/
 ├── common/                 设备加载/探测 + 输入 scheme + 参考实现
 ├── routes/                 三条路线的正式实现
 ├── tests/                  op_level（三段式） + framework_level（真实推理）
-├── examples/               6 个矩阵格的可运行样例（算子层自包含）
+├── examples/               9 个矩阵格的可运行样例（kernel/op 层自包含）
 ├── injection/              A1 框架级的 sitecustomize 跨进程注入桥
 ├── inputs/                 声明式输入模板（spec.yaml）
 ├── golden/                 跨设备黄金输出（多快照+共识前缀）

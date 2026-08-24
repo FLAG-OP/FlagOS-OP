@@ -20,7 +20,7 @@
 ## quirks 说明
 
 - `keep_default_prefer: true` — 禁止覆盖 `VLLM_FL_PREFER`
-  （P800: 容器默认非法值恰好让算子回落 vendor kernel，是保护路径）
+  （参考实例 P800: 环境默认非法值恰好让算子回落 vendor kernel，是保护路径）
 - `require_two_visible_devices: true` — 单卡路径有厂商 reshape_and_cache
   通道异常史，固定 TP=2
 
@@ -36,9 +36,12 @@
 2. flag_gems `DeviceDetector().vendor_name` 匹配 `vendor` 字段 → 选中
 3. 失败则报错并列出可用 profile（提示 `--device` 显式指定）
 
-## 已验证
+## 参考实例
 
-- `p800-kunlunxin`: 6/6 矩阵全绿（本库的主 case）
-- `nvidia`: profile 就绪；在 P800 机器上经 CUDA 兼容层映射可跑
-  （真实 N 卡环境下 vLLM 引擎路径已备好）
-- `cpu`: transformers 黄金引擎已实测（确定性，跨设备锚点）
+- `p800-kunlunxin`: 9/9 矩阵 + 跨层一致性全绿（本库首个完整验证 case，
+  其设备特有问题见 known-issues.md）
+- `nvidia`: profile 就绪；曾借 CUDA 兼容层在加速卡环境验证过
+  profile 切换机制（真实 N 卡的 vLLM 引擎路径已备好）
+- `cpu`: transformers 黄金引擎已实测（确定性，跨设备语义锚点）
+
+其他芯片: 复制 `_template.yaml` 填写后即可进入同一体.

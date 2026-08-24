@@ -16,9 +16,8 @@
 ## 运行
 
 ```bash
-cd /workspace/flagos-op-templates
-python3 examples/a1-op/example.py                  # 默认 p800-kunlunxin
-python3 examples/a1-op/example.py nvidia           # 切设备 profile
+python3 examples/a1-op/example.py                  # 默认参考 profile
+python3 examples/a1-op/example.py <profile名>      # 切设备 profile
 ```
 
 ## 预期输出

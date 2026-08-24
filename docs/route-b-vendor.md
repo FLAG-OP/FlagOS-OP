@@ -2,8 +2,8 @@
 
 ## 适用场景
 
-用厂商 SDK / C++ / 芯片专用语言写的 kernel（P800 上即昆仑芯
-XPU C++ kernel，经 `xtorch_ops` / `.so` 暴露）。
+用厂商 SDK / C++ / 芯片专用语言写的 kernel（经厂商 Python 绑定
+或 `.so` 暴露；参考实例 P800 上为昆仑芯 XPU 栈的 `xtorch_ops`）。
 
 ## vendor backend 三要素
 
@@ -23,7 +23,7 @@ class MyVendorBackend(Backend):
 kind=BackendImplKind.VENDOR, vendor="myvendor",
 priority=BackendPriority.VENDOR)`（100）
 
-## 真实厂商 kernel 接入（以 P800 为例）
+## 真实厂商 kernel 接入（以参考实例 P800 为例）
 
 1. `routes/b_vendor/csrc/` 写 C++ kernel（pybind11 模板）
 2. 厂商工具链编译产出 `.so`（参考 BUILD.md；内置算子库见 `/env/output/`）
@@ -44,7 +44,7 @@ audit vendor = 计数 + 委托，双用途:
 2. 框架层测试中拦截真实 vLLM 前向流量
 
 委托目标由设备 profile 的 `vendor_delegate` 字段驱动
-（p800 → `xtorch_ops.swiglu`；无厂商库芯片 → 自动退化 reference.torch）。
+（由各设备 profile 的 `vendor_delegate` 字段驱动；未声明或厂商库缺失时自动退化 reference.torch）。
 
 ## 注意事项
 

@@ -1,4 +1,4 @@
-# 厂商 kernel 编译说明（以 Kunlunxin P800 为例）
+# 厂商 kernel 编译说明（以参考实例 Kunlunxin P800 为例）
 
 ## 真实厂商案例
 

@@ -16,7 +16,7 @@
 
 | 需求 | 入口 |
 |---|---|
-| 跑全部 6 格矩阵 | `./scripts/run_all.sh` |
+| 跑全部 9 格矩阵 | `DEVICE=<profile> ./scripts/run_all.sh` |
 | 看某格的可运行样例 | `examples/` |
 | 加一种新芯片 | `docs/device-profiles.md` |
 | 排查数值问题 | `docs/known-issues.md` |
