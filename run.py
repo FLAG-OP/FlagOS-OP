@@ -76,9 +76,10 @@ def main() -> None:
     ap.add_argument("--level", choices=LEVELS)
     ap.add_argument("--device", default=None,
                     help="设备 profile 名（缺省自动探测）")
-    ap.add_argument("--all", action="store_true", help="跑全部 6 格矩阵")
+    ap.add_argument("--all", action="store_true",
+                    help="跑全部 9 格矩阵 + 跨层一致性")
     ap.add_argument("--consistency", action="store_true",
-                    help="跑 L0<->L2 跨层一致性验证")
+                    help="仅跑 L0<->L2 跨层一致性验证")
     ap.add_argument("--list", action="store_true", help="列出 profile 与矩阵")
     args = ap.parse_args()
 
@@ -103,6 +104,8 @@ def main() -> None:
         device = detect_profile().name
         print(f"auto-detected device profile: {device}")
 
+    if args.all:
+        args.consistency = True
     cells = [(r, l) for r in ROUTES for l in LEVELS] if args.all \
         else [(args.route, args.level)] if (args.route and args.level) else []
 
@@ -127,8 +130,16 @@ def main() -> None:
             err = traceback.format_exc()
             print(err)
         (passed if ok else failed).append(("consistency", "l0-l2"))
-        print(f"  CONSISTENCY RESULT: {'PASS' if ok else 'FAIL'} "
-              f"({time.perf_counter() - t0:.1f}s)")
+        dt = time.perf_counter() - t0
+        print(f"  CONSISTENCY RESULT: {'PASS' if ok else 'FAIL'} ({dt:.1f}s)")
+        out = ROOT / "results" / f"{device}_consistency.json"
+        out.parent.mkdir(exist_ok=True)
+        out.write_text(json.dumps({
+            "device": device, "route": "consistency", "level": "l0-l2",
+            "status": "PASS" if ok else "FAIL",
+            "seconds": round(dt, 1),
+            "error": err.splitlines()[-1] if err else None,
+        }, indent=2))
 
     print()
     print("=" * 64)

@@ -46,8 +46,17 @@ def run(profile) -> bool:
     print(f"  accuracy           : max_err={err:.3e}")
     assert err < 1e-1
 
-    cnt_file = os.environ.get("AUDIT_VENDOR_COUNT_FILE", "/tmp/audit_vendor_counts.json")
-    counts = json.load(open(cnt_file))
+    # 分片感知读取（audit 写 pid 分片; 兼容旧单文件格式）
+    import glob as _glob
+    base = os.environ.get("AUDIT_VENDOR_COUNT_FILE", "/tmp/audit_vendor_counts")
+    counts: dict = {}
+    for p_ in _glob.glob(f"{base}.*") + [f"{base}.json"]:
+        try:
+            with open(p_) as f:
+                for k, v in json.load(f).items():
+                    counts[k] = counts.get(k, 0) + v
+        except (OSError, ValueError):
+            continue
     assert counts.get("silu_and_mul", 0) >= 1
     print(f"  call counter       : {counts}")
     print("  => B op-level PASS")

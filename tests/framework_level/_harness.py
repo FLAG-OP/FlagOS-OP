@@ -135,16 +135,6 @@ def compare_outputs(base: dict, plug: dict, *, exact: bool,
             "detail": f"{matched}/{len(b)} prompts matched first {k_tokens} tokens"}
 
 
-def auto_exact_prefix(device_name: str, cap: int = 8) -> int:
-    """exact 断言前缀 = min(cap, 该设备黄金实测最短稳定前缀)。
-
-    设备稳定性由 build_golden 的多次快照实测得出，无需人工猜测。
-    """
-    golden = load_golden(device_name)
-    if golden is None:
-        return cap
-    return min(cap, min(golden["stable_prefix_lens"]))
-
 
 def exact_prefixes_per_prompt(device_name: str, cap: int = 8) -> list[int]:
     """逐 prompt 自适应前缀: max(1, min(cap, 黄金稳定长度 - 1))。
