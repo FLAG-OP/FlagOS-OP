@@ -1,0 +1,31 @@
+# 设备 Profile: NVIDIA GPU（通用参考模板，本机未验证跑绿）
+name: nvidia
+vendor: nvidia
+
+auto_detect:
+  module: torch_cuda_vendor_probe   # 占位: 通常靠 vendor=nvidia 匹配，见 device.py
+
+device:
+  torch_device: "cuda:0"
+  visible_devices: "0"
+  dispatch_key: CUDA
+
+framework:
+  tensor_parallel_size: 1
+  distributed_executor_backend: mp
+  max_model_len: 4096
+  max_num_seqs: 50
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  enable_prefix_caching: false
+  load_format: safetensors
+  seed: 20260823
+  model_path: /workspace/random-llm-models/llama-3.1-8b-like
+  quirks:
+    keep_default_prefer: false
+    require_two_visible_devices: false
+
+vendor_delegate: null              # 无专属委托 → audit 委托 reference.torch
+
+reference_fallback: reference.torch

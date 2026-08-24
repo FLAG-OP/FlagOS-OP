@@ -1,0 +1,32 @@
+# 测试输入声明式模板（gen_inputs.py 按此生成）。
+# ⚠️ 修改 framework 部分会使已有黄金输出失效（prompts 哈希不匹配），
+#    需重新 build_golden。disabled 类别仅作模板示例。
+seed: 20260823
+
+framework:
+  - kind: fixed                # 固定文本（当前黄金输出所依据的 6 条）
+    enabled: true
+    prompts:
+      - "Hello, how are you today?"
+      - "The capital of France is"
+      - "Write a haiku about mountains:"
+      - "Explain quantum computing in simple terms:"
+      - "List three benefits of exercise."
+      - "Translate \"good morning\" to French, Spanish, and Japanese."
+
+  - kind: length_sweep         # 模板展开（示例，默认关闭）
+    enabled: false
+    template: "Explain {item} in detail:"
+    vars: ["photosynthesis", "the Pythagorean theorem"]
+
+  - kind: edge_cases           # 边界输入（示例，默认关闭）
+    enabled: false
+    prompts: ["", "a", "12345678901234567890"]
+
+operator:
+  - kind: token_based          # 算子级 token id 输入
+    enabled: true
+    name: benchmark_default
+    scheme: deterministic      # deterministic | seeded_random
+    count: 50
+    input_len: 100

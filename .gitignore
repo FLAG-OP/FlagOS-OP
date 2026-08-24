@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+results/
+bench_result.json
+*_baseline.json
+*_plugin.json
+run_baseline.json
+run_plugin.json

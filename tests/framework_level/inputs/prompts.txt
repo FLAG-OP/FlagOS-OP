@@ -1,0 +1,7 @@
+# 自动生成: scripts/gen_inputs.py (勿手改; spec: inputs/spec.yaml)
+Hello, how are you today?
+The capital of France is
+Write a haiku about mountains:
+Explain quantum computing in simple terms:
+List three benefits of exercise.
+Translate "good morning" to French, Spanish, and Japanese.

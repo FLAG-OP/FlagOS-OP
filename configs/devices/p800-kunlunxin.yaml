@@ -1,0 +1,34 @@
+# 设备 Profile: Kunlunxin P800 (本机实测 case)
+name: p800-kunlunxin
+vendor: kunlunxin
+
+auto_detect:
+  module: torch_xmlir        # 可 import 即认定为该设备
+
+device:
+  torch_device: "cuda:1"     # 算子层测试设备 (XPU 经 XMLIR 伪装为 CUDA)
+  visible_devices: "1,2"     # 框架级测试暴露的卡
+  dispatch_key: CUDA         # A1 aten 注册的 dispatch key
+
+framework:
+  # 框架级 vLLM 引擎参数（本机已验证的稳定组合）
+  tensor_parallel_size: 2
+  distributed_executor_backend: mp
+  max_model_len: 4096
+  max_num_seqs: 50
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  enable_prefix_caching: false
+  load_format: safetensors
+  seed: 20260823
+  model_path: /workspace/random-llm-models/llama-3.1-8b-like
+  quirks:
+    keep_default_prefer: true        # 禁止覆盖 VLLM_FL_PREFER（容器默认非法值是保护路径）
+    require_two_visible_devices: true # 单卡路径曾出现厂商 reshape_and_cache 通道异常
+
+vendor_delegate:
+  # audit vendor 的 silu_and_mul 委托目标（厂商 kernel 原样透传）
+  silu_and_mul: xtorch_ops.swiglu
+
+reference_fallback: reference.torch
