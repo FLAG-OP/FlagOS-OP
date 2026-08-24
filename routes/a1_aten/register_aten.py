@@ -11,7 +11,9 @@ import torch
 
 # 调用计数（内存 + 可选文件落地，框架级测试跨进程读取）
 CALL_COUNT = {"gelu": 0, "silu": 0}
-COUNT_FILE = os.environ.get("A1_ATEN_COUNT_FILE")  # 设置后每次调用写入文件
+_COUNT_BASE = os.environ.get("A1_ATEN_COUNT_FILE")
+# pid 后缀消除 TP 多 worker 并发写竞争（读取端用 harness.read_counts 汇总分片）
+COUNT_FILE = f"{_COUNT_BASE}.{os.getpid()}" if _COUNT_BASE else None
 
 
 def _bump(op: str) -> None:

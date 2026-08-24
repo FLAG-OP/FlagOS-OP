@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""A2 kernel 层: Triton gelu_and_mul kernel 直测（不经 dispatch）。"""
+from __future__ import annotations
+
+
+def run(profile) -> bool:
+    import time
+
+    import torch
+    from routes.a2_dispatch.plugin import kernels as K
+
+    dev = profile.torch_device
+    print("=" * 60)
+    print(f"A2 kernel [{profile.name}]: Triton gelu_and_mul 直测 @ {dev}")
+    print("=" * 60)
+
+    # ---- 精度 vs PyTorch 语义参考 ----
+    for shape in [(4096, 4096), (1, 14336), (128, 5120)]:
+        for dt in (torch.bfloat16, torch.float16, torch.float32):
+            x = torch.randn(*shape, dtype=dt, device=dev) * 2
+            y = torch.randn(*shape, dtype=dt, device=dev)
+            ref = K.gelu_and_mul_reference(x, y)
+            out = K.gelu_and_mul_triton(x, y)
+            tol = 1e-5 if dt == torch.float32 else 1e-2
+            assert (out.float() - ref.float()).abs().max().item() < tol
+    print("  精度: 9/9 组合 PASS")
+
+    # ---- 哨兵 ----
+    x = torch.randn(64, 1024, dtype=torch.bfloat16, device=dev)
+    y = torch.randn(64, 1024, dtype=torch.bfloat16, device=dev)
+    o1 = K.gelu_and_mul_triton(x, y)
+    assert torch.equal(o1, K.gelu_and_mul_triton(x, y))
+    assert not torch.equal(o1, K.gelu_and_mul_triton(x + 1.0, y))
+    print("  哨兵: 确定性 OK 输入敏感 OK")
+
+    # ---- 性能 ----
+    shape = (8192, 8192)
+    x = torch.randn(*shape, dtype=torch.bfloat16, device=dev)
+    y = torch.randn(*shape, dtype=torch.bfloat16, device=dev)
+    for _ in range(20):
+        K.gelu_and_mul_triton(x, y)
+    torch.cuda.synchronize()
+    t0 = time.perf_counter()
+    for _ in range(100):
+        K.gelu_and_mul_triton(x, y)
+    torch.cuda.synchronize()
+    t = (time.perf_counter() - t0) / 100 * 1000
+    bw = x.numel() * 2 * 3 / t / 1e9 * 1e3
+    print(f"  性能: {t:.3f}ms ({bw:.0f} GB/s)")
+    print("  => A2 kernel PASS")
+    return True

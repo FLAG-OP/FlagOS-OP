@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A2 算子层测试: 精度 / dispatch / 性能 三段式"""
+"""A2 op 层测试: dispatch 注册 + 策略选择（kernel 直测见 kernel 层）。"""
 from __future__ import annotations
 
 
@@ -24,18 +24,7 @@ def run(profile) -> bool:
     print(f"A2 op-level [{profile.name}]: gelu_and_mul 三段式 @ {dev}")
     print("=" * 60)
 
-    # ---- stage 1: accuracy ----
-    for shape in [(4096, 4096), (8192, 2048), (1, 14336), (128, 5120)]:
-        for dt in (torch.bfloat16, torch.float16, torch.float32):
-            x = torch.randn(*shape, dtype=dt, device=dev) * 2
-            y = torch.randn(*shape, dtype=dt, device=dev)
-            ref = K.gelu_and_mul_reference(x, y)
-            out = K.gelu_and_mul_triton(x, y)
-            tol = 1e-5 if dt == torch.float32 else 1e-2
-            assert (out.float() - ref.float()).abs().max().item() < tol
-    print("  stage 1/3 accuracy : 12/12 PASS")
-
-    # ---- stage 2: dispatch ----
+    # ---- dispatch 注册 + 策略切换 ----
     m = get_default_manager()
     m.ensure_initialized()
     impls = m.registry.snapshot().impls_by_op.get("gelu_and_mul", [])
@@ -48,28 +37,8 @@ def run(profile) -> bool:
     with with_preference("reference"):
         call_op("gelu_and_mul", None, x, y)
         assert m._called_ops["gelu_and_mul"] == "reference.torch"
-    print("  stage 2/3 dispatch : PASS (flagos/reference 切换正确)")
-
-    # ---- stage 3: benchmark ----
-    shape = (8192, 8192)
-    x = torch.randn(*shape, dtype=torch.bfloat16, device=dev)
-    y = torch.randn(*shape, dtype=torch.bfloat16, device=dev)
-
-    def bench(fn, iters=200, warmup=20):
-        for _ in range(warmup):
-            fn(x, y)
-        torch.cuda.synchronize()
-        t0 = time.perf_counter()
-        for _ in range(iters):
-            fn(x, y)
-        torch.cuda.synchronize()
-        return (time.perf_counter() - t0) / iters * 1000
-
-    t_tri = bench(K.gelu_and_mul_triton)
-    t_ref = bench(K.gelu_and_mul_reference)
-    bw = x.numel() * 2 * 3 / t_tri / 1e9 * 1e3
-    print(f"  stage 3/3 bench    : Triton={t_tri:.3f}ms ({bw:.0f} GB/s) "
-          f"ref={t_ref:.3f}ms speedup={t_ref/t_tri:.1f}x")
+    print("  dispatch: flagos->default.flagos / reference->reference.torch PASS")
+    print("  （kernel 精度/性能直测已移至 kernel 层）")
     print("  => A2 op-level PASS")
     return True
 

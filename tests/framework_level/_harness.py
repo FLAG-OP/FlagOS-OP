@@ -88,12 +88,25 @@ def run_case(route: str, profile, out_name: str, with_plugin: bool) -> dict:
 
 
 def reset_counts(route: str) -> None:
-    Path(_count_file(route)).write_text("{}")
+    """清空该 route 的全部 pid 分片计数文件。"""
+    import glob as _glob
+    for p in _glob.glob(f"{_count_file(route)}.*"):
+        Path(p).unlink(missing_ok=True)
+    Path(_count_file(route)).unlink(missing_ok=True)
 
 
 def read_counts(route: str) -> dict:
-    p = Path(_count_file(route))
-    return json.loads(p.read_text()) if p.exists() else {}
+    """汇总 pid 分片 + 兼容单文件旧格式。"""
+    import glob as _glob
+    total: dict = {}
+    for p in sorted(_glob.glob(f"{_count_file(route)}.*")) + [_count_file(route)]:
+        try:
+            with open(p) as f:
+                for k, v in json.load(f).items():
+                    total[k] = total.get(k, 0) + v
+        except (OSError, ValueError):
+            continue
+    return total
 
 
 def compare_outputs(base: dict, plug: dict, *, exact: bool,
@@ -110,10 +123,13 @@ def compare_outputs(base: dict, plug: dict, *, exact: bool,
     """
     b, p = base["output_token_ids"], plug["output_token_ids"]
     if exact:
-        ok = all(x[:exact_prefix] == y[:exact_prefix] for x, y in zip(b, p))
-        return {"mode": f"exact-prefix-{exact_prefix}", "ok": ok,
-                "detail": (f"first {exact_prefix} tokens identical"
-                           if ok else f"prefix-{exact_prefix} differ")}
+        prefixes = exact_prefixes_per_prompt(base.get("device", ""),
+                                             cap=exact_prefix)
+        ok = all(x[:k] == y[:k]
+                 for x, y, k in zip(b, p, prefixes * len(b)))
+        return {"mode": f"exact-prefix-per-prompt{prefixes}", "ok": ok,
+                "detail": ("per-prompt prefixes identical" if ok
+                           else f"per-prompt prefixes {prefixes} differ")}
     matched = sum(1 for x, y in zip(b, p) if x[:k_tokens] == y[:k_tokens])
     return {"mode": f"first-{k_tokens}-token", "ok": matched >= min_match_prompts,
             "detail": f"{matched}/{len(b)} prompts matched first {k_tokens} tokens"}
@@ -128,6 +144,17 @@ def auto_exact_prefix(device_name: str, cap: int = 8) -> int:
     if golden is None:
         return cap
     return min(cap, min(golden["stable_prefix_lens"]))
+
+
+def exact_prefixes_per_prompt(device_name: str, cap: int = 8) -> list[int]:
+    """逐 prompt 自适应前缀: max(1, min(cap, 黄金稳定长度 - 1))。
+
+    黄金稳定长度是"已观测到分叉的位置"，断言取 length-1 避免踩线。
+    """
+    golden = load_golden(device_name)
+    if golden is None:
+        return [cap]
+    return [max(1, min(cap, s - 1)) for s in golden["stable_prefix_lens"]]
 
 
 def load_golden(device_name: str) -> Optional[dict]:

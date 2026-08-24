@@ -3,20 +3,20 @@
 基于: FlagGems 4.2.1rc0 / vllm-plugin-FL 0.1.0 / vLLM 0.13.0 / Triton
 默认 case: 2×P800 (Kunlunxin XPU)，其他芯片通过设备 profile 接入。
 
-## 矩阵总览
+## 矩阵总览（3 路线 × 3 层级 = 9 格）
 
-**本机 2×P800 实测: 6/6 全部通过**（含 6 次真实 vLLM 推理）。
+| | kernel 层（硬件语言直测） | op 层（注册/分发/拦截） | framework 层（真实推理） |
+|---|---|---|---|
+| **A1** Triton→aten | Triton gelu 直测 | aten 注册+拦截 | aten::silu 恒等计数注入 vLLM |
+| **A2** Triton→dispatch | Triton gelu_and_mul 直测 | dispatch 注册+策略切换 | vendor:triton-template 注入 |
+| **B** 厂商语言→vendor | **厂商 kernel 直测+C++ JIT 编译闭环+哨兵检查** | vendor 注册/选择 | audit vendor 拦截 |
 
-| | 算子层 (op) | 框架层 (framework) |
-|---|---|---|
-| **A1** Triton→aten dispatcher | `--route a1 --level op`<br>gelu 被真实拦截+精度 | `--route a1 --level framework`<br>aten::silu 恒等计数注入真实 vLLM |
-| **A2** Triton→FlagOS dispatch | `--route a2 --level op`<br>三段式: 精度/分发/性能 | `--route a2 --level framework`<br>Triton silu_and_mul 经 vendor:triton-template 注入 |
-| **B** 厂商语言→vendor backend | `--route b --level op`<br>注册/选择/计数/语义 | `--route b --level framework`<br>audit vendor 拦截真实 vLLM |
+另有 `--consistency`: 同算子 L0 直调 ↔ L2 dispatch 张量级一致矩阵。
 
 ## 快速开始
 
 ```bash
-# 全矩阵（6 格，本机 P800 约 15-20 分钟，含 6 次真实 vLLM 推理）
+# 全矩阵（9 格 + consistency，本机 P800 约 20 分钟）
 ./scripts/run_all.sh
 
 # 单格
@@ -122,3 +122,10 @@ flagos-op-templates/
    vendor 路径 4 连跑（各 6 prompt × 32 token）**全部 100% 确定**；
    此前观察到的偶发后期 token 漂移为低概率条件相关事件。防御性设计
    （前 8 token 断言 + 黄金多数票共识）已覆盖残余风险。
+
+### 10. ⚠️ 厂商 kernel 按物理设备分化（gelu_tanh_and_mul）
+XPU1(=cuda:0) 上正常（vs 参考 err≈0.125，确定）；XPU2(=cuda:1) 上
+非确定且输出 inf/17+。kernel 层哨兵检查已稳定抓出（负例验证）。
+
+### 11. xtorch_ops.silu 不写输出
+与 swiglu 同类：out 参数模式调用后输出全零未写入（sentinel 0/65536）。

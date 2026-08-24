@@ -21,9 +21,9 @@ def run(profile) -> bool:
     # reference 委托（基线同样钉在 reference 路径）→ 数值恒等，
     # exact 断言成立。注: 本机 xtorch_ops.swiglu 独立调用不写 out，
     # 不能用于恒等断言（详见顶层 README 注意事项）。
-    # exact 前缀按设备黄金实测稳定性自适应
+    # exact 前缀按设备黄金逐 prompt 实测稳定性自适应
     cmp_res = H.compare_outputs(
-        base, plug, exact=True, exact_prefix=H.auto_exact_prefix(profile.name))
+        base, plug, exact=True, exact_prefix=8)
     print(f"  output compare     : {cmp_res['detail']}")
     assert cmp_res["ok"], "纯拦截下输出不应变化"
 

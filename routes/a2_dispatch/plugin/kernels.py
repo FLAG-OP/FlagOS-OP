@@ -39,7 +39,8 @@ def silu_and_mul_kernel(x, y):
     return xf * sig * y
 
 
-_SILU_COUNT_FILE = os.environ.get("A2_SILU_COUNT_FILE")
+_SILU_COUNT_BASE = os.environ.get("A2_SILU_COUNT_FILE")
+_SILU_COUNT_FILE = f"{_SILU_COUNT_BASE}.{os.getpid()}" if _SILU_COUNT_BASE else None
 
 
 def silu_and_mul_triton_counted(x: torch.Tensor) -> torch.Tensor:

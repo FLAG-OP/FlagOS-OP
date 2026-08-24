@@ -29,3 +29,7 @@ framework:
 vendor_delegate: null             # "my_lib.my_op" 或 null(委托 reference)
 
 reference_fallback: reference.torch
+
+# 厂商 kernel 直测清单（可选; kernel 层用）
+# adapter 可选: gelu_tanh_and_mul / silu / out_param
+vendor_kernels: []

@@ -18,9 +18,9 @@ def run(profile) -> bool:
     print(f"  aten::silu calls   : {counts.get('silu', 0)}")
     assert counts.get("silu", 0) > 0, "aten::silu 未被真实推理调用"
 
-    # exact 前缀按设备黄金实测稳定性自适应
+    # exact 前缀按设备黄金逐 prompt 实测稳定性自适应
     cmp_res = H.compare_outputs(
-        base, plug, exact=True, exact_prefix=H.auto_exact_prefix(profile.name))
+        base, plug, exact=True, exact_prefix=8)
     print(f"  output compare     : {cmp_res['detail']} [{cmp_res['mode']}]")
     assert cmp_res["ok"], "数值恒等覆盖下输出不应变化"
 

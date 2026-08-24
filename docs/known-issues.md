@@ -49,3 +49,10 @@ silu(x1)*x2 不符（是问题 2 的衍生表现）。
 逐次新分配大输出的长循环基准（如 500 次 × 128MB）会触发分配器
 池增长，均值被抬高一两个数量级（实测同 kernel 0.047ms vs 16ms）。
 基准一律用短采样（≤100 次）。
+
+### 10. 厂商 kernel 按物理设备分化（gelu_tanh_and_mul）
+XPU1(=cuda:0) 正常（err≈0.125、确定）；XPU2(=cuda:1) 非确定且输出
+inf。kernel 层哨兵检查稳定抓出。
+
+### 11. xtorch_ops.silu 不写输出
+out 参数模式调用后输出全零未写入（sentinel 0/65536），与 #2 swiglu 同类。

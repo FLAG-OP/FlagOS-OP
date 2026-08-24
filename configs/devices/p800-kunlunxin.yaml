@@ -32,3 +32,35 @@ vendor_delegate:
   silu_and_mul: xtorch_ops.swiglu
 
 reference_fallback: reference.torch
+
+# 厂商硬件语言 kernel 直测清单（kernel 层 / --level kernel）
+vendor_kernels:
+  - name: xtorch_ops.gelu_tanh_and_mul
+    op: gelu_and_mul
+    out_mode: return
+    adapter: gelu_tanh_and_mul
+    n_inputs: 2
+    expected_ok: false
+    known_issue: XPU2(=cuda:1) 上非确定且输出 inf; XPU1(=cuda:0) 上 err≈0.125 正常（按设备分化 bug，known-issues #10）
+  - name: xtorch_ops.silu
+    op: silu
+    out_mode: out_param
+    adapter: out_param
+    n_inputs: 1
+    expected_ok: false
+    known_issue: out 参数不写输出（与 swiglu 同类，known-issues #2）
+  # 已知坏例: 哨兵检查应能抓出（验证检测能力）
+  - name: xtorch_ops.swiglu
+    op: gelu_and_mul
+    out_mode: out_param
+    adapter: out_param
+    n_inputs: 2
+    expected_ok: false
+    known_issue: 独立 eager 调用不写输出（known-issues #2）
+  # 自研 C++ kernel JIT 编译产物（csrc 闭环）
+  - name: my_vendor_ops.gelu_and_mul
+    op: gelu_and_mul
+    out_mode: return
+    adapter: two_tensor
+    n_inputs: 2
+    build: csrc

@@ -19,11 +19,13 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 ROUTES = ["a1", "a2", "b"]
-LEVELS = ["op", "framework"]
+LEVELS = ["kernel", "op", "framework"]
 
 
 def load_test(route: str, level: str):
-    if level == "op":
+    if level == "kernel":
+        mod = __import__(f"tests.kernel_level.test_{route}", fromlist=["run"])
+    elif level == "op":
         mod = __import__(f"tests.op_level.test_{route}", fromlist=["run"])
     else:
         mod = __import__(f"tests.framework_level.test_{route}", fromlist=["run"])
@@ -75,6 +77,8 @@ def main() -> None:
     ap.add_argument("--device", default=None,
                     help="设备 profile 名（缺省自动探测）")
     ap.add_argument("--all", action="store_true", help="跑全部 6 格矩阵")
+    ap.add_argument("--consistency", action="store_true",
+                    help="跑 L0<->L2 跨层一致性验证")
     ap.add_argument("--list", action="store_true", help="列出 profile 与矩阵")
     args = ap.parse_args()
 
@@ -89,8 +93,8 @@ def main() -> None:
                       f"python3 run.py --route {r} --level {l}")
         return
 
-    if not (args.all or (args.route and args.level)):
-        ap.error("需要 --all，或同时指定 --route 和 --level")
+    if not (args.all or args.consistency or (args.route and args.level)):
+        ap.error("需要 --all / --consistency，或同时指定 --route 和 --level")
 
     if args.device:
         device = args.device
@@ -100,12 +104,31 @@ def main() -> None:
         print(f"auto-detected device profile: {device}")
 
     cells = [(r, l) for r in ROUTES for l in LEVELS] if args.all \
-        else [(args.route, args.level)]
+        else [(args.route, args.level)] if (args.route and args.level) else []
 
     passed, failed = [], []
     for r, l in cells:
         ok = run_cell(r, l, device)
         (passed if ok else failed).append((r, l))
+
+    if args.consistency:
+        from common.device import load_profile
+        from tests.kernel_level import test_consistency
+        print()
+        print("=" * 64)
+        print(f"  CONSISTENCY: L0 <-> L2 device={device}")
+        print("=" * 64)
+        t0 = time.perf_counter()
+        try:
+            ok = bool(test_consistency.run(load_profile(device)))
+            err = None
+        except Exception:
+            ok = False
+            err = traceback.format_exc()
+            print(err)
+        (passed if ok else failed).append(("consistency", "l0-l2"))
+        print(f"  CONSISTENCY RESULT: {'PASS' if ok else 'FAIL'} "
+              f"({time.perf_counter() - t0:.1f}s)")
 
     print()
     print("=" * 64)

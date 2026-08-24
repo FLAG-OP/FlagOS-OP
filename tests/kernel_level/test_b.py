@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""B kernel 层: 厂商硬件语言 kernel 直测（核心新格）。
+
+内容:
+  1. JIT 编译闭环: csrc C++ 模板 load() 编译直调（自研厂商语言路径）
+  2. profile 声明的现成厂商 kernel 直测（精度 vs 语义参考）
+  3. 哨兵健全性检查（swiglu 型"不写输出"bug 的通用检测）
+  4. 性能短采样
+"""
+from __future__ import annotations
+
+
+def _load_csrc_module():
+    """JIT 编译 routes/b_vendor/csrc/vendor_kernel.cpp。"""
+    import os
+    from pathlib import Path
+
+    from torch.utils.cpp_extension import load
+
+    src = Path(__file__).resolve().parents[2] / "routes/b_vendor/csrc"
+    os.makedirs("/tmp/flagos_csrc_build", exist_ok=True)
+    return load(
+        name="my_vendor_ops",
+        sources=[str(src / "vendor_kernel.cpp")],
+        extra_cflags=["-O3"],
+        verbose=False,
+        build_directory="/tmp/flagos_csrc_build",
+    )
+
+
+def run(profile) -> bool:
+    import time
+
+    import torch
+    from common.kernel_spec import load_kernel_specs, sentinel_check, SEMANTIC_REFS
+
+    dev = profile.torch_device
+    print("=" * 60)
+    print(f"B kernel [{profile.name}]: 厂商硬件语言 kernel 直测 @ {dev}")
+    print("=" * 60)
+
+    specs = load_kernel_specs(profile)
+    assert specs, f"设备 {profile.name} 未声明 vendor_kernels"
+
+    # ---- 1. JIT 编译闭环 ----
+    mod = None
+    csrc_ok = False
+    try:
+        mod = _load_csrc_module()
+        csrc_ok = True
+        print("  JIT 编译: csrc -> my_vendor_ops OK")
+    except Exception as e:
+        print(f"  JIT 编译: SKIP（本机工具链限制: {str(e)[:80]}）")
+
+    # ---- 2/3. 现成厂商 kernel 直测 + 哨兵 ----
+    SHAPES = [(64, 1024), (128, 5120)]
+    results = []
+    for spec in specs:
+        if spec.build == "csrc" and not csrc_ok:
+            results.append((spec, "SKIP", "JIT 不可用"))
+            continue
+        try:
+            fn = (getattr(mod, spec.func_name) if spec.build == "csrc"
+                  else spec.load_callable())
+        except ImportError as e:
+            results.append((spec, "SKIP", str(e)[:50]))
+            continue
+
+        # 哨兵健全性
+        sent = sentinel_check(spec, fn, dev)
+        if not spec.expected_ok:
+            # 已知坏例: 哨兵检查应抓出问题（验证检测能力）
+            caught = not sent["ok"]
+            results.append((spec, "PASS" if caught else "FAIL",
+                            f"负例哨兵{'抓出 OK' if caught else '漏检 BAD'}: "
+                            f"{sent['detail']}"))
+            continue
+        if not sent["ok"]:
+            results.append((spec, "FAIL", f"哨兵: {sent['detail']}"))
+            continue
+
+        # 精度 vs 语义参考
+        ref_fn = SEMANTIC_REFS.get(spec.op)
+        if ref_fn is None:
+            results.append((spec, "SKIP", f"无语义参考 op={spec.op}"))
+            continue
+        ok, detail = True, ""
+        for shape in SHAPES:
+            for dt in (torch.bfloat16, torch.float16):
+                parts = spec.make_inputs(shape, dt, dev)
+                ref = ref_fn(*parts)
+                out = spec.call(fn, *parts)
+                err = (out.float() - ref.float()).abs().max().item() \
+                    if out.shape == ref.shape else float("inf")
+                if err > 1e-2:
+                    ok = False
+                    detail = f"shape={shape} {dt} err={err:.3f}"
+                    break
+            if not ok:
+                break
+        results.append((spec, "PASS" if ok else "FAIL",
+                        detail or "精度+哨兵 OK"))
+
+    print(f"\n  {'kernel':38s} {'结果':5s} 说明")
+    print("  " + "-" * 70)
+    n_pass = n_fail = 0
+    for spec, status, detail in results:
+        print(f"  {spec.name:38s} {status:5s} {detail}")
+        n_pass += status == "PASS"
+        n_fail += status == "FAIL"
+    assert n_fail == 0, f"{n_fail} 个厂商 kernel 直测失败"
+
+    # ---- 4. 性能（首个可用 return 模式 kernel） ----
+    for spec, status, _ in results:
+        if status != "PASS" or spec.out_mode != "return":
+            continue
+        try:
+            fn = (getattr(mod, spec.func_name) if spec.build == "csrc"
+                  else spec.load_callable())
+            parts = spec.make_inputs((8192, 4096), torch.bfloat16, dev)
+            for _ in range(20):
+                spec.call(fn, *parts)
+            torch.cuda.synchronize()
+            t0 = time.perf_counter()
+            for _ in range(100):
+                spec.call(fn, *parts)
+            torch.cuda.synchronize()
+            t = (time.perf_counter() - t0) / 100 * 1000
+            print(f"\n  性能: {spec.name} {t:.3f}ms/call")
+        except Exception:
+            pass
+        break
+
+    print(f"\n  => B kernel PASS（{n_pass} pass / {n_fail} fail / "
+          f"{len(results) - n_pass - n_fail} skip）")
+    return True

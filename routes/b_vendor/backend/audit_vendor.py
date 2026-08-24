@@ -11,7 +11,11 @@ import torch.nn.functional as F
 from vllm_fl.dispatch.backends.base import Backend
 
 
-COUNT_FILE = os.environ.get("AUDIT_VENDOR_COUNT_FILE", "/tmp/audit_vendor_counts.json")
+_COUNT_BASE = os.environ.get("AUDIT_VENDOR_COUNT_FILE",
+                              "/tmp/audit_vendor_counts")
+# pid 后缀: 消除 TP 多 worker 并发写同一文件的竞争；读取方用
+# read_counts() 汇总全部 pid 分片
+COUNT_FILE = f"{_COUNT_BASE}.{os.getpid()}"
 
 
 def _bump(op: str) -> None:
@@ -24,6 +28,20 @@ def _bump(op: str) -> None:
     counts[op] = counts.get(op, 0) + 1
     with open(COUNT_FILE, "w") as f:
         json.dump(counts, f)
+
+
+def read_counts() -> dict:
+    """汇总全部 pid 分片的计数（消除并发写竞争后的读取端）。"""
+    import glob as _glob
+    total: dict = {}
+    for p in _glob.glob(f"{_COUNT_BASE}.*"):
+        try:
+            with open(p) as f:
+                for k, v in json.load(f).items():
+                    total[k] = total.get(k, 0) + v
+        except (OSError, ValueError):
+            continue
+    return total
 
 
 def _vendor_delegate(pkg: str, func: str):
