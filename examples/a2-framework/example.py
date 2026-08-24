@@ -22,8 +22,11 @@ def main() -> None:
     profile = load_profile(
         sys.argv[1] if len(sys.argv) > 1 else "p800-kunlunxin")
     print(f"[a2-framework 样例] 设备: {profile.summary()}")
-    print("  注入: vendor:triton-template + PER_OP 精确钉住")
-    print("  断言: 计数>0 / 前2token一致率(自定义数值允许混沌分叉)\n")
+    print("  注入机制实配:")
+    print(f"    1. 插件: VLLM_FL_PLUGIN_MODULES=routes.a2_dispatch.plugin.register_ops"
+          f"（每个 vLLM 子进程自动发现）")
+    print(f"    2. PER_OP 钉选: silu_and_mul=vendor:triton-template|reference"
+          f"（vendor:<name> 可精确钉住 Triton 实现，避免与内置 flagos 冲突）\n")
 
     ok = test_a2.run(profile)
     assert ok

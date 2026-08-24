@@ -45,3 +45,10 @@ python3 examples/a1-op/example.py <profile名>      # 切设备 profile
 逐次新分配输出张量的循环基准中，迭代次数过多（如 500 次 × 128MB 输出）
 会触发分配器池增长，均值被抬高一两个数量级——本机实测同 kernel
 100 次迭代 0.047ms / 500 次迭代 16ms。样例采用短采样并注明环境敏感。
+
+## 同算子贯穿三层
+
+本路线三层样例各自独立可跑；若要跟踪**同一算子**走完
+kernel→op→framework，把各层样例的算子替换为同一个即可。
+gelu_and_mul 的贯穿实证见 `tests/kernel_level/test_consistency.py`
+与旗舰样例 [examples/b-fullstack](../b-fullstack/)。

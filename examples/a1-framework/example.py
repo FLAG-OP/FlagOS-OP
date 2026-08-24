@@ -24,8 +24,14 @@ def main() -> None:
     profile = load_profile(
         sys.argv[1] if len(sys.argv) > 1 else "p800-kunlunxin")
     print(f"[a1-framework 样例] 设备: {profile.summary()}")
-    print("  注入: sitecustomize(子进程注册) + FlagGems黑名单 + PER_OP钉reference")
-    print("  断言: 调用计数>0 / 前缀恒等(自适应) / 黄金共识回归\n")
+    print("  注入机制实配（框架级三要素）:")
+    inj = ROOT / "injection" / "sitecustomize.py"
+    print(f"    1. sitecustomize 桥: {inj.name} 存在={inj.exists()}"
+          f"（加入 PYTHONPATH 后每个 vLLM 子进程启动即注册）")
+    print(f"    2. FlagGems 黑名单: VLLM_FL_FLAGOS_BLACKLIST=silu,silu_"
+          f"（防 flag_gems.enable 覆盖计数实现）")
+    print(f"    3. PER_OP 钉路径: silu_and_mul=reference"
+          f"（迫使模型走 F.silu -> aten::silu）\n")
 
     ok = test_a1.run(profile)
     assert ok

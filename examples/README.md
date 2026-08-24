@@ -12,6 +12,7 @@
 | [a2-framework](a2-framework/) | Triton silu_and_mul 以 vendor 身份注入真实推理 | `python3 examples/a2-framework/example.py` |
 | [b-kernel](b-kernel/) | **厂商 kernel 直测 + C++ JIT 编译闭环 + 哨兵检查** | `python3 examples/b-kernel/example.py` |
 | [b-op](b-op/) | 自定义 vendor backend 注册/选择/计数 | `python3 examples/b-op/example.py` |
+| **[b-fullstack](b-fullstack/)** ⭐ | **旗舰: 同一 C++ kernel 贯穿 L0→L2→L4**（JIT 编译→vendor 注册→真实推理） | `python3 examples/b-fullstack/example.py` |
 | [b-framework](b-framework/) | audit vendor 拦截真实 vLLM + 黄金回归 | `python3 examples/b-framework/example.py` |
 
 样例与正式测试（`run.py`）复用同一套基础设施（harness / golden / 设备 profile）；

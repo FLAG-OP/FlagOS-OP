@@ -19,8 +19,12 @@ def main() -> None:
     profile = load_profile(
         sys.argv[1] if len(sys.argv) > 1 else "p800-kunlunxin")
     print(f"[b-framework 样例] 设备: {profile.summary()}")
-    print("  注入: audit vendor + PER_OP 钉住（基线/插件同走 reference）")
-    print("  断言: 计数>0 / 前缀恒等(自适应) / 黄金共识回归\n")
+    print("  注入机制实配:")
+    pkg, func = profile.delegate_import()
+    print(f"    1. 插件: VLLM_FL_PLUGIN_MODULES=routes.b_vendor.backend.register_ops")
+    print(f"    2. PER_OP 钉选: silu_and_mul=vendor:audit|reference（基线/插件同钉 reference）")
+    print(f"    3. 委托: AUDIT_DELEGATE=reference; profile vendor_delegate={pkg}.{func}"
+          f"（本机厂商 kernel 有缺陷故用 reference 委托保证恒等）\n")
 
     ok = test_b.run(profile)
     assert ok
