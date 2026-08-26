@@ -52,3 +52,16 @@ python3 examples/a1-op/example.py <profile名>      # 切设备 profile
 kernel→op→framework，把各层样例的算子替换为同一个即可。
 gelu_and_mul 的贯穿实证见 `tests/kernel_level/test_consistency.py`
 与旗舰样例 [examples/b-fullstack](../b-fullstack/)。
+
+## 性能对比图
+
+```mermaid
+xychart-beta
+    title "gelu(tanh) 加速比 (8192^2 bf16, Triton 相对 CPU)"
+    x-axis ["CPU torch", "Triton kernel"]
+    y-axis "相对加速 (x, 对数刻度示意)" 0 --> 2400
+    bar [1, 2341]
+```
+
+> CPU 110ms vs Triton 0.047ms（同 shape 短采样）。数值跨度大，
+> 图为线性示意；精确数字以文本为准。

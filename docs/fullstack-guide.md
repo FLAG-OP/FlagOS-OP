@@ -7,6 +7,15 @@
 
 <a id="pipeline"></a>
 ## 流水线总览
+```mermaid
+flowchart LR
+    SRC["kernel 源码<br/>C++/Triton"] --> JIT["JIT 编译<br/>cpp_extension.load /<br/>triton 编译器"]
+    JIT --> L0["L0 kernel 直测<br/>精度 vs 参考<br/>哨兵检查<br/>性能短采样"]
+    L0 -->|注册| L2["L2 dispatch/aten<br/>impl 注册<br/>PER_OP 钉选"]
+    L2 -->|注入| L4["L4 真实推理<br/>调用计数<br/>输出比对<br/>黄金回归"]
+    L4 --> FIN["一致性 + 报告"]
+```
+
 
 ```
    你的 kernel（C++ / Triton / 厂商库）

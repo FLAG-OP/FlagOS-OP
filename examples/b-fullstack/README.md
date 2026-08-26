@@ -46,3 +46,17 @@ Stage 3/3  L4: 真实前向调用 2240 次 · 5/6 前2token一致 · 黄金匹�
 
 本样例的完整开发报告（按 `templates/op-development-report.md` 撰写，
 环境配置自动生成、验证数据来自实测）: [report.md](report.md)
+
+## 性能对比图
+
+```mermaid
+xychart-beta
+    title "silu_and_mul 耗时对比 (4096x8192 bf16, 越低越好, ms)"
+    x-axis ["Triton 融合", "C++ ATen 分解", "PyTorch 参考"]
+    y-axis "ms/call" 0 --> 0.8
+    bar [0.083, 0.271, 0.651]
+```
+
+> 测量条件: 健康态进程、短采样(100 次)、参考实现为 fp32 物化分解
+> （多中间张量，故偏慢）；C++ 版同为 ATen 分解故同量级。
+> Triton 单融合 kernel 结构性领先（详见[开发报告](report.md) 第 5 章）。

@@ -35,6 +35,19 @@ kernel 均在此层检出）。三条[实现路线](#routes) × 三个开发层�
 > 注: 本栈无公开的芯片 ISA/SDK 内联开发环境，L-K2 的"真厂商语言"形态
 > （C++ 设备函数内联）以 csrc 模板预留接口，未含自研示例。
 
+```mermaid
+flowchart TD
+    OP["自定义算子"] --> Q1{"aten 已有算子?"}
+    Q1 -->|是| A1["A1: Triton→aten<br/>torch.library 注册"]
+    Q1 -->|"否, vLLM 融合算子"| A2["A2: Triton→FlagOS dispatch"]
+    Q1 -->|"厂商专用 kernel"| B["B: vendor backend"]
+    A1 & A2 & B --> L0["L0 kernel 直测<br/>精度·哨兵·性能"]
+    L0 --> L2["L2 op 注册/分发<br/>策略钉选"]
+    L2 --> L4["L4 framework<br/>真实推理注入"]
+    L4 --> CONS["跨层一致性<br/>L0↔L2 张量级"]
+    CONS --> RPT["开发报告"]
+```
+
 <a id="routes"></a>
 ## 为什么是三条路线
 

@@ -43,3 +43,17 @@ dispatch: flagos→default.flagos / reference→reference.torch PASS
 kernel→op→framework，把各层样例的算子替换为同一个即可。
 gelu_and_mul 的贯穿实证见 `tests/kernel_level/test_consistency.py`
 与旗舰样例 [examples/b-fullstack](../b-fullstack/)。
+
+## 性能对比图
+
+```mermaid
+xychart-beta
+    title "gelu_and_mul 耗时 (8192^2 bf16, 越低越好, ms)"
+    x-axis ["Triton 融合", "PyTorch 分解参考"]
+    y-axis "ms" 0 --> 350
+    bar [0.052, 320.7]
+```
+
+> 6204x 来自融合收益: Triton 单 kernel 零中间物化；
+> 参考实现逐算子物化 fp32 中间张量（3 次全量读写）。
+> 注意 PyTorch 生产路径（厂商 kernel）远快于此参考值。

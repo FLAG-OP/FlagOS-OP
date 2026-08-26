@@ -17,19 +17,32 @@
 <a id="map"></a>
 ## 体系一图
 
-```
-                 FlagOS 算子开发模板库
-                        │
-      ┌─────────────────┼──────────────────┐
-      │                 │                  │
- 三条实现路线        三层验证            支撑设施
-      │                 │                  │
- ┌────┴───┐      ┌─────┼──────┐     ┌─────┴──────┐
- A1       A2      kernel  op   framework 设备profile 黄金输出/漂移实验
- aten  dispatch    直测   注册  真实推理 (芯片泛化)  报告模板/环境快照
- 路线    路线  B                 │
-              vendor             └ 全链路: examples/b-fullstack
-              路线                 (同一算子贯穿三层)
+```mermaid
+flowchart LR
+    subgraph DEV["开发层级（kernel 写在哪）"]
+        K1["L-K1 Triton DSL<br/>自研设备码"]
+        K2["L-K2 C++ extension<br/>工程链路"]
+        K3["L-K3 厂商预编译<br/>直测+哨兵"]
+    end
+    subgraph ROUTES["三条实现路线"]
+        A1["A1 → aten dispatcher"]
+        A2["A2 → FlagOS dispatch"]
+        B["B → vendor backend"]
+    end
+    subgraph TEST["三层验证"]
+        T1["kernel 直测"]
+        T2["op 注册/分发"]
+        T3["framework 真实推理"]
+    end
+    subgraph SUPPORT["支撑设施"]
+        S1["设备 profile<br/>芯片泛化"]
+        S2["黄金输出<br/>漂移实验"]
+        S3["报告模板<br/>环境快照"]
+    end
+    K1 --> A1 & A2
+    K2 & K3 --> B
+    A1 & A2 & B --> T1 --> T2 --> T3
+    SUPPORT -.-> ROUTES & TEST
 ```
 
 <a id="quick"></a>

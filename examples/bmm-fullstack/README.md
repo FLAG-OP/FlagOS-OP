@@ -52,3 +52,24 @@ with torch_device_fn.device(x.device):
 - `nn.MultiheadAttention` 的 fast-path（`_native_multi_head_attention`）
   在本栈有维度问题；标准路径可用但不如手写 mini-attention 直观
 - mini-attention 每次前向显式调 3 次 bmm，是干净的应用层消费者
+
+## 性能对比图
+
+```mermaid
+xychart-beta
+    title "BMM 耗时 (16x512^3 bf16, 越低越好, ms)"
+    x-axis ["Triton 分块", "原生 torch.bmm"]
+    y-axis "ms" 0 --> 0.06
+    bar [0.030, 0.048]
+```
+
+```mermaid
+xychart-beta
+    title "BMM 吞吐 (TFLOPS, 越高越好)"
+    x-axis ["Triton 分块", "原生 torch.bmm"]
+    y-axis "TFLOPS" 0 --> 160
+    bar [142, 89]
+```
+
+> 修复 [#12](../../docs/known-issues.md) 前的"0.19ms"是 no-op 假数据；
+> 真实测量下自研 Triton BMM 比原生快 1.59x（fp32 累加、64³ 分块）。

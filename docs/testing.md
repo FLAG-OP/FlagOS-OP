@@ -11,6 +11,14 @@
 
 <a id="levels"></a>
 ## 三层验证
+```mermaid
+flowchart TD
+    K["kernel 层<br/>精度·哨兵·性能"] -->|"注册<br/>(aten impl / OpImpl / vendor)"| O["op 层<br/>注册·分发·拦截"]
+    O -->|"注入<br/>(PLUGIN_MODULES / PER_OP / sitecustomize)"| F["framework 层<br/>真实推理·计数·比对"]
+    F --> G["黄金回归<br/>跨会话漂移检测"]
+    K -.->|"同算子同输入"| C["跨层一致性<br/>L0↔L2 张量级"]
+```
+
 
 | 层级 | 验证什么 | 形式 | 入口 |
 |---|---|---|---|

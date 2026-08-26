@@ -265,6 +265,14 @@ JIT 编译: 冷编译 14.2s，缓存后 0.3s。
 
 ---
 
+```mermaid
+xychart-beta
+    title "silu_and_mul 耗时对比 (ms, 越低越好)"
+    x-axis ["Triton", "C++ ATen", "PyTorch 参考"]
+    y-axis "ms" 0 --> 0.8
+    bar [0.083, 0.271, 0.651]
+```
+
 ## 6. 已知问题与风险
 
 | # | 问题 | 影响 | 缓解 | 状态 |

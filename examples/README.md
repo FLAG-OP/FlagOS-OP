@@ -18,3 +18,15 @@
 
 样例与正式测试（`run.py`）复用同一套基础设施（harness / golden / 设备 profile）；
 算子层样例完全自包含（不依赖 routes/），可直接复制为开发起点。
+
+## 性能速览（参考实例实测）
+
+| 算子 @ shape (bf16) | 最优实现 | 关键数字 | 详见 |
+|---|---|---|---|
+| silu_and_mul 4096×8192 | Triton 融合 | 0.083ms（C++ 0.271 / 参考 0.651） | [b-fullstack](b-fullstack/) |
+| BMM 16×512³ | Triton 分块 | 0.030ms / 142 TFLOPS（原生 1.59x） | [bmm-fullstack](bmm-fullstack/) |
+| gelu 8192² | Triton | 0.047ms（CPU 2341x） | [a1-op](a1-op/) |
+| gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | [a2-op](a2-op/) |
+
+> 所有数字: 健康态进程、短采样(≤100 次)。共享设备的进程内污染可致
+> 200x 级失真（[known-issues](../docs/known-issues.md) #10/#12），勿跨进程直接对比。
