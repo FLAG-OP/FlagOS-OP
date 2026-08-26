@@ -16,48 +16,22 @@
 附加维度: [`--consistency`](testing.md#consistency) 同算子 L0 直调 ↔ L2 dispatch 张量级一致矩阵。
 
 <a id="levels"></a>
-## 开发层级（kernel 写在哪一层）
+## 开发级别（kernel 用什么写）
 
-"自定义算子开发"按 kernel 本体的书写位置从高到低分三级——
-**框架层 → Triton 层 → 硬件语言层**，抽象度递减、可控性递增:
+三个级别按工具链抽象度从高到低排列:
 
-| 层级 | 物理栈位置 | 写什么 | 编译/执行路径 | 本库覆盖 |
+| 级别 | 写什么 | 编译/执行 | 本库覆盖 |
 |---|---|---|---|
-| **框架层 FW**<br/>模型框架层 | 框架层 | PyTorch/FlagOS 框架内代码: ATen 算子组合、Python 委托、C++ extension 调 ATen | 计算由框架派发到已注册 kernel（不接触设备码） | ✅ [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）、audit vendor、PyTorch 参考实现 |
-| **Triton 层 TR** | 编译层→算子库层 | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码；可移植 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
-| **硬件语言层 HW**<br/>NPU 定制语言层 | 算子库层 | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；csrc 模板预留自研接口 |
+| **torch 级** | PyTorch/FlagOS 框架内代码: ATen 算子组合、Python 委托、C++ extension 调 ATen | 计算由框架派发（不产生新设备码） | ✅ [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）、audit vendor |
+| **Triton 级** | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
+| **硬件级** | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；csrc 模板预留自研接口 |
 
 **要点**:
-- 三级与三条[实现路线](#routes)正交——路线管"接到哪"（aten/dispatch/vendor
-  backend），层级管"kernel 用什么写"。任意组合可行: 如 A1 路线 +
-  Triton 层（[bmm-fullstack](../examples/bmm-fullstack/)）、B 路线 +
-  框架层（[b-fullstack](../examples/b-fullstack/)）
-- 框架层开发的算子**不产生新设备码**，其价值在融合/粘合与工程接入
-- 本栈无公开芯片 ISA/SDK 内联环境，硬件语言层自研仅 csrc 模板预留；
-  已消费的厂商 kernel 中 3 个损坏（[known-issues](known-issues.md)）
-- 注意与[验证三级](#matrix)（kernel/op/framework）区分: 开发层级描述
-  **怎么写**，验证层级描述**在哪验**。为避免歧义，指验证层级时全库
-  统一写 "framework 验证层"（L4）而非裸用"框架层"一词
-
-```mermaid
-flowchart TB
-    APP["应用层<br/>vLLM · transformers"]
-    FW["框架层<br/>PyTorch + FlagOS 融合算子"]
-    COMP["编译层<br/>Triton → 芯片编译栈"]
-    OPS["算子库层<br/>FlagGems · 厂商 kernel"]
-    HW["硬件层"]
-
-    APP -->|"A1: aten 注册<br/>A2: dispatch 注册"| FW
-    FW -->|"TR kernel 编译"| COMP
-    COMP --> OPS
-    OPS -->|"B: 厂商算子注册<br/>HW: 厂商 kernel<br/>FW: ATen 组合"| HW
-
-    style APP fill:#e0e7ff
-    style FW fill:#dbeafe
-    style COMP fill:#dcfce7
-    style OPS fill:#ffedd5
-    style HW fill:#f3e8ff
-```
+- 开发级别与[实现路线](#routes)正交——路线管"怎么接入"，级别管"用什么写"
+- torch 级的算子**不产生新设备码**，价值在融合/粘合与工程接入
+- 本栈无公开芯片 ISA/SDK 内联环境，硬件级自研仅 csrc 模板预留
+- 已消费的厂商 kernel 中 3 个损坏（[known-issues](known-issues.md)）
+- 注意与物理栈"层"区分: 开发**级**描述用什么写，物理栈**层**是系统架构
 
 <a id="routes"></a>
 ## 为什么是三条路线
@@ -70,9 +44,9 @@ flowchart TB
 
 | 路线 | 适用算子宿主 | 机制 | 典型 kernel 层级 |
 |---|---|---|---|
-| A1 torch 算子替换 | torch aten 算子（add/gelu/silu…） | `torch.library.Library("aten","IMPL").impl()` 按 dispatch key 注册 | TR 或 FW |
-| A2 FlagOS 融合算子 | vLLM 融合算子（silu_and_mul/rms_norm…） | FlagOS 自研 OpManager / OpRegistry / policy | TR 或 FW |
-| B 厂商算子注册 | 以厂商身份提供的算子 | Backend 子类 + OpImpl VENDOR 注册 | FW 或 HW |
+| A1 torch 算子替换 | torch aten 算子（add/gelu/silu…） | `torch.library.Library("aten","IMPL").impl()` 按 dispatch key 注册 | Triton 或 torch |
+| A2 FlagOS 融合算子 | vLLM 融合算子（silu_and_mul/rms_norm…） | FlagOS 自研 OpManager / OpRegistry / policy | Triton 或 torch |
+| B 厂商算子注册 | 以厂商身份提供的算子 | Backend 子类 + OpImpl VENDOR 注册 | torch 或硬件 |
 
 FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kernel），
 自研的是"分发"与"可移植"。
@@ -82,10 +56,10 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 单格验证之外，[全链路指南](fullstack-guide.md) 演示同一算子贯穿三层，
 两个可运行范本:
 
-- [b-fullstack](../examples/b-fullstack/)（框架层 FW）: C++ kernel → vendor 注册 → 真实 vLLM
-- [bmm-fullstack](../examples/bmm-fullstack/)（Triton 层 TR）: Triton BMM → aten 拦截 → 应用层
-- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 层 TR）: 流式归约 + autotune
-- [backward-example](../examples/backward-example/)（Triton 层 TR）: autograd fwd+bwd
+- [b-fullstack](../examples/b-fullstack/)（torch 级）: C++ kernel → vendor 注册 → 真实 vLLM
+- [bmm-fullstack](../examples/bmm-fullstack/)（Triton 级）: Triton BMM → aten 拦截 → 应用层
+- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + autotune
+- [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
 
 全部 13 个样例在 3×3 矩阵中的位置与涵盖范围见
 [样例定位图](../examples/README.md#map)。

@@ -1,6 +1,6 @@
 # 路线 A1: torch 算子替换
 
-> 典型 kernel 层级: TR（Triton）/ FW（torch 算子组合）——路线只管接入，不限定层级。
+> 典型 kernel 层级: Triton（Triton）/ torch（torch 算子组合）——路线只管接入，不限定层级。
 
 [← 返回文档中心](index.md): Triton → torch torch 算子替换
 

@@ -3,10 +3,10 @@
 [← 返回文档中心](index.md)
 
 > 可运行范本（四条路线 × 两个层级）:
-> - [b-fullstack](../examples/b-fullstack/)（FW, C++ 调 ATen）: `python3 examples/b-fullstack/example.py`，约 3-4 分钟
-> - [bmm-fullstack](../examples/bmm-fullstack/)（TR, GEMM）: `python3 examples/bmm-fullstack/example.py`，约 10 秒
-> - [softmax-fullstack](../examples/softmax-fullstack/)（TR, reduction+autotune）: `python3 examples/softmax-fullstack/example.py`
-> - [backward-example](../examples/backward-example/)（TR, autograd）: `python3 examples/backward-example/example.py`
+> - [b-fullstack](../examples/b-fullstack/)（torch 级）: `python3 examples/b-fullstack/example.py`，约 3-4 分钟
+> - [bmm-fullstack](../examples/bmm-fullstack/)（Triton 级）: `python3 examples/bmm-fullstack/example.py`，约 10 秒
+> - [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: `python3 examples/softmax-fullstack/example.py`
+> - [backward-example](../examples/backward-example/)（Triton 级）: `python3 examples/backward-example/example.py`
 
 <a id="pipeline"></a>
 ## 流水线总览

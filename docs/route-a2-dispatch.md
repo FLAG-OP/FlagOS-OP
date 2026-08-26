@@ -1,6 +1,6 @@
 # 路线 A2: FlagOS 融合算子
 
-> 典型 kernel 层级: TR / FW——路线只管接入，不限定层级。
+> 典型开发级别: Triton / torch——路线管接入，级别管用什么写。
 
 [← 返回文档中心](index.md): Triton → FlagOS 融合算子
 

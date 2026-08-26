@@ -17,7 +17,7 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 - [ ] `example.py` 含 `main()` 入口 + 设备 profile 参数（不硬编码设备）
 - [ ] README 含: 定位 / 运行方式 / 预期输出 / 关键点
 - [ ] 若含新 kernel: 确认启动包了 `torch_device_fn.device` 上下文（[known-issues #11](docs/known-issues.md)）
-- [ ] 标注[开发层级](docs/architecture.md#levels)（TR/FW/HW）
+- [ ] 标注[开发层级](docs/architecture.md#levels)（Triton 级/torch 级/硬件级）
 - [ ] 更新 `examples/README.md` 索引表与定位图
 
 ### 新增设备 profile
