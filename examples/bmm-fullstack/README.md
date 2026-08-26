@@ -46,7 +46,7 @@ with torch_device_fn.device(x.device):
     my_kernel[grid](...)
 ```
 
-## 为什么 L4 用 mini-attention 而非 vLLM/nn.MultiheadAttention
+## 为什么应用层用 mini-attention 而非 vLLM/nn.MultiheadAttention
 
 - vLLM 注意力走自定义 attention backend，不经 `torch.bmm`
 - `nn.MultiheadAttention` 的 fast-path（`_native_multi_head_attention`）
