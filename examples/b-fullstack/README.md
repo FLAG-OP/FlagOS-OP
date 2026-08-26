@@ -13,7 +13,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| `example.py` | 三阶段编排（L0/L2/L4） |
+| `example.py` | 三阶段编排（算子库层→框架层→应用层） |
 | `fullstack_plugin.py` | dispatch 插件: C++ kernel 注册为 `vendor:my-cpp`（带 pid 分片计数） |
 
 ## 运行（约 3-4 分钟，含 2 次真实 vLLM 推理）

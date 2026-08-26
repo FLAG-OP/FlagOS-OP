@@ -76,7 +76,7 @@ flowchart LR
 
 ### 第 4 步: 跨层一致性与收尾
 
-- `run.py --consistency`: 同输入张量在 L0 直调 / 框架层 dispatch /
+- `run.py --consistency`: 同输入张量在 算子库层直调 / 框架层 dispatch /
   参考实现处两两比对（张量级，容差 bf16=1e-2）
 - `scripts/gen_report_scaffold.py` 生成[开发报告](reporting.md)骨架
 - `scripts/report.py` 输出全矩阵汇总
@@ -88,8 +88,8 @@ A1/A2 路线的全链路与之同构，差异仅在:
 | 环节 | C++（B） | Triton（A1/A2） |
 |---|---|---|
 | kernel 编写 | csrc + pybind11 | `@pointwise_dynamic + @triton.jit` |
-| L2 注册 | 厂商算子注册 + OpImpl(VENDOR) | A1: aten `Library.impl()`；A2: dispatch 插件双后端 |
-| L4 注入 | PLUGIN_MODULES + PER_OP | A1 额外需 [sitecustomize 跨进程桥](route-a1-aten.md) + FlagGems 黑名单 |
+| 框架层: 注册 | 厂商算子注册 + OpImpl(VENDOR) | A1: aten `Library.impl()`；A2: dispatch 插件双后端 |
+| 应用层: 注入 | PLUGIN_MODULES + PER_OP | A1 额外需 [sitecustomize 跨进程桥](route-a1-aten.md) + FlagGems 黑名单 |
 
 Triton 全链路的完整可运行范本见
 [examples/bmm-fullstack](../examples/bmm-fullstack/)（aten 路线三阶段）；
