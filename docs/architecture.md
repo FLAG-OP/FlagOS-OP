@@ -9,9 +9,9 @@
 
 | | kernel 层（[直测](testing.md#kernel-level)） | op 层（注册/分发/拦截） | framework 层（真实推理） |
 |---|---|---|---|
-| **A1** [Triton→aten](route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
-| **A2** [Triton→dispatch](route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
-| **B** [厂商语言→vendor](route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 编译闭环](route-b-vendor.md#csrc) + [哨兵检查](testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
+| **A1** [aten dispatcher 路线](route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
+| **A2** [FlagOS dispatch 路线](route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
+| **B** [vendor backend 路线](route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 编译闭环](route-b-vendor.md#csrc) + [哨兵检查](testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
 
 附加维度: [`--consistency`](testing.md#consistency) 同算子 L0 直调 ↔ L2 dispatch 张量级一致矩阵。
 
@@ -42,9 +42,9 @@
 ```mermaid
 flowchart TD
     OP["自定义算子"] --> Q1{"aten 已有算子?"}
-    Q1 -->|是| A1["A1: Triton→aten<br/>torch.library 注册"]
-    Q1 -->|"否, vLLM 融合算子"| A2["A2: Triton→FlagOS dispatch"]
-    Q1 -->|"厂商专用 kernel"| B["B: vendor backend"]
+    Q1 -->|是| A1["A1: aten dispatcher<br/>torch.library 注册"]
+    Q1 -->|"否, vLLM 融合算子"| A2["A2: FlagOS dispatch"]
+    Q1 -->|"厂商专用 kernel"| B["B: vendor backend<br/>(可承载 FW/HW kernel)"]
     A1 & A2 & B --> L0["L0 kernel 直测<br/>精度·哨兵·性能"]
     L0 --> L2["L2 op 注册/分发<br/>策略钉选"]
     L2 --> L4["L4 framework<br/>真实推理注入"]
@@ -55,13 +55,13 @@ flowchart TD
 <a id="routes"></a>
 ## 为什么是三条路线
 
-FlagOS 的算子替换发生在**两个层次**，加上芯片层共三条路线:
+路线 = **替换/接入机制**（接到哪），由目标算子的宿主决定，与开发层级正交:
 
-| 层次 | 算子类型 | 机制 |
-|---|---|---|
-| torch 层 | aten 算子（add/gelu/silu…） | `torch.library.Library("aten","IMPL").impl()` 按 dispatch key 注册 |
-| vLLM 层 | 融合算子（silu_and_mul/rms_norm…） | FlagOS 自研 OpManager / OpRegistry / policy |
-| 芯片层 | 厂商 C++/SDK kernel | vendor backend（Backend 子类 + OpImpl VENDOR 注册） |
+| 路线 | 适用算子宿主 | 机制 | 典型 kernel 层级 |
+|---|---|---|---|
+| A1 aten dispatcher | torch aten 算子（add/gelu/silu…） | `torch.library.Library("aten","IMPL").impl()` 按 dispatch key 注册 | TR 或 FW |
+| A2 FlagOS dispatch | vLLM 融合算子（silu_and_mul/rms_norm…） | FlagOS 自研 OpManager / OpRegistry / policy | TR 或 FW |
+| B vendor backend | 以厂商身份提供的算子 | Backend 子类 + OpImpl VENDOR 注册 | FW 或 HW |
 
 FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kernel），
 自研的是"分发"与"可移植"。
@@ -84,9 +84,9 @@ flagos-op-templates/
 ├── docs/                     本文档
 ├── common/                   设备抽象 / [kernel spec](route-b-vendor.md#kernelspec) / 输入模板 / 参考实现
 ├── routes/                   三条路线正式实现
-│   ├── a1_aten/              Triton → torch dispatcher
+│   ├── a1_aten/              aten dispatcher 路线
 │   ├── a2_dispatch/          Triton → FlagOS dispatch 插件
-│   └── b_vendor/             厂商语言 → vendor backend（csrc + audit）
+│   └── b_vendor/             vendor backend 路线（csrc + audit）
 ├── examples/                 9 个矩阵格样例 + [b-fullstack 旗舰](fullstack-guide.md)
 ├── tests/
 │   ├── kernel_level/         [kernel 直测层](testing.md#kernel-level) + [一致性](testing.md#consistency)

@@ -1,4 +1,6 @@
-# 路线 A2
+# 路线 A2: FlagOS dispatch 路线
+
+> 典型 kernel 层级: TR / FW——路线只管接入，不限定层级。
 
 [← 返回文档中心](index.md): Triton → FlagOS dispatch
 

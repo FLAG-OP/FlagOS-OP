@@ -65,9 +65,9 @@ python3 run.py --list
 
 | | [kernel 层](docs/testing.md#kernel-level) | op 层 | framework 层 |
 |---|---|---|---|
-| **A1** [Triton→aten](docs/route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
-| **A2** [Triton→dispatch](docs/route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
-| **B** [厂商语言→vendor](docs/route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 闭环](docs/route-b-vendor.md#csrc) + [哨兵检查](docs/testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
+| **A1** [aten dispatcher 路线](docs/route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
+| **A2** [FlagOS dispatch 路线](docs/route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
+| **B** [vendor backend 路线](docs/route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 闭环](docs/route-b-vendor.md#csrc) + [哨兵检查](docs/testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
 
 另有 [`--consistency`](docs/testing.md#consistency) 同算子 L0↔L2 一致矩阵；
 **全链路开发**（单一算子贯穿三层）见[全链路指南](docs/fullstack-guide.md) ⭐。

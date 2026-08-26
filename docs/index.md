@@ -6,9 +6,9 @@
 1. [快速开始](getting-started.md) — 5 分钟跑通第一格
 2. [体系结构](architecture.md) — 层次图 · 3×3 矩阵 · 目录导航
 3. 路线详解
-   - [路线 A1: Triton → aten](route-a1-aten.md)
-   - [路线 A2: Triton → dispatch](route-a2-dispatch.md)
-   - [路线 B: 厂商语言 → vendor](route-b-vendor.md)
+   - [路线 A1: aten dispatcher](route-a1-aten.md)
+   - [路线 A2: FlagOS dispatch](route-a2-dispatch.md)
+   - [路线 B: vendor backend](route-b-vendor.md)
 4. [测试体系](testing.md) — kernel/op/framework 三层 · 黄金 · 漂移 · 一致性
 5. [全链路开发指南](fullstack-guide.md) ⭐ — 一个算子从源码到真实推理
 6. [设备接入](device-profiles.md) — 芯片泛化 · 新芯片 3 步接入

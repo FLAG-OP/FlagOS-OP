@@ -1,4 +1,6 @@
-# 路线 B
+# 路线 B: vendor backend 路线
+
+> 典型 kernel 层级: FW（C++ 调 ATen，如 b-fullstack）/ HW（厂商 kernel）——路线只管接入，不限定层级。
 
 [← 返回文档中心](index.md): 厂商语言 → vendor backend
 

@@ -6,7 +6,7 @@
 |---|---|---|
 | [a1-kernel](a1-kernel/) | Triton gelu 直测（精度+哨兵+性能） | **TR** |
 | [a1-op](a1-op/) | 从零写 Triton relu → aten 注册 → 拦截/精度/性能 | **TR** |
-| [a1-framework](a1-framework/) | aten::silu 恒等计数注入真实 vLLM 前向 | **TR** |
+| [a1-framework](a1-framework/) | aten::silu 恒等计数注入真实 vLLM 前向 | **FW**（恒等计数·torch 组合） |
 | [a2-kernel](a2-kernel/) | Triton gelu_and_mul 直测 | **TR** |
 | [a2-op](a2-op/) | Triton gelu_and_mul → dispatch 双后端 → 三段式 | **TR** |
 | [a2-framework](a2-framework/) | Triton silu_and_mul 以 vendor 身份注入真实推理 | **TR** |
