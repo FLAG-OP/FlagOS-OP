@@ -31,7 +31,7 @@
 
 ## quirks 说明
 
-- `keep_default_prefer: true` — 禁止覆盖 `VLLM_FL_PREFER`
+- `keep_default_prefer: true` — 保持 `VLLM_FL_PREFER` 继承值（避免覆盖）
   （参考实例 P800: 环境默认非法值恰好让算子回落 vendor kernel，是保护路径）
 - `require_two_visible_devices: true` — 单卡路径有厂商 reshape_and_cache
   通道异常史，固定 TP=2

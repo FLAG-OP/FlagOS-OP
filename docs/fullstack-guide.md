@@ -62,7 +62,7 @@ flowchart LR
 3. 验证钉选: `with_preference("vendor") + with_allowed_vendors("my-cpp")`
    或 `VLLM_FL_PER_OP="op=vendor:my-cpp|reference"`
 
-> 入口函数必须是 `register` / `vllm_fl_register`（[文档与代码差异](known-issues.md)）。
+> 入口函数名为 `register` / `vllm_fl_register`（[文档与代码差异](known-issues.md)）。
 
 ### 第 3 步: 注入真实推理（L4）
 
@@ -98,7 +98,7 @@ Triton 全链路的完整可运行范本见
 
 ## 常见坑（全链路视角）
 
-1. vLLM v1 前向在**子进程**——主进程注册不传播（A1 必须 sitecustomize）
+1. vLLM v1 前向在**子进程**——主进程注册不传播（A1 需通过 sitecustomize 注入，见[路线 A1](route-a1-aten.md)）
 2. 自研 kernel 与[黄金](testing.md#golden)路径不同时，输出会混沌分叉
    （随机权重放大数值微差）——不是 bug，用一致率断言
 3. 性能基准长循环触发分配器池增长（0.04ms→16ms 失真）

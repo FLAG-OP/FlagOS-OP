@@ -89,7 +89,7 @@ framework:
   seed: 20260823
   model_path: /workspace/random-llm-models/llama-3.1-8b-like
   quirks:
-    keep_default_prefer: true        # 禁止覆盖 VLLM_FL_PREFER（容器默认非法值是保护路径）
+    keep_default_prefer: true        # 保持继承值不覆盖（容器默认值是保护路径）
     require_two_visible_devices: true # 单卡路径曾出现厂商 reshape_and_cache 通道异常
 
 vendor_delegate:
@@ -257,7 +257,7 @@ JIT 编译: 冷编译 14.2s，缓存后 0.3s。
 结构性地快 3–8x，是性能上限参照。
 
 > 测量警示: 本共享设备上同进程串跑多实现后，C++ 路径观测过
-> 200x 劣化（设备状态污染，换进程即恢复）——基准务必独立进程
+> 200x 劣化（设备状态污染，换进程即恢复）——基准在独立进程中运行（避免设备状态污染）
 > 短采样（见 known-issues 分配器陷阱与设备分化条目）。
 
 > 基准: shape (4096, 8192) bf16，短采样 100 次 + synchronize
@@ -278,7 +278,7 @@ xychart-beta
 | # | 问题 | 影响 | 缓解 | 状态 |
 |---|---|---|---|---|
 | 1 | 本机厂商栈多个 kernel 损坏（swiglu/silu 不写输出、gelu_tanh_and_mul@XPU2 输出 inf） | 无——本实现不依赖厂商现成 kernel | 哨兵检查持续守护 | 已记录 known-issues |
-| 2 | 自定义数值实现输出与 reference 路径混沌分叉 | 报告/比对不能用全量一致断言 | 前 2 token 一致率标准 | 已缓解 |
+| 2 | 自定义数值实现输出与 reference 路径混沌分叉 | 报告/比对采用前 2 token 一致率（非全量一致断言） | 前 2 token 一致率标准 | 已缓解 |
 | 3 | embedding 静默越界（tokenizer>词表） | 框架测试输入非法 | tokenize+词表钳制 | 已缓解 |
 
 ---

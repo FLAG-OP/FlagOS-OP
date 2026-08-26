@@ -14,11 +14,11 @@
 
 ## 数值正确性类
 
-### 1. 不要设 VLLM_FL_PREFER=flagos（该栈）
+### 1. VLLM_FL_PREFER 设为 flagos 会触发 rms_norm 失败（该栈）
 FlagGems 的 rms_norm Triton dispatch 实现在真实 vLLM 前向中会失败。
 容器默认值（非法值 `flagos|vendor`）恰好让所有算子回落
-vendor backend——是生产可用路径。测试自定义算子只用
-`VLLM_FL_PER_OP` 精确钉住。
+vendor backend——是生产可用路径。测试自定义算子可用
+`VLLM_FL_PER_OP` 精确钉住目标算子（避免全局改动）。
 
 ### 2. 厂商 kernel 不写输出: xtorch_ops.swiglu（严重）
 独立 eager 调用下完全不写输出张量（哨兵测试: torch.full 预填后
@@ -53,7 +53,7 @@ TP=1 曾触发厂商 reshape_and_cache 通道级异常，设备 profile 固定 T
 
 ### 8. 插件入口函数名不一致
 dispatch 文档写 `register_builtins`，代码实际查找
-`register` / `vllm_fl_register`——外挂插件必须用后者。
+`register` / `vllm_fl_register`——外挂插件入口函数名需与代码查找一致。
 
 ### 9. vLLM v1 前向在子进程
 主进程 torch.library 注册不传播到 EngineCore/Worker 子进程。
@@ -62,7 +62,7 @@ aten 路线框架级需 sitecustomize 注入桥（本库已内置）。
 ### 10. 性能基准的分配器陷阱
 逐次新分配大输出的长循环基准（如 500 次 × 128MB）触发分配器
 池增长，均值被抬高一两个数量级（实测同 kernel 0.047ms vs 16ms）。
-基准一律用短采样（≤100 次）。
+基准统一采用短采样（≤100 次），以避免分配器池增长导致均值失真。
 
 ### 11. ⚠️ 裸 Triton 启动缺 device 上下文 → 静默 no-op（严重）
 裸 `@triton.jit` kernel 启动若不包
