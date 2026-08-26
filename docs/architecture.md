@@ -76,7 +76,7 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 - [softmax-fullstack](../examples/softmax-fullstack/)（Triton 层 TR）: 流式归约 + autotune
 - [backward-example](../examples/backward-example/)（Triton 层 TR）: autograd fwd+bwd
 
-全部 14 个样例在 3×3 矩阵中的位置与涵盖范围见
+全部 13 个样例在 3×3 矩阵中的位置与涵盖范围见
 [样例定位图](../examples/README.md#map)。
 
 <a id="tree"></a>
