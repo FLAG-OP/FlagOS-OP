@@ -87,6 +87,8 @@ python3 run.py --list
 | 接入新芯片 | [设备接入](docs/device-profiles.md#onboard) |
 | 写开发报告 | [报告指南](docs/reporting.md) |
 | 排查问题 | [已知问题](docs/known-issues.md#method) |
+| 贡献代码 | [CONTRIBUTING](CONTRIBUTING.md) |
+| 查看版本变更 | [CHANGELOG](CHANGELOG.md) |
 | 可运行样例 | [examples/](examples/README.md)（9 格 + 2 全链路，标注[开发层级](docs/architecture.md#levels)） |
 
 <a id="tree"></a>
