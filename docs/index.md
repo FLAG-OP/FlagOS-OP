@@ -41,7 +41,7 @@
 | 开发 torch 算子替换 | [路线 A1](route-a1-aten.md) |
 | 开发 vLLM 融合算子 | [路线 A2](route-a2-dispatch.md) |
 | 接入厂商 C++ kernel | [路线 B](route-b-vendor.md) |
-| 完整走一遍开发到上线 | [全链路指南](fullstack-guide.md) |
+| 完整走一遍开发到上线 | [全链路指南](fullstack-guide.md)（4 个范本） |
 | 理解每层验证断什么 | [测试体系](testing.md) |
 | 接入新芯片 | [设备接入](device-profiles.md#onboard) |
 | 写开发报告 | [报告指南](reporting.md) |

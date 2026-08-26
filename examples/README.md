@@ -31,19 +31,25 @@ flowchart TB
         BF["b-framework"]:::fw
     end
 
-    BMM["bmm-fullstack ⭐<br/>A1 路线 · TR"]:::fs
-    BFS["b-fullstack ⭐<br/>B 路线 · FW"]:::fs
+    BMM["bmm-fullstack ⭐<br/>A1 · TR · GEMM"]:::fs
+    BFS["b-fullstack ⭐<br/>B · FW · fused"]:::fs
+    SMX["softmax-fullstack ⭐<br/>A1 · TR · reduction"]:::fs
+    BWD["backward-example<br/>A2 · TR · autograd"]:::fs
 
-    BMM -. "贯穿 L0→L2→L4" .-> A1K
-    BFS -. "贯穿 L0→L2→L4" .-> BK
+    BMM -. "L0→L2→L4" .-> A1K
+    BFS -. "L0→L2→L4" .-> BK
+    SMX -. "L0→L2→L4" .-> A1K
+    BWD -. "fwd+bwd" .-> A2K
 ```
 
 **读图方式**:
 - 每行 = 一个验证层级（L0/L2/L4），行内左→右 = A1 / A2 / B 三条路线
 - 节点配色 = [开发层级](../docs/architecture.md#levels):
   🔵 **TR**（Triton 层，自研设备码）· 🟢 **FW**（框架层）· 🟠 **HW**（硬件语言层）
-- ⭐ 全链路样例以虚线标注贯穿范围（bmm-fullstack 覆盖 A1 列三层，
-  b-fullstack 覆盖 B 列三层）
+- ⭐ 全链路/专项样例以虚线标注覆盖范围（bmm/b-fullstack/softmax 各覆盖
+  对应列三层；backward-example 覆盖 A2 列的 fwd+bwd）
+- 全链路/专项: bmm-fullstack(GEMM) / b-fullstack(fused) /
+  softmax-fullstack(reduction+autotune) / backward-example(autograd)
 - b-kernel 同时含 HW（厂商 kernel 直测）与 FW（csrc JIT 编译闭环）
 
 
@@ -78,6 +84,8 @@ kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为�
 | [bmm-fullstack](bmm-fullstack/) |
 | gelu 8192² | Triton | 0.047ms（CPU 2341x） | [a1-op](a1-op/) |
 | gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | [a2-op](a2-op/) |
+| softmax 1024² | Triton 流式归约 | 见样例输出 | [softmax-fullstack](softmax-fullstack/) |
+| gelu_and_mul bwd | Triton autograd | dx_err=1.7e-06 | [backward-example](backward-example/) |
 
 > 所有数字: 健康态进程、短采样(≤100 次)。共享设备的进程内污染可致
 > 200x 级失真（[known-issues](../docs/known-issues.md) #10/#11），勿跨进程直接对比。

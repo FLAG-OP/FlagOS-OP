@@ -89,7 +89,7 @@ python3 run.py --list
 | 排查问题 | [已知问题](docs/known-issues.md#method) |
 | 贡献代码 | [CONTRIBUTING](CONTRIBUTING.md) |
 | 查看版本变更 | [CHANGELOG](CHANGELOG.md) |
-| 可运行样例 | [examples/](examples/README.md)（9 格 + 2 全链路，标注[开发层级](docs/architecture.md#levels)） |
+| 可运行样例 | [examples/](examples/README.md)（9 格 + 4 全链路/专项，标注[开发层级](docs/architecture.md#levels)） |
 
 <a id="tree"></a>
 ## 目录结构
@@ -101,7 +101,7 @@ flagos-op-templates/
 ├── docs/                     中文文档（含全链路指南/报告指南）
 ├── common/                   设备抽象 / KernelSpec / 输入模板 / 参考实现
 ├── routes/                   三条路线正式实现（a1_aten / a2_dispatch / b_vendor）
-├── examples/                 9 个矩阵格样例 + 2 个全链路样例
+├── examples/                 9 矩阵格 + 4 全链路/专项样例
 ├── tests/                    kernel_level / op_level / framework_level
 ├── injection/                A1 框架级 sitecustomize 跨进程注入桥
 ├── inputs/                   声明式输入模板（spec.yaml）
