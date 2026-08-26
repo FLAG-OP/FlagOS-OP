@@ -3,7 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 算子名称 | `<op_name>` |
-| 实现路线 | A1 aten / A2 dispatch / B vendor（勾选） |
+| 实现路线 | A1 aten dispatcher / A2 FlagOS dispatch / B vendor backend（勾选） |
+| 开发层级 | 框架层 FW / Triton 层 TR / 硬件语言层 HW（[定义](https://github.com/TruNcat3/FlagOS-OP/blob/main/docs/architecture.md#levels)） |
 | 目标设备 | `<device profile 名>` |
 | 开发者 | `<姓名>` |
 | 日期 | `<YYYY-MM-DD>` |
@@ -110,13 +111,13 @@ def reference(x, ...):
 > 9 格矩阵中与本算子相关的格子 + 跨层一致性 + 黄金回归。
 > `gen_report_scaffold.py` 自动填状态与耗时，详细数据手填。
 
-| 层级 | 状态 | 耗时 | 关键结论 `[手填]` |
-|---|---|---|---|
-| kernel 直测 | `<自动: PASS/FAIL>` | `<自动>` | <精度 N/N、哨兵、性能 GB/s> |
-| op 注册/分发 | `<自动>` | `<自动>` | <注册数、策略切换> |
-| framework 真实推理 | `<自动>` | `<自动>` | <调用次数、输出比对> |
-| 跨层一致性 L0↔L2 | `<自动>` | `<自动>` | <一致矩阵摘要> |
-| 黄金回归 | `<自动>` | — | <prefix 匹配> |
+| 物理栈层 | 验证层级 | 状态 | 耗时 | 关键结论 `[手填]` |
+|---|---|---|---|---|
+| 算子库层 | kernel 直测 | `<自动>` | `<自动>` | <精度 N/N、哨兵、性能> |
+| 框架层 | op 注册/分发 | `<自动>` | `<自动>` | <注册数、策略切换> |
+| 应用层 | framework 真实推理 | `<自动>` | `<自动>` | <调用次数、输出比对> |
+| 跨层 | 算子库层↔框架层一致性 | `<自动>` | `<自动>` | <一致矩阵摘要> |
+| — | 黄金回归 | `<自动>` | — | <prefix 匹配> |
 
 ### 4.1 kernel 层明细
 
@@ -140,7 +141,7 @@ def reference(x, ...):
 | PyTorch 参考 | | | 1x |
 | 厂商原实现（若有） | | | |
 
-> 基准方法: 短采样（≤100 次）+ synchronize；避免分配器池增长失真。
+> 基准方法: 短采样（≤100 次）+ synchronize（[分配器陷阱](https://github.com/TruNcat3/FlagOS-OP/blob/main/docs/known-issues.md#10-性能基准的分配器陷阱)）。
 
 ---
 
@@ -169,10 +170,10 @@ def reference(x, ...):
 ## 附录 A: 复现命令
 
 ```bash
-python3 run.py --route <X> --level kernel --device <profile>
-python3 run.py --route <X> --level op --device <profile>
-python3 run.py --route <X> --level framework --device <profile>
-python3 run.py --consistency --device <profile>
+python3 run.py --route <X> --level kernel --device <profile>   # 算子库层
+python3 run.py --route <X> --level op --device <profile>       # 框架层
+python3 run.py --route <X> --level framework --device <profile> # 应用层
+python3 run.py --consistency --device <profile>                # 算子库层↔框架层
 ```
 
 ## 附录 B: 相关产物

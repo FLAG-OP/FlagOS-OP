@@ -108,12 +108,12 @@ def main() -> None:
 
 ## 4. 验证结果
 
-| 层级 | 状态 | 耗时 | 关键结论 `[手填]` |
-|---|---|---|---|
-| kernel 直测 | {_fmt_cell(cells['kernel'])} |
-| op 注册/分发 | {_fmt_cell(cells['op'])} |
-| framework 真实推理 | {_fmt_cell(cells['framework'])} |
-| 跨层一致性 L0↔L2 | {_consistency_status(args.device)} |
+| 物理栈层 | 验证层级 | 状态 | 耗时 | 关键结论 |
+|---|---|---|---|---|
+| 算子库层 | kernel 直测 | {_fmt_cell(cells['kernel'])} |
+| 框架层 | op 注册/分发 | {_fmt_cell(cells['op'])} |
+| 应用层 | framework 真实推理 | {_fmt_cell(cells['framework'])} |
+| 跨层 | 算子库层↔框架层一致性 | {_consistency_status(args.device)} |
 | 黄金回归 | {_golden_status(args.device)} |
 
 ### 4.1 kernel 层明细 `[手填]`
