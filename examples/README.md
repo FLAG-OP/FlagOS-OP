@@ -10,14 +10,16 @@
 | [a2-kernel](a2-kernel/) | Triton gelu_and_mul 直测 | **TR** |
 | [a2-op](a2-op/) | Triton gelu_and_mul → dispatch 双后端 → 三段式 | **TR** |
 | [a2-framework](a2-framework/) | Triton silu_and_mul 以 vendor 身份注入真实推理 | **TR** |
-| [b-kernel](b-kernel/) | **厂商 kernel 直测 + C++ JIT 编译闭环 + 哨兵检查** | `python3 examples/b-kernel/example.py` |
+| [b-kernel](b-kernel/) | **厂商 kernel 直测 + C++ JIT 编译闭环 + 哨兵检查** | **HW + FW** |
 | [b-op](b-op/) | 自定义 vendor backend 注册/选择/计数 | FW（委托） |
 | [bmm-fullstack](bmm-fullstack/) | torch.bmm 贯穿 L0→L2→应用层（含 [#11](../docs/known-issues.md) 根因发现） | **TR** |
 | **[b-fullstack](b-fullstack/)** ⭐ | **旗舰: 同一 C++ kernel 贯穿 L0→L2→L4**（JIT 编译→vendor 注册→真实推理，附[开发报告](b-fullstack/report.md)） | **FW** |
 | [b-framework](b-framework/) | audit vendor 拦截真实 vLLM + 黄金回归 | FW（委托） |
 
+运行方式统一: `python3 examples/<样例名>/example.py [设备profile名]`。
+
 样例与正式测试（`run.py`）复用同一套基础设施（harness / golden / 设备 profile）；
-算子层样例完全自包含（不依赖 routes/），可直接复制为开发起点。
+kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为开发起点。
 
 ## 性能速览（参考实例实测）
 
@@ -29,4 +31,4 @@
 | gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | [a2-op](a2-op/) |
 
 > 所有数字: 健康态进程、短采样(≤100 次)。共享设备的进程内污染可致
-> 200x 级失真（[known-issues](../docs/known-issues.md) #10/#12），勿跨进程直接对比。
+> 200x 级失真（[known-issues](../docs/known-issues.md) #10/#11），勿跨进程直接对比。

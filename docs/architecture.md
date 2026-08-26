@@ -36,7 +36,8 @@
 - 本栈无公开芯片 ISA/SDK 内联环境，硬件语言层自研仅 csrc 模板预留；
   已消费的厂商 kernel 中 3 个损坏（[known-issues](known-issues.md)）
 - 注意与[验证三级](#matrix)（kernel/op/framework）区分: 开发层级描述
-  **怎么写**，验证层级描述**在哪验**
+  **怎么写**，验证层级描述**在哪验**。为避免歧义，指验证层级时全库
+  统一写 "framework 验证层"（L4）而非裸用"框架层"一词
 
 ```mermaid
 flowchart TD

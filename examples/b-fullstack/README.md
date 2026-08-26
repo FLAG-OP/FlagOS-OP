@@ -7,7 +7,7 @@
 
 - L0 kernel 层: 写 C++ 源码 → JIT 编译 → 直测（精度 6/6 · 哨兵 · 性能）
 - L2 op 层: 注册 `vendor:my-cpp` → dispatch 精确钉选
-- L4 框架层: 注入真实 vLLM（前向调用计数 · 输出比对 · 黄金回归）
+- L4 framework 验证层: 注入真实 vLLM（前向调用计数 · 输出比对 · 黄金回归）
 
 ## 文件
 
