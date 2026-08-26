@@ -1,8 +1,8 @@
-# 路线 B: vendor backend 路线
+# 路线 B: 厂商算子接入
 
 > 典型 kernel 层级: FW（C++ 调 ATen，如 b-fullstack）/ HW（厂商 kernel）——路线只管接入，不限定层级。
 
-[← 返回文档中心](index.md): 厂商语言 → vendor backend
+[← 返回文档中心](index.md): 厂商语言 → 厂商算子接入
 
 ## 适用场景
 
@@ -17,7 +17,7 @@
 从[设备 profile](device-profiles.md#fields) 的 `vendor_kernels` 段加载。
 配套 `sentinel_check()` 见[测试体系](testing.md#sentinel)。
 
-## vendor backend 三要素
+## 厂商算子接入 三要素
 
 ```python
 class MyVendorBackend(Backend):

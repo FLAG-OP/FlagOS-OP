@@ -2,7 +2,7 @@
 
 ## 目标
 
-从零写一个 Triton 算子（relu），通过 **torch aten dispatcher** 接管
+从零写一个 Triton 算子（relu），通过 **torch torch 算子替换** 接管
 `torch.relu`——任何框架代码（vLLM/transformers/自研脚本）调用
 `torch.relu` 都自动走你的 kernel，无需改业务代码。
 

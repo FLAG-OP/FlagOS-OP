@@ -2,7 +2,7 @@
 
 ## 目标
 
-开发 vLLM 融合算子（非 aten 算子），通过 **FlagOS dispatch**
+开发 vLLM 融合算子（非 aten 算子），通过 **FlagOS 融合算子**
 注册双后端并完成算子层三段式测试。
 
 ## 三步流程

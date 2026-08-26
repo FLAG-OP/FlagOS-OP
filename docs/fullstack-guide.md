@@ -27,7 +27,7 @@ flowchart LR
 ┌─ L0 kernel 层 ─────────────────────────────┐
 │  直测: 精度 vs PyTorch 参考 · 哨兵 · 性能   │  run.py --level kernel
 └──────────────┬─────────────────────────────┘
-               │  注册（aten impl / OpImpl / vendor backend）
+               │  注册（aten impl / OpImpl / 厂商算子接入）
                ▼
 ┌─ L2 op 层 ────────────────────────────────┐
 │  注册 · 策略钉选（PER_OP）· fallback       │  run.py --level op
@@ -56,7 +56,7 @@ flowchart LR
 
 ### 第 2 步: 注册进 dispatch（L2）
 
-1. 写 vendor backend（继承 `Backend`，`vendor` 属性 + `is_available` + 算子方法），
+1. 写 厂商算子接入（继承 `Backend`，`vendor` 属性 + `is_available` + 算子方法），
    参考 [fullstack_plugin.py](../examples/b-fullstack/fullstack_plugin.py)
 2. 注册 `OpImpl(kind=VENDOR, vendor="my-cpp", priority=100)`
 3. 验证钉选: `with_preference("vendor") + with_allowed_vendors("my-cpp")`
@@ -88,7 +88,7 @@ A1/A2 路线的全链路与之同构，差异仅在:
 | 环节 | C++（B） | Triton（A1/A2） |
 |---|---|---|
 | kernel 编写 | csrc + pybind11 | `@pointwise_dynamic + @triton.jit` |
-| L2 注册 | vendor backend + OpImpl(VENDOR) | A1: aten `Library.impl()`；A2: dispatch 插件双后端 |
+| L2 注册 | 厂商算子接入 + OpImpl(VENDOR) | A1: aten `Library.impl()`；A2: dispatch 插件双后端 |
 | L4 注入 | PLUGIN_MODULES + PER_OP | A1 额外需 [sitecustomize 跨进程桥](route-a1-aten.md) + FlagGems 黑名单 |
 
 Triton 全链路的完整可运行范本见

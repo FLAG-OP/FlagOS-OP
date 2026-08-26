@@ -1,4 +1,4 @@
-# 路线 A2: Triton 算子 → FlagOS dispatch 插件
+# 路线 A2: Triton 算子 → FlagOS 融合算子 插件
 
 ## 适用场景
 
