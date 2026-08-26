@@ -5,7 +5,7 @@
 <a id="matrix"></a>
 ## 3×3 验证矩阵
 
-**三条实现路线 × 三层验证层级**，每格独立可跑（`run.py --route X --level Y`）:
+**三条实现路线 × 三层验证层级**（对应[物理栈](../README.md#map)各层），每格独立可跑（`run.py --route X --level Y`）:
 
 | | kernel 层（[直测](testing.md#kernel-level)） | op 层（注册/分发/拦截） | framework 层（真实推理） |
 |---|---|---|---|
@@ -40,16 +40,23 @@
   统一写 "framework 验证层"（L4）而非裸用"框架层"一词
 
 ```mermaid
-flowchart TD
-    OP["自定义算子"] --> Q1{"aten 已有算子?"}
-    Q1 -->|是| A1["A1: aten dispatcher<br/>torch.library 注册"]
-    Q1 -->|"否, vLLM 融合算子"| A2["A2: FlagOS dispatch"]
-    Q1 -->|"厂商专用 kernel"| B["B: vendor backend<br/>(可承载 FW/HW kernel)"]
-    A1 & A2 & B --> L0["L0 kernel 直测<br/>精度·哨兵·性能"]
-    L0 --> L2["L2 op 注册/分发<br/>策略钉选"]
-    L2 --> L4["L4 framework<br/>真实推理注入"]
-    L4 --> CONS["跨层一致性<br/>L0↔L2 张量级"]
-    CONS --> RPT["开发报告"]
+flowchart TB
+    APP["应用层<br/>vLLM · transformers"]
+    FW["框架层<br/>PyTorch + FlagOS dispatch"]
+    COMP["编译层<br/>Triton → 芯片编译栈"]
+    OPS["算子库层<br/>FlagGems · 厂商 kernel"]
+    HW["硬件层"]
+
+    APP -->|"A1: aten 注册<br/>A2: dispatch 注册"| FW
+    FW -->|"TR kernel 编译"| COMP
+    COMP --> OPS
+    OPS -->|"B: vendor backend<br/>HW: 厂商 kernel<br/>FW: ATen 组合"| HW
+
+    style APP fill:#e0e7ff
+    style FW fill:#dbeafe
+    style COMP fill:#dcfce7
+    style OPS fill:#ffedd5
+    style HW fill:#f3e8ff
 ```
 
 <a id="routes"></a>

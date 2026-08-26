@@ -17,33 +17,31 @@ FlagOS 自定义算子开发与验证模板：三条实现路线 × 三层验证
 ## 体系一图
 
 ```mermaid
-flowchart LR
-    subgraph DEV["开发层级（kernel 写在哪）"]
-        K1["Triton 层 TR<br/>自研设备码"]
-        K2["框架层 FW<br/>ATen 组合/委托"]
-        K3["硬件语言层 HW<br/>厂商 kernel"]
-    end
-    subgraph ROUTES["三条实现路线"]
-        A1["A1 → aten dispatcher"]
-        A2["A2 → FlagOS dispatch"]
-        B["B → vendor backend"]
-    end
-    subgraph TEST["三层验证"]
-        T1["kernel 直测"]
-        T2["op 注册/分发"]
-        T3["framework 真实推理"]
-    end
-    subgraph SUPPORT["支撑设施"]
-        S1["设备 profile"]
-        S2["黄金输出<br/>漂移实验"]
-        S3["报告模板<br/>环境快照"]
-    end
-    K1 --> A1 & A2
-    K2 --> A1 & A2 & B
-    K3 --> B
-    A1 & A2 & B --> T1 --> T2 --> T3
-    SUPPORT -.-> ROUTES & TEST
+flowchart TB
+    APP["应用层<br/>vLLM · transformers · 自研代码"]
+    FW["框架层 — PyTorch + FlagOS dispatch"]
+    COMP["编译层 — Triton → 芯片编译栈"]
+    OP["算子库层 — FlagGems · 厂商 kernel (.so)"]
+    HW["硬件层 — XPU · GPU · NPU"]
+
+    APP --> FW --> COMP --> OP --> HW
+
+    style APP fill:#e0e7ff
+    style FW fill:#dbeafe
+    style COMP fill:#dcfce7
+    style OP fill:#ffedd5
+    style HW fill:#f3e8ff
 ```
+
+本库的概念映射到上述物理栈:
+
+| 物理层 | 本库在此做的事 |
+|---|---|
+| **应用层** | [L4 framework 验证](docs/testing.md#framework)（真实推理注入·调用计数·输出比对·黄金回归） |
+| **框架层** | [L2 op 验证](docs/testing.md#levels)（注册·分发·拦截）；A1 = aten dispatcher 注册，A2 = FlagOS dispatch 注册 |
+| **编译层** | [TR 开发层级](docs/architecture.md#levels)——Triton DSL 经此编译到设备码 |
+| **算子库层** | [L0 kernel 验证](docs/testing.md#kernel-level)（直测·[哨兵](docs/testing.md#sentinel)·性能）；[FW](docs/architecture.md#levels) = ATen 组合/C++ extension，[HW](docs/architecture.md#levels) = 厂商 kernel 直测；B = vendor backend 注册 |
+| **硬件层** | [设备 profile](docs/device-profiles.md) 接入不同芯片 |
 
 <a id="quick"></a>
 ## 快速开始
