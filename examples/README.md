@@ -7,34 +7,34 @@
 
 ```mermaid
 flowchart TB
-    classDef tr fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
-    classDef fw fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef hw fill:#ffedd5,stroke:#ea580c,color:#7c2d12
+    classDef tr_level fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef torch_level fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef hw_level fill:#ffedd5,stroke:#ea580c,color:#7c2d12
     classDef fs fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12
 
     subgraph L0["算子库层 · kernel 直测"]
         direction LR
-        A1K["a1-kernel"]:::tr
-        A2K["a2-kernel"]:::tr
-        BK["b-kernel<br/>硬件+torch"]:::hw
+        A1K["a1-kernel"]:::tr_level
+        A2K["a2-kernel"]:::tr_level
+        BK["b-kernel<br/>硬件+torch"]:::hw_level
     end
     subgraph L2["框架层 · op 注册/分发"]
         direction LR
-        A1O["a1-op"]:::tr
-        A2O["a2-op"]:::tr
-        BO["b-op"]:::fw
+        A1O["a1-op"]:::tr_level
+        A2O["a2-op"]:::tr_level
+        BO["b-op"]:::torch_level
     end
     subgraph L4["应用层 · framework"]
         direction LR
-        A1F["a1-framework"]:::fw
-        A2F["a2-framework"]:::tr
-        BF["b-framework"]:::fw
+        A1F["a1-framework"]:::torch_level
+        A2F["a2-framework"]:::tr_level
+        BF["b-framework"]:::torch_level
     end
 
-    BMM["bmm-fullstack ⭐<br/>A1 · TR · GEMM"]:::fs
-    BFS["b-fullstack ⭐<br/>B · FW · fused"]:::fs
-    SMX["softmax-fullstack ⭐<br/>A1 · TR · reduction"]:::fs
-    BWD["backward-example<br/>A2 · TR · autograd"]:::fs
+    BMM["bmm-fullstack ⭐<br/>A1 · Triton 级 · GEMM"]:::fs
+    BFS["b-fullstack ⭐<br/>B · torch 级 · fused"]:::fs
+    SMX["softmax-fullstack ⭐<br/>A1 · Triton 级 · reduction"]:::fs
+    BWD["backward-example<br/>A2 · Triton 级 · autograd"]:::fs
 
     BMM -. "算子库层→框架层→应用层" .-> A1K
     BFS -. "算子库层→框架层→应用层" .-> BK

@@ -22,9 +22,9 @@
     ↓
   框架层    PyTorch + FlagOS 融合算子     ← op 验证（框架层） · A1/A2 路线
     ↓
-  编译层    Triton → 芯片编译栈           ← TR 开发层级
+  编译层    Triton → 芯片编译栈           ← Triton 级
     ↓
-  算子库层  FlagGems · 厂商 kernel        ← kernel 验证（算子库层） · B 路线 · FW/HW
+  算子库层  FlagGems · 厂商 kernel        ← kernel 验证（算子库层） · B 路线 · torch 级/硬件级
     ↓
   硬件层    XPU · GPU · NPU              ← 设备 profile
 ```

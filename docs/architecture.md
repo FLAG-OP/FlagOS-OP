@@ -38,11 +38,29 @@
 
 路线 = **替换/接入机制**（接到哪），由目标算子的宿主决定，与开发层级正交:
 
-> 术语: **aten** = A Tensor Library，PyTorch 的 C++ 算子分发库。
->  内部走  → 按 dispatch key 路由到具体实现。
-> 本库用  注册自定义实现。
+```mermaid
+flowchart TB
+    APP["应用层<br/>vLLM · transformers"]
+    FRAME["框架层<br/>PyTorch + FlagOS 融合算子"]
+    COMP["编译层<br/>Triton → 芯片编译栈"]
+    OPS["算子库层<br/>FlagGems · 厂商 kernel"]
+    CHIP["硬件层"]
+    APP -->|"A1: torch 算子替换<br/>A2: FlagOS 融合算子"| FRAME
+    FRAME -->|"Triton 级 kernel 编译"| COMP
+    COMP --> OPS
+    OPS -->|"B: 厂商算子注册<br/>硬件级: 厂商 kernel<br/>torch 级: ATen 组合"| CHIP
+    style APP fill:#e0e7ff
+    style FRAME fill:#dbeafe
+    style COMP fill:#dcfce7
+    style OPS fill:#ffedd5
+    style CHIP fill:#f3e8ff
+```
 
-| 路线 | 适用算子宿主 | 机制 | 典型 kernel 层级 |
+> 术语: **aten** = A Tensor Library，PyTorch 的 C++ 算子分发库。
+> `torch.add()` 内部走 `aten::add` → 按 dispatch key 路由到具体实现。
+> 本库用 `torch.library.Library("aten","IMPL")` 注册自定义实现。
+
+| 路线 | 适用算子宿主 | 机制 | 典型开发级别 |
 |---|---|---|---|
 | A1 torch 算子替换 | torch aten 算子（add/gelu/silu…） | `torch.library.Library("aten","IMPL").impl()` 按 dispatch key 注册 | Triton 或 torch |
 | A2 FlagOS 融合算子 | vLLM 融合算子（silu_and_mul/rms_norm…） | FlagOS 自研 OpManager / OpRegistry / policy | Triton 或 torch |
@@ -54,10 +72,12 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 ## 全链路视角
 
 单格验证之外，[全链路指南](fullstack-guide.md) 演示同一算子贯穿三层，
-两个可运行范本:
+四个可运行范本:
 
 - [b-fullstack](../examples/b-fullstack/)（torch 级）: C++ kernel → vendor 注册 → 真实 vLLM
 - [bmm-fullstack](../examples/bmm-fullstack/)（Triton 级）: Triton BMM → aten 拦截 → 应用层
+- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + autotune
+- [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
 - [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + autotune
 - [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
 
