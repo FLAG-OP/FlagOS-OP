@@ -79,7 +79,7 @@ def main() -> None:
     ap.add_argument("--all", action="store_true",
                     help="跑全部 9 格矩阵 + 跨层一致性")
     ap.add_argument("--consistency", action="store_true",
-                    help="仅跑 L0<->L2 跨层一致性验证")
+                    help="仅跑 算子库层<->框架层 跨层一致性验证")
     ap.add_argument("--list", action="store_true", help="列出 profile 与矩阵")
     args = ap.parse_args()
 

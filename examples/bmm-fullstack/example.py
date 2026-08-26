@@ -3,9 +3,9 @@
 
 BMM 是 aten 算子（区别于 silu_and_mul 的 dispatch 算子），天然走
 A1 风格三层:
-  L0 kernel:  Triton 分块 BMM 直测（精度/哨兵/性能 vs torch.bmm）
-  L2 aten:    Library("aten","IMPL").impl("bmm",...) → torch.bmm 拦截
-  L4 应用层:  nn.MultiheadAttention 前向（内部保证调用 bmm）
+  kernel 层:  Triton 分块 BMM 直测（精度/哨兵/性能 vs torch.bmm）
+  框架层 aten:    Library("aten","IMPL").impl("bmm",...) → torch.bmm 拦截
+  应用层:  nn.MultiheadAttention 前向（内部保证调用 bmm）
               基线/插件输出张量级数值比对 + 调用计数
 
 运行: python3 examples/bmm-fullstack/example.py [设备profile名]
@@ -106,7 +106,7 @@ def _bench(fn, iters=100, warm=20):
 
 def stage_l0(dev: str) -> bool:
     print("-" * 60)
-    print("Stage 1/3  L0 kernel: Triton 分块 BMM 直测")
+    print("Stage 1/3  kernel 层: Triton 分块 BMM 直测")
     print("-" * 60)
 
     for (B_, M, K, N) in [(8, 256, 256, 256), (4, 128, 512, 64),
@@ -142,7 +142,7 @@ def stage_l0(dev: str) -> bool:
 def stage_l2(dev: str, dispatch_key: str) -> bool:
     print()
     print("-" * 60)
-    print("Stage 2/3  L2 aten: torch.bmm 拦截")
+    print("Stage 2/3  框架层 aten: torch.bmm 拦截")
     print("-" * 60)
     register_bmm(dispatch_key)
 
@@ -168,7 +168,7 @@ def stage_l2(dev: str, dispatch_key: str) -> bool:
 def stage_l4(dev: str) -> bool:
     print()
     print("-" * 60)
-    print("Stage 3/3  L4 应用层: mini-attention 前向（显式 torch.bmm）")
+    print("Stage 3/3  应用层: mini-attention 前向（显式 torch.bmm）")
     print("-" * 60)
     # 手写单头 mini-attention: scores=bmm(q,k^T) -> softmax -> out=bmm(p,v)
     # （nn.MultiheadAttention 的 fast-path 在本栈有维度问题，故手写显式路径）
@@ -213,7 +213,7 @@ def main() -> None:
     profile = load_profile(sys.argv[1] if len(sys.argv) > 1 else "p800-kunlunxin")
     dev = profile.torch_device
     print("=" * 60)
-    print(f"BMM-fullstack 样例: torch.bmm 贯穿 L0→L2→应用层")
+    print(f"BMM-fullstack 样例: torch.bmm 贯穿 算子库层→框架层→应用层")
     print(f"设备: {profile.summary()}")
     print("=" * 60)
 

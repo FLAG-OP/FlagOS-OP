@@ -36,9 +36,9 @@ flowchart TB
     SMX["softmax-fullstack ⭐<br/>A1 · TR · reduction"]:::fs
     BWD["backward-example<br/>A2 · TR · autograd"]:::fs
 
-    BMM -. "L0→L2→L4" .-> A1K
-    BFS -. "L0→L2→L4" .-> BK
-    SMX -. "L0→L2→L4" .-> A1K
+    BMM -. "算子库层→框架层→应用层" .-> A1K
+    BFS -. "算子库层→框架层→应用层" .-> BK
+    SMX -. "算子库层→框架层→应用层" .-> A1K
     BWD -. "fwd+bwd" .-> A2K
 ```
 
@@ -65,8 +65,8 @@ flowchart TB
 | [b-op](b-op/) | 自定义 厂商算子注册 注册/选择/计数 | torch（委托） |
 | [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **Triton** |
 | [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **Triton** |
-| [bmm-fullstack](bmm-fullstack/) | torch.bmm 贯穿 L0→L2→应用层（含 [#11](../docs/known-issues.md) 根因发现） | **Triton** |
-| **[b-fullstack](b-fullstack/)** ⭐ | **旗舰: 同一 C++ kernel 贯穿 L0→L2→L4**（JIT 编译→vendor 注册→真实推理，附[开发报告](b-fullstack/report.md)） | **torch** |
+| [bmm-fullstack](bmm-fullstack/) | torch.bmm 贯穿 算子库层→框架层→应用层（含 [#11](../docs/known-issues.md) 根因发现） | **Triton** |
+| **[b-fullstack](b-fullstack/)** ⭐ | **旗舰: 同一 C++ kernel 贯穿 算子库层→框架层→应用层**（JIT 编译→vendor 注册→真实推理，附[开发报告](b-fullstack/report.md)） | **torch** |
 | [b-framework](b-framework/) | audit vendor 拦截真实 vLLM + 黄金回归 | torch（委托） |
 
 运行方式统一: `python3 examples/<样例名>/example.py [设备profile名]`。

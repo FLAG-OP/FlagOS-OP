@@ -24,12 +24,12 @@ flowchart LR
    你的 kernel（C++ / Triton / 厂商库）
         │  JIT 编译（cpp_extension.load）或 pointwise_dynamic
         ▼
-┌─ L0 kernel 层 ─────────────────────────────┐
+┌─ kernel 层 层 ─────────────────────────────┐
 │  直测: 精度 vs PyTorch 参考 · 哨兵 · 性能   │  run.py --level kernel
 └──────────────┬─────────────────────────────┘
                │  注册（aten impl / OpImpl / 厂商算子注册）
                ▼
-┌─ L2 op 层 ────────────────────────────────┐
+┌─ op 层 层 ────────────────────────────────┐
 │  注册 · 策略钉选（PER_OP）· fallback       │  run.py --level op
 └──────────────┬─────────────────────────────┘
                │  注入（sitecustomize / PLUGIN_MODULES）
@@ -42,7 +42,7 @@ flowchart LR
 
 ## 分步指引（以厂商语言 C++ 为例）
 
-### 第 1 步: 写 kernel 并直测（L0）
+### 第 1 步: 写 kernel 并直测（算子库层）
 
 1. 参考 [routes/b_vendor/csrc/vendor_kernel.cpp](../routes/b_vendor/csrc/vendor_kernel.cpp)
    写 C++ kernel（pybind11 绑定）
@@ -54,7 +54,7 @@ flowchart LR
      （能抓出"不写输出"类厂商 bug——参考 case 中 3 个坏 kernel 全被它检出）
    - 性能短采样（≤100 次，避免[分配器陷阱](known-issues.md)）
 
-### 第 2 步: 注册进 dispatch（L2）
+### 第 2 步: 注册进 dispatch（框架层）
 
 1. 写 厂商算子注册（继承 `Backend`，`vendor` 属性 + `is_available` + 算子方法），
    参考 [fullstack_plugin.py](../examples/b-fullstack/fullstack_plugin.py)
@@ -64,7 +64,7 @@ flowchart LR
 
 > 入口函数名为 `register` / `vllm_fl_register`（[文档与代码差异](known-issues.md)）。
 
-### 第 3 步: 注入真实推理（L4）
+### 第 3 步: 注入真实推理（应用层）
 
 1. `VLLM_FL_PLUGIN_MODULES=<你的插件>` 让每个 vLLM 子进程自动发现
 2. `VLLM_FL_PER_OP` 钉住目标算子，其余算子保持默认
@@ -76,7 +76,7 @@ flowchart LR
 
 ### 第 4 步: 跨层一致性与收尾
 
-- `run.py --consistency`: 同输入张量在 L0 直调 / L2 dispatch /
+- `run.py --consistency`: 同输入张量在 L0 直调 / 框架层 dispatch /
   参考实现处两两比对（张量级，容差 bf16=1e-2）
 - `scripts/gen_report_scaffold.py` 生成[开发报告](reporting.md)骨架
 - `scripts/report.py` 输出全矩阵汇总

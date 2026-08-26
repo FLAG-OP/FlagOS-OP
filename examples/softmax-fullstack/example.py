@@ -98,7 +98,7 @@ def _bench(fn, iters=100, warm=20):
 
 def stage_l0(dev: str) -> bool:
     print("-" * 60)
-    print("Stage 1/3  L0 kernel: Triton fused softmax (reduction + autotune)")
+    print("Stage 1/3  kernel 层: Triton fused softmax (reduction + autotune)")
     print("-" * 60)
     for shape in [(128, 512), (256, 1024), (64, 2048), (1, 4096), (512, 256)]:
         for dt in (torch.bfloat16, torch.float16, torch.float32):
@@ -124,7 +124,7 @@ def stage_l0(dev: str) -> bool:
 def stage_l2(dev: str, dispatch_key: str) -> bool:
     print()
     print("-" * 60)
-    print("Stage 2/3  L2 aten: F.softmax 拦截")
+    print("Stage 2/3  框架层 aten: F.softmax 拦截")
     print("-" * 60)
     register_softmax(dispatch_key)
     x = torch.randn(128, 512, dtype=torch.bfloat16, device=dev)
@@ -142,7 +142,7 @@ def stage_l2(dev: str, dispatch_key: str) -> bool:
 def stage_l4(dev: str) -> bool:
     print()
     print("-" * 60)
-    print("Stage 3/3  L4 应用层: attention scores softmax")
+    print("Stage 3/3  应用层: attention scores softmax")
     print("-" * 60)
     torch.manual_seed(42)
     B, H, T, D = 1, 4, 64, 64

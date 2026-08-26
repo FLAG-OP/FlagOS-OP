@@ -13,7 +13,7 @@
 | **A2** [FlagOS 融合算子](route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
 | **B** [厂商算子注册](route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 编译闭环](route-b-vendor.md#csrc) + [哨兵检查](testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
 
-附加维度: [`--consistency`](testing.md#consistency) 同算子 L0 直调 ↔ L2 dispatch 张量级一致矩阵。
+附加维度: [`--consistency`](testing.md#consistency) 同算子 L0 直调 ↔ 框架层 dispatch 张量级一致矩阵。
 
 <a id="levels"></a>
 ## 开发级别（kernel 用什么写）

@@ -5,8 +5,8 @@
 回答一个完整问题: **"一个厂商语言 kernel 从源码到真实推理，如何逐步验证？"**
 以 `silu_and_mul`（C++ 实现）为锚定算子，一条故事线走完:
 
-- L0 kernel 层: 写 C++ 源码 → JIT 编译 → 直测（精度 6/6 · 哨兵 · 性能）
-- L2 op 层: 注册 `vendor:my-cpp` → dispatch 精确钉选
+- kernel 层 层: 写 C++ 源码 → JIT 编译 → 直测（精度 6/6 · 哨兵 · 性能）
+- op 层 层: 注册 `vendor:my-cpp` → dispatch 精确钉选
 - framework 验证层: 注入真实 vLLM（前向调用计数 · 输出比对 · 黄金回归）
 
 ## 文件
@@ -25,9 +25,9 @@ python3 examples/b-fullstack/example.py
 ## 实测输出要点
 
 ```
-Stage 1/3  L0: JIT 编译完成 -> 精度 6/6 PASS · 哨兵 OK · 性能 0.44ms
-Stage 2/3  L2: vendor.my-cpp 注册并被精确钉选
-Stage 3/3  L4: 真实前向调用 2240 次 · 5/6 前2token一致 · 黄金匹配
+Stage 1/3  算子库层: JIT 编译完成 -> 精度 6/6 PASS · 哨兵 OK · 性能 0.44ms
+Stage 2/3  框架层: vendor.my-cpp 注册并被精确钉选
+Stage 3/3  应用层: 真实前向调用 2240 次 · 5/6 前2token一致 · 黄金匹配
 ```
 
 ## 关键设计

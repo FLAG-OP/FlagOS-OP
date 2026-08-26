@@ -8,9 +8,9 @@
 [b-fullstack](../b-fullstack/)（dispatch 算子 + C++）互补:
 
 ```
-L0 kernel:  Triton 分块 BMM（tl.dot, fp32 累加）直测
-L2 aten:    Library("aten","IMPL").impl("bmm",...) → torch.bmm 拦截
-L4 应用层:  mini-attention 前向（显式 3 次 bmm/步）
+kernel 层:  Triton 分块 BMM（tl.dot, fp32 累加）直测
+框架层 aten:    Library("aten","IMPL").impl("bmm",...) → torch.bmm 拦截
+应用层:  mini-attention 前向（显式 3 次 bmm/步）
 ```
 
 ## 运行

@@ -12,10 +12,10 @@
 
 ## 三层
 
-- **L0 kernel**: 流式三遍归约 softmax（max → exp+sum → normalize），
+- **kernel 层**: 流式三遍归约 softmax（max → exp+sum → normalize），
   支持 N > BLOCK_N；精度 15/15 + 哨兵 + 性能
-- **L2 aten**: `Library("aten","IMPL").impl("_softmax",...)` 拦截 F.softmax
-- **L4 应用层**: attention scores softmax（手写 mini-attention）
+- **框架层 aten**: `Library("aten","IMPL").impl("_softmax",...)` 拦截 F.softmax
+- **应用层**: attention scores softmax（手写 mini-attention）
 
 ## 运行
 

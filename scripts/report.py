@@ -68,7 +68,7 @@ def main() -> None:
         "- kernel 层: 硬件语言/Triton kernel 直测（精度+哨兵+性能）",
         "- op 层: 注册/分发/拦截验证",
         "- framework 层: 真实 vLLM 推理注入验证",
-        "- consistency: 同算子 L0 直调 vs L2 dispatch 张量级一致",
+        "- consistency: 同算子 L0 直调 vs 框架层 dispatch 张量级一致",
     ]
 
     text = "\n".join(lines)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """样例 B-fullstack: 单一算子（silu_and_mul）贯穿三层——旗舰样例。
 
-  L0 kernel 层: 写 C++ kernel → JIT 编译 → 直测（精度/哨兵/性能）
-  L2 op 层:     注册 vendor:my-cpp → PER_OP 钉选 → call_op 验证
-  L4 框架层:    注入真实 vLLM → 前向调用计数 + 输出比对 + 黄金回归
+  kernel 层 层: 写 C++ kernel → JIT 编译 → 直测（精度/哨兵/性能）
+  op 层 层:     注册 vendor:my-cpp → PER_OP 钉选 → call_op 验证
+  framework 验证:    注入真实 vLLM → 前向调用计数 + 输出比对 + 黄金回归
 
 运行: python3 examples/b-fullstack/example.py [设备profile名]（约 3-4 分钟）
 """
@@ -22,13 +22,13 @@ sys.path.insert(0, str(ROOT))
 
 
 def stage_l0_kernel(profile) -> bool:
-    """L0: JIT 编译 + 直测。"""
+    """算子库层: JIT 编译 + 直测。"""
     import torch
     import torch.nn.functional as F
 
     dev = profile.torch_device
     print("-" * 60)
-    print("Stage 1/3  L0 kernel: C++ 源码 → JIT 编译 → 直测")
+    print("Stage 1/3  kernel 层: C++ 源码 → JIT 编译 → 直测")
     print("-" * 60)
 
     sys.path.insert(0, str(HERE))
@@ -73,13 +73,13 @@ def stage_l0_kernel(profile) -> bool:
 
 
 def stage_l2_dispatch(profile) -> bool:
-    """L2: 注册 vendor:my-cpp + PER_OP 语义验证（进程内 with_allowed_vendors）。"""
+    """框架层: 注册 vendor:my-cpp + PER_OP 语义验证（进程内 with_allowed_vendors）。"""
     import torch
 
     dev = profile.torch_device
     print()
     print("-" * 60)
-    print("Stage 2/3  L2 op: vendor:my-cpp 注册 → dispatch 选择")
+    print("Stage 2/3  op 层: vendor:my-cpp 注册 → dispatch 选择")
     print("-" * 60)
 
     os.environ["VLLM_FL_PLUGIN_MODULES"] = "fullstack_plugin"
@@ -107,10 +107,10 @@ def stage_l2_dispatch(profile) -> bool:
 
 
 def stage_l4_framework(profile) -> bool:
-    """L4: 注入真实 vLLM（基线/插件双跑 + 计数 + 输出比对 + 黄金）。"""
+    """应用层: 注入真实 vLLM（基线/插件双跑 + 计数 + 输出比对 + 黄金）。"""
     print()
     print("-" * 60)
-    print("Stage 3/3  L4 framework: 真实 vLLM 前向注入")
+    print("Stage 3/3  framework 验证: 真实 vLLM 前向注入")
     print("-" * 60)
 
     from tests.framework_level._harness import compare_outputs, check_golden
@@ -175,7 +175,7 @@ def main() -> None:
 
     profile = load_profile(sys.argv[1] if len(sys.argv) > 1 else "p800-kunlunxin")
     print("=" * 60)
-    print(f"B-fullstack 样例: silu_and_mul 贯穿 L0→L2→L4")
+    print(f"B-fullstack 样例: silu_and_mul 贯穿 算子库层→框架层→应用层")
     print(f"设备: {profile.summary()}")
     print("=" * 60)
 
