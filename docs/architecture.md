@@ -74,6 +74,9 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 - [b-fullstack](../examples/b-fullstack/)（框架层 FW）: C++ kernel → vendor 注册 → 真实 vLLM
 - [bmm-fullstack](../examples/bmm-fullstack/)（Triton 层 TR）: Triton BMM → aten 拦截 → 应用层
 
+全部 11 个样例在 3×3 矩阵中的位置与涵盖范围见
+[样例定位图](../examples/README.md#map)。
+
 <a id="tree"></a>
 ## 目录结构
 
