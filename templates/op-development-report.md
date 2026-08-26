@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 算子名称 | `<op_name>` |
-| 实现路线 | A1 torch 算子替换 / A2 FlagOS 融合算子 / B 厂商算子接入（勾选） |
+| 实现路线 | A1 torch 算子替换 / A2 FlagOS 融合算子 / B 厂商算子注册（勾选） |
 | 开发层级 | 框架层 FW / Triton 层 TR / 硬件语言层 HW（[定义](https://github.com/TruNcat3/FlagOS-OP/blob/main/docs/architecture.md#levels)） |
 | 目标设备 | `<device profile 名>` |
 | 开发者 | `<姓名>` |

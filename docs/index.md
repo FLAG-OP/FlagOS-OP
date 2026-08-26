@@ -8,7 +8,7 @@
 3. 路线详解
    - [路线 A1: torch 算子替换](route-a1-aten.md)
    - [路线 A2: FlagOS 融合算子](route-a2-dispatch.md)
-   - [路线 B: 厂商算子接入](route-b-vendor.md)
+   - [路线 B: 厂商算子注册](route-b-vendor.md)
 4. [测试体系](testing.md) — kernel/op/framework 三层 · 黄金 · 漂移 · 一致性
 5. [全链路开发指南](fullstack-guide.md) ⭐ — 一个算子从源码到真实推理
 6. [设备接入](device-profiles.md) — 新芯片接入
@@ -55,5 +55,5 @@
 | [黄金输出](testing.md#golden) | 多快照共识回归锚点 | 测试体系 |
 | [跨层一致性](testing.md#consistency) | 同算子 L0↔L2 张量级比对 | 测试体系 |
 | PER_OP | 按算子钉选后端的策略 | [路线 A2](route-a2-dispatch.md) |
-| 厂商算子接入 | 厂商 kernel 的 Python 接入层 | [路线 B](route-b-vendor.md) |
+| 厂商算子注册 | 厂商 kernel 的 Python 接入层 | [路线 B](route-b-vendor.md) |
 | 开发层级 | kernel 写在哪一层: 框架层 FW / Triton 层 TR / 硬件语言层 HW | [体系结构](architecture.md#levels) |

@@ -17,12 +17,12 @@
 ### 1. VLLM_FL_PREFER 设为 flagos 会触发 rms_norm 失败（该栈）
 FlagGems 的 rms_norm Triton dispatch 实现在真实 vLLM 前向中会失败。
 容器默认值（非法值 `flagos|vendor`）恰好让所有算子回落
-厂商算子接入——是生产可用路径。测试自定义算子可用
+厂商算子注册——是生产可用路径。测试自定义算子可用
 `VLLM_FL_PER_OP` 精确钉住目标算子（避免全局改动）。
 
 ### 2. 厂商 kernel 不写输出: xtorch_ops.swiglu（严重）
 独立 eager 调用下完全不写输出张量（哨兵测试: torch.full 预填后
-调用，全部元素保持原值；返回 int 0）。厂商算子接入 的
+调用，全部元素保持原值；返回 int 0）。厂商算子注册 的
 silu_and_mul 在此栈上不可靠——生产 vLLM 表面正常疑似依赖 allocator
 复用旧激活内存。建议向芯片厂商反馈。
 

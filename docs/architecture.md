@@ -11,7 +11,7 @@
 |---|---|---|---|
 | **A1** [torch 算子替换](route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
 | **A2** [FlagOS 融合算子](route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
-| **B** [厂商算子接入](route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 编译闭环](route-b-vendor.md#csrc) + [哨兵检查](testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
+| **B** [厂商算子注册](route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 编译闭环](route-b-vendor.md#csrc) + [哨兵检查](testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
 
 附加维度: [`--consistency`](testing.md#consistency) 同算子 L0 直调 ↔ L2 dispatch 张量级一致矩阵。
 
@@ -50,7 +50,7 @@ flowchart TB
     APP -->|"A1: aten 注册<br/>A2: dispatch 注册"| FW
     FW -->|"TR kernel 编译"| COMP
     COMP --> OPS
-    OPS -->|"B: 厂商算子接入<br/>HW: 厂商 kernel<br/>FW: ATen 组合"| HW
+    OPS -->|"B: 厂商算子注册<br/>HW: 厂商 kernel<br/>FW: ATen 组合"| HW
 
     style APP fill:#e0e7ff
     style FW fill:#dbeafe
@@ -72,7 +72,7 @@ flowchart TB
 |---|---|---|---|
 | A1 torch 算子替换 | torch aten 算子（add/gelu/silu…） | `torch.library.Library("aten","IMPL").impl()` 按 dispatch key 注册 | TR 或 FW |
 | A2 FlagOS 融合算子 | vLLM 融合算子（silu_and_mul/rms_norm…） | FlagOS 自研 OpManager / OpRegistry / policy | TR 或 FW |
-| B 厂商算子接入 | 以厂商身份提供的算子 | Backend 子类 + OpImpl VENDOR 注册 | FW 或 HW |
+| B 厂商算子注册 | 以厂商身份提供的算子 | Backend 子类 + OpImpl VENDOR 注册 | FW 或 HW |
 
 FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kernel），
 自研的是"分发"与"可移植"。
@@ -102,7 +102,7 @@ flagos-op-templates/
 ├── routes/                   三条路线正式实现
 │   ├── a1_aten/              torch 算子替换
 │   ├── a2_dispatch/          Triton → FlagOS 融合算子 插件
-│   └── b_vendor/             厂商算子接入（csrc + audit）
+│   └── b_vendor/             厂商算子注册（csrc + audit）
 ├── examples/                 9 个矩阵格样例 + [b-fullstack 旗舰](fullstack-guide.md)
 ├── tests/
 │   ├── kernel_level/         [kernel 直测层](testing.md#kernel-level) + [一致性](testing.md#consistency)

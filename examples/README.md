@@ -62,7 +62,7 @@ flowchart TB
 | [a2-op](a2-op/) | Triton gelu_and_mul → dispatch 双后端 → 三段式 | **TR** |
 | [a2-framework](a2-framework/) | Triton silu_and_mul 以 vendor 身份注入真实推理 | **TR** |
 | [b-kernel](b-kernel/) | **厂商 kernel 直测 + C++ JIT 编译闭环 + 哨兵检查** | **HW + FW** |
-| [b-op](b-op/) | 自定义 厂商算子接入 注册/选择/计数 | FW（委托） |
+| [b-op](b-op/) | 自定义 厂商算子注册 注册/选择/计数 | FW（委托） |
 | [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **TR** |
 | [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **TR** |
 | [bmm-fullstack](bmm-fullstack/) | torch.bmm 贯穿 L0→L2→应用层（含 [#11](../docs/known-issues.md) 根因发现） | **TR** |

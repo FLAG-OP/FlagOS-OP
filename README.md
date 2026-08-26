@@ -40,7 +40,7 @@ flowchart TB
 | **应用层** | [L4 framework 验证](docs/testing.md#framework)（真实推理注入·调用计数·输出比对·黄金回归） |
 | **框架层** | [L2 op 验证](docs/testing.md#levels)（注册·分发·拦截）；A1 = torch 算子替换 注册，A2 = FlagOS 融合算子 注册 |
 | **编译层** | [TR 开发层级](docs/architecture.md#levels)——Triton DSL 经此编译到设备码 |
-| **算子库层** | [L0 kernel 验证](docs/testing.md#kernel-level)（直测·[哨兵](docs/testing.md#sentinel)·性能）；[FW](docs/architecture.md#levels) = ATen 组合/C++ extension，[HW](docs/architecture.md#levels) = 厂商 kernel 直测；B = 厂商算子接入 注册 |
+| **算子库层** | [L0 kernel 验证](docs/testing.md#kernel-level)（直测·[哨兵](docs/testing.md#sentinel)·性能）；[FW](docs/architecture.md#levels) = ATen 组合/C++ extension，[HW](docs/architecture.md#levels) = 厂商 kernel 直测；B = 厂商算子注册 注册 |
 | **硬件层** | [设备 profile](docs/device-profiles.md) 接入不同芯片 |
 
 <a id="quick"></a>
@@ -64,7 +64,7 @@ python3 run.py --list
 |---|---|---|---|
 | **A1** [torch 算子替换](docs/route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
 | **A2** [FlagOS 融合算子](docs/route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
-| **B** [厂商算子接入](docs/route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 闭环](docs/route-b-vendor.md#csrc) + [哨兵检查](docs/testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
+| **B** [厂商算子注册](docs/route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 闭环](docs/route-b-vendor.md#csrc) + [哨兵检查](docs/testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
 
 另有 [`--consistency`](docs/testing.md#consistency) 同算子 L0↔L2 一致矩阵；
 **全链路开发**（单一算子贯穿三层）见[全链路指南](docs/fullstack-guide.md) ⭐。
