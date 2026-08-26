@@ -60,7 +60,9 @@ python3 run.py --list
 <a id="matrix"></a>
 ## 矩阵总览（3 路线 × 3 层级 = 9 格）
 
-| | [kernel 层](docs/testing.md#kernel-level) | op 层 | framework 层 |
+**行** = 实现路线（怎么接入）· **列** = 验证层级（在物理栈哪一层验证）
+
+| 路线 \ 验证层级 | [算子库层 · kernel 直测](docs/testing.md#kernel-level) | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
 |---|---|---|---|
 | **A1** [torch 算子替换](docs/route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
 | **A2** [FlagOS 融合算子](docs/route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
