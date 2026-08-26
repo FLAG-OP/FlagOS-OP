@@ -59,3 +59,4 @@
 | [跨层一致性](testing.md#consistency) | 同算子 L0↔L2 张量级比对 | 测试体系 |
 | PER_OP | 按算子钉选后端的策略 | [路线 A2](route-a2-dispatch.md) |
 | vendor backend | 厂商 kernel 的 Python 接入层 | [路线 B](route-b-vendor.md) |
+| 开发层级 | kernel 写在哪一层（Triton DSL / C++ extension / 厂商预编译） | [体系结构](architecture.md#levels) |

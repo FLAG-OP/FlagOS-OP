@@ -15,6 +15,26 @@
 
 附加维度: [`--consistency`](testing.md#consistency) 同算子 L0 直调 ↔ L2 dispatch 张量级一致矩阵。
 
+<a id="levels"></a>
+## 开发层级（kernel 到底写在哪一层）
+
+"自定义算子开发"按 kernel 本体的书写与编译方式分三个层级，本库的覆盖范围如下:
+
+| 层级 | kernel 本体 | 编译路径 | 本库覆盖 |
+|---|---|---|---|
+| **L-K1 Triton DSL** | Triton 语言（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → XMLIR → XPU 设备码 | ✅ 多个自研 kernel（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子）——**真·自研设备 kernel** |
+| **L-K2 C++ torch extension** | C++ 调 ATen 算子 | nvcc 编译宿主码 + pybind 绑定 | ✅ [b-fullstack](../examples/b-fullstack/)（silu_and_mul csrc）——演示**工程链路**（编译→加载→vendor 注册），计算内核仍派发 ATen |
+| **L-K3 厂商预编译 kernel** | 不写 kernel，直接调厂商库 | 厂商 `.so`（如 `xtorch_ops`） | ✅ 直测+哨兵（[kernel 层](testing.md#kernel-level)）——本栈实测多个损坏 |
+
+**范围界定**: L-K1 是本库唯一"写到设备码"的自研路径；L-K2 覆盖 C++ 接入
+路线（若厂商提供 SDK 头文件，同一框架可承载真正的厂商语言 kernel）；
+L-K3 只做消费与质量验证（[known-issues](known-issues.md) 中 3 个损坏
+kernel 均在此层检出）。三条[实现路线](#routes) × 三个开发层级自由组合，
+例如 A1 路线可用 L-K1 kernel 替换 aten 算子，B 路线可承载 L-K2/L-K3。
+
+> 注: 本栈无公开的芯片 ISA/SDK 内联开发环境，L-K2 的"真厂商语言"形态
+> （C++ 设备函数内联）以 csrc 模板预留接口，未含自研示例。
+
 <a id="routes"></a>
 ## 为什么是三条路线
 
