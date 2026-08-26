@@ -63,7 +63,7 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 
 | 方向 | 说明 | 参考 |
 ---|---|---|
-| reduction 类算子样例 | softmax / layernorm 行归约 kernel | Triton tutorial 02-fused-softmax |
+| ~~reduction 类算子样例~~ | ✅ softmax-fullstack 已完成 | — |
 | autotune 集成 | `@triton.autotune` / FlagGems `libtuner` 分块参数搜索 | FlagGems `bmm.py` |
 | backward / autograd | 自定义算子的反向传播注册 | FlagGems `silu_and_mul_grad` |
 | 多芯片 CI | 矩阵在多设备上的自动回归 | GitHub Actions self-hosted runner |

@@ -57,6 +57,8 @@ flowchart TB
 | [a2-framework](a2-framework/) | Triton silu_and_mul 以 vendor 身份注入真实推理 | **TR** |
 | [b-kernel](b-kernel/) | **厂商 kernel 直测 + C++ JIT 编译闭环 + 哨兵检查** | **HW + FW** |
 | [b-op](b-op/) | 自定义 vendor backend 注册/选择/计数 | FW（委托） |
+| [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **TR** |
+| [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **TR** |
 | [bmm-fullstack](bmm-fullstack/) | torch.bmm 贯穿 L0→L2→应用层（含 [#11](../docs/known-issues.md) 根因发现） | **TR** |
 | **[b-fullstack](b-fullstack/)** ⭐ | **旗舰: 同一 C++ kernel 贯穿 L0→L2→L4**（JIT 编译→vendor 注册→真实推理，附[开发报告](b-fullstack/report.md)） | **FW** |
 | [b-framework](b-framework/) | audit vendor 拦截真实 vLLM + 黄金回归 | FW（委托） |
@@ -71,7 +73,9 @@ kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为�
 | 算子 @ shape (bf16) | 最优实现 | 关键数字 | 详见 |
 |---|---|---|---|
 | silu_and_mul 4096×8192 | Triton 融合 | 0.083ms（C++ 0.271 / 参考 0.651） | [b-fullstack](b-fullstack/) |
-| BMM 16×512³ | Triton 分块 | 0.030ms / 142 TFLOPS（原生 1.59x） | [bmm-fullstack](bmm-fullstack/) |
+| BMM 16×512³ | Triton 分块 | 0.030ms / 142 TFLOPS（原生 1.59x） | [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **TR** |
+| [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **TR** |
+| [bmm-fullstack](bmm-fullstack/) |
 | gelu 8192² | Triton | 0.047ms（CPU 2341x） | [a1-op](a1-op/) |
 | gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | [a2-op](a2-op/) |
 
