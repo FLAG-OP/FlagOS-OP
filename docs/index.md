@@ -18,21 +18,18 @@
 ## 体系一图
 
 ```
-                 FlagOS 算子开发模板库
-                        │
-      ┌─────────────────┼──────────────────┐
-      │                 │                  │
- 三条实现路线        三层验证            支撑设施
-      │                 │                  │
- ┌────┴───┐      ┌─────┼──────┐     ┌─────┴─────┐
- A1       A2      kernel op  framework  设备profile  黄金输出/漂移实验
- aten  dispatch    直测  注册  真实推理     报告模板/环境快照
- 路线   路线  B                 │
-              vendor            └─ 全链路: [b-fullstack](../examples/b-fullstack/)
-              路线                 (同一算子贯穿三层)
+  应用层    vLLM · transformers           ← L4 framework 验证
+    ↓
+  框架层    PyTorch + FlagOS dispatch     ← L2 op 验证 · A1/A2 路线
+    ↓
+  编译层    Triton → 芯片编译栈           ← TR 开发层级
+    ↓
+  算子库层  FlagGems · 厂商 kernel        ← L0 kernel 验证 · B 路线 · FW/HW
+    ↓
+  硬件层    XPU · GPU · NPU              ← 设备 profile
 ```
 
-## 按任务找入口
+完整物理栈图与概念映射见[根 README](../README.md#map)。## 按任务找入口
 
 | 我想… | 去哪 |
 |---|---|

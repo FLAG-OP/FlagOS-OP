@@ -13,18 +13,18 @@
 ## 三层验证
 ```mermaid
 flowchart TD
-    K["kernel 层<br/>精度·哨兵·性能"] -->|"注册<br/>(aten impl / OpImpl / vendor)"| O["op 层<br/>注册·分发·拦截"]
-    O -->|"注入<br/>(PLUGIN_MODULES / PER_OP / sitecustomize)"| F["framework 层<br/>真实推理·计数·比对"]
+    K["算子库层 · kernel 直测<br/>精度·哨兵·性能"] -->|"注册<br/>(aten impl / OpImpl / vendor)"| O["框架层 · op 注册/分发<br/>注册·分发·拦截"]
+    O -->|"注入<br/>(PLUGIN_MODULES / PER_OP / sitecustomize)"| F["应用层 · framework<br/>真实推理·计数·比对"]
     F --> G["黄金回归<br/>跨会话漂移检测"]
     K -.->|"同算子同输入"| C["跨层一致性<br/>L0↔L2 张量级"]
 ```
 
 
-| 层级 | 验证什么 | 形式 | 入口 |
-|---|---|---|---|
-| [kernel 层](#kernel-level) | kernel 本体: 精度/哨兵/性能 | 直测，秒级 | `--level kernel` |
-| op 层 | 注册/分发/拦截正确 | 策略切换验证 | `--level op` |
-| [framework 层](#framework) | 真实推理被调用且不破坏输出 | 基线/插件双跑 | `--level framework` |
+| 层级 | 物理栈位置 | 验证什么 | 形式 | 入口 |
+|---|---|---|---|---|
+| [kernel 层](#kernel-level) | 算子库层 | kernel 本体: 精度/哨兵/性能 | 直测，秒级 | `--level kernel` |
+| op 层 | 框架层 | 注册/分发/拦截正确 | 策略切换验证 | `--level op` |
+| [framework 层](#framework) | 应用层 | 真实推理被调用且不破坏输出 | 基线/插件双跑 | `--level framework` |
 
 <a id="kernel-level"></a>
 ## kernel 层（硬件语言直测）

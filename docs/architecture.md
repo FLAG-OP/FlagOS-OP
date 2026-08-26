@@ -7,7 +7,7 @@
 
 **三条实现路线 × 三层验证层级**（对应[物理栈](../README.md#map)各层），每格独立可跑（`run.py --route X --level Y`）:
 
-| | kernel 层（[直测](testing.md#kernel-level)） | op 层（注册/分发/拦截） | framework 层（真实推理） |
+| | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
 |---|---|---|---|
 | **A1** [aten dispatcher 路线](route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
 | **A2** [FlagOS dispatch 路线](route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
@@ -21,11 +21,11 @@
 "自定义算子开发"按 kernel 本体的书写位置从高到低分三级——
 **框架层 → Triton 层 → 硬件语言层**，抽象度递减、可控性递增:
 
-| 层级 | 写什么 | 编译/执行路径 | 本库覆盖 |
+| 层级 | 物理栈位置 | 写什么 | 编译/执行路径 | 本库覆盖 |
 |---|---|---|---|
-| **框架层 FW**<br/>模型框架层 | PyTorch/FlagOS 框架内代码: ATen 算子组合、Python 委托、C++ extension 调 ATen | 计算由框架派发到已注册 kernel（不接触设备码） | ✅ [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）、audit vendor、PyTorch 参考实现 |
-| **Triton 层 TR** | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码；可移植 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
-| **硬件语言层 HW**<br/>NPU 定制语言层 | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；csrc 模板预留自研接口 |
+| **框架层 FW**<br/>模型框架层 | 框架层 | PyTorch/FlagOS 框架内代码: ATen 算子组合、Python 委托、C++ extension 调 ATen | 计算由框架派发到已注册 kernel（不接触设备码） | ✅ [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）、audit vendor、PyTorch 参考实现 |
+| **Triton 层 TR** | 编译层→算子库层 | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码；可移植 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
+| **硬件语言层 HW**<br/>NPU 定制语言层 | 算子库层 | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；csrc 模板预留自研接口 |
 
 **要点**:
 - 三级与三条[实现路线](#routes)正交——路线管"接到哪"（aten/dispatch/vendor

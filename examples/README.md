@@ -12,19 +12,19 @@ flowchart TB
     classDef hw fill:#ffedd5,stroke:#ea580c,color:#7c2d12
     classDef fs fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12
 
-    subgraph L0["L0 · kernel 直测层"]
+    subgraph L0["算子库层 · L0 kernel 直测"]
         direction LR
         A1K["a1-kernel"]:::tr
         A2K["a2-kernel"]:::tr
         BK["b-kernel<br/>HW+FW"]:::hw
     end
-    subgraph L2["L2 · op 注册/分发层"]
+    subgraph L2["框架层 · L2 op 注册/分发"]
         direction LR
         A1O["a1-op"]:::tr
         A2O["a2-op"]:::tr
         BO["b-op"]:::fw
     end
-    subgraph L4["L4 · framework 验证层"]
+    subgraph L4["应用层 · L4 framework"]
         direction LR
         A1F["a1-framework"]:::fw
         A2F["a2-framework"]:::tr
@@ -43,7 +43,7 @@ flowchart TB
 ```
 
 **读图方式**:
-- 每行 = 一个验证层级（L0/L2/L4），行内左→右 = A1 / A2 / B 三条路线
+- 每行 = 物理栈一层（算子库/框架/应用），行内左→右 = A1 / A2 / B 三条路线
 - 节点配色 = [开发层级](../docs/architecture.md#levels):
   🔵 **TR**（Triton 层，自研设备码）· 🟢 **FW**（框架层）· 🟠 **HW**（硬件语言层）
 - ⭐ 全链路/专项样例以虚线标注覆盖范围（bmm/b-fullstack/softmax 各覆盖

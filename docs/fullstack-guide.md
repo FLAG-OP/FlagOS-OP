@@ -12,10 +12,10 @@
 ## 流水线总览
 ```mermaid
 flowchart LR
-    SRC["kernel 源码<br/>C++/Triton"] --> JIT["JIT 编译<br/>cpp_extension.load /<br/>triton 编译器"]
-    JIT --> L0["L0 kernel 直测<br/>精度 vs 参考<br/>哨兵检查<br/>性能短采样"]
-    L0 -->|注册| L2["L2 dispatch/aten<br/>impl 注册<br/>PER_OP 钉选"]
-    L2 -->|注入| L4["L4 真实推理<br/>调用计数<br/>输出比对<br/>黄金回归"]
+    SRC["kernel 源码<br/>C++/Triton"] --> JIT["编译层<br/>Triton 编译 / cpp_extension"]
+    JIT --> L0["算子库层<br/>L0 kernel 直测<br/>精度·哨兵·性能"]
+    L0 -->|注册| L2["框架层<br/>L2 op 注册/分发<br/>impl 注册·PER_OP 钉选"]
+    L2 -->|注入| L4["应用层<br/>L4 framework<br/>调用计数·输出比对·黄金回归"]
     L4 --> FIN["一致性 + 报告"]
 ```
 
