@@ -1,8 +1,7 @@
 # FlagOS 算子开发模板库
 
-一套**设备无关**的 FlagOS 自定义算子开发与验证模板：三条实现路线 ×
-三层验证层级构成 9 格矩阵，芯片差异全部收敛到
-[设备 profile](docs/device-profiles.md)，测试代码零硬编码。
+FlagOS 自定义算子开发与验证模板：三条实现路线 × 三层验证层级
+构成 9 格矩阵，芯片差异通过[设备 profile](docs/device-profiles.md) 接入。
 
 - 依赖形态: FlagGems + vllm-plugin-FL + vLLM + Triton
 - **参考实例**: `configs/devices/p800-kunlunxin.yaml`（9/9 矩阵 +
@@ -35,7 +34,7 @@ flowchart LR
         T3["framework 真实推理"]
     end
     subgraph SUPPORT["支撑设施"]
-        S1["设备 profile<br/>芯片泛化"]
+        S1["设备 profile"]
         S2["黄金输出<br/>漂移实验"]
         S3["报告模板<br/>环境快照"]
     end
@@ -127,7 +126,7 @@ flagos-op-templates/
 2. **断言分两种**: 恒等路径逐 prompt 前缀一致（按黄金自适应）；
    自定义数值实现用前 2 token 一致率（详见[断言策略](docs/testing.md#assertions)）
 3. **输入模板化**: 同一 spec 跨硬件生成相同输入（黄金可比的前提）
-4. **黄金跨设备**: CPU transformers 权威参考 + 加速卡 vLLM
+4. **黄金输出**: CPU transformers 参考 + 加速卡 vLLM
 5. **性能短采样**（≤100 次）: 长循环触发分配器池增长失真
 6. **vLLM 前向在子进程**: aten 路线需 sitecustomize 注入桥（已内置）
 

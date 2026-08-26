@@ -11,7 +11,7 @@
    - [路线 B: vendor backend](route-b-vendor.md)
 4. [测试体系](testing.md) — kernel/op/framework 三层 · 黄金 · 漂移 · 一致性
 5. [全链路开发指南](fullstack-guide.md) ⭐ — 一个算子从源码到真实推理
-6. [设备接入](device-profiles.md) — 芯片泛化 · 新芯片 3 步接入
+6. [设备接入](device-profiles.md) — 新芯片接入
 7. [报告与环境快照](reporting.md) — 算子开发报告模板
 8. [已知问题](known-issues.md) — 参考 case 记录 + 通用检测方法
 
@@ -26,7 +26,7 @@
       │                 │                  │
  ┌────┴───┐      ┌─────┼──────┐     ┌─────┴─────┐
  A1       A2      kernel op  framework  设备profile  黄金输出/漂移实验
- aten  dispatch    直测  注册  真实推理  (芯片泛化)   报告模板/环境快照
+ aten  dispatch    直测  注册  真实推理     报告模板/环境快照
  路线   路线  B                 │
               vendor            └─ 全链路: [b-fullstack](../examples/b-fullstack/)
               路线                 (同一算子贯穿三层)

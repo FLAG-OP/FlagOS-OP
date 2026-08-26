@@ -24,7 +24,7 @@
 | 层级 | 写什么 | 编译/执行路径 | 本库覆盖 |
 |---|---|---|---|
 | **框架层 FW**<br/>模型框架层 | PyTorch/FlagOS 框架内代码: ATen 算子组合、Python 委托、C++ extension 调 ATen | 计算由框架派发到已注册 kernel（不接触设备码） | ✅ [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）、audit vendor、PyTorch 参考实现 |
-| **Triton 层 TR** | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码；跨芯片可移植 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
+| **Triton 层 TR** | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码；可移植 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
 | **硬件语言层 HW**<br/>NPU 定制语言层 | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；csrc 模板预留自研接口 |
 
 **要点**:
@@ -85,7 +85,7 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 ```
 flagos-op-templates/
 ├── run.py                    统一矩阵入口（--route/--level/--device/--all/--consistency）
-├── configs/devices/          [设备 profile](device-profiles.md)（芯片泛化核心）
+├── configs/devices/          [设备 profile](device-profiles.md)
 ├── docs/                     本文档
 ├── common/                   设备抽象 / [kernel spec](route-b-vendor.md#kernelspec) / 输入模板 / 参考实现
 ├── routes/                   三条路线正式实现
@@ -109,7 +109,7 @@ flagos-op-templates/
 ## 矩阵入口约定
 
 - 所有测试模块统一签名 `run(profile) -> bool`（[设备 profile](device-profiles.md) 传入）
-- 测试代码零硬编码设备串/卡号/厂商库名
+- 设备参数全部来自 profile
 - 框架级由 [harness](testing.md#framework) 拉起 vLLM 子进程，引擎参数与注入
   环境变量按 profile 与路线自动组装
 - 每格结果 JSON 落 `results/`，`scripts/report.py` 汇总成 Markdown

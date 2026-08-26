@@ -1,15 +1,13 @@
-# 设备 Profile 与芯片泛化
+# 设备 Profile
 
 [← 返回文档中心](index.md)
 
-> 芯片差异全部收敛到一份 YAML；测试代码零硬编码。
 > 字段是[设备 profile](#fields)机制的核心，也是[黄金](testing.md#golden)
 > 与[kernel 层](testing.md#kernel-level)跨设备可比的基础。
 
 ## 设计
 
-芯片差异全部收敛到 `configs/devices/<芯片名>.yaml`，
-测试代码零硬编码。字段速查:
+芯片差异声明于 `configs/devices/<芯片名>.yaml`。字段速查:
 
 | 字段 | 作用 |
 |---|---|
@@ -58,6 +56,6 @@
   其设备特有问题见 known-issues.md）
 - `nvidia`: profile 就绪；曾借 CUDA 兼容层在加速卡环境验证过
   profile 切换机制（真实 N 卡的 vLLM 引擎路径已备好）
-- `cpu`: transformers 黄金引擎已实测（确定性，跨设备语义锚点）
+- `cpu`: transformers 黄金引擎已实测（确定性语义参考）
 
 其他芯片: 复制 `_template.yaml` 填写后即可进入同一体.

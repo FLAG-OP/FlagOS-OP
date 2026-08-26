@@ -79,7 +79,7 @@ with torch_device_fn.device(x.device):
 ```
 
 <a id="method"></a>
-## 通用检测方法（任何芯片栈适用）
+## 通用检测方法
 
 | 问题类型 | 检测工具 |
 |---|---|
