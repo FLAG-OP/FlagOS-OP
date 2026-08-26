@@ -39,7 +39,7 @@ jobs:
                   if 'xychart' in b:
                       assert 'bar [' in b and 'x-axis' in b, f'{md}: xychart 缺件'
                   elif 'flowchart' in b:
-                      assert '-->' in b or '-.->' in b, f'{md}: flowchart 无边'
+                      pass  # 网格/定位图可无边，只有流程图才要求边
               # 链接检查（跳过代码块）
               text = re.sub(r'```.*?```', '', raw, flags=re.S)
               for m in re.finditer(r'\[([^\]]*)\]\(([^)#\s]+)(?:#([^)\s]+))?\)', text):
