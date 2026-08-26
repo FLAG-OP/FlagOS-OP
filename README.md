@@ -19,28 +19,28 @@ FlagOS 自定义算子开发与验证模板：三条实现路线 × 三层验证
 ```mermaid
 flowchart TB
     APP["应用层<br/>vLLM · transformers · 自研代码"]
-    FW["框架层 — PyTorch + FlagOS 融合算子"]
+    FRAME["框架层 — PyTorch + FlagOS 融合算子"]
     COMP["编译层 — Triton → 芯片编译栈"]
     OP["算子库层 — FlagGems · 厂商 kernel (.so)"]
-    HW["硬件层 — XPU · GPU · NPU"]
+    CHIP["硬件层 — XPU · GPU · NPU"]
 
-    APP --> FW --> COMP --> OP --> HW
+    APP --> FRAME --> COMP --> OP --> CHIP
 
     style APP fill:#e0e7ff
-    style FW fill:#dbeafe
+    style FRAME fill:#dbeafe
     style COMP fill:#dcfce7
     style OP fill:#ffedd5
-    style HW fill:#f3e8ff
+    style CHIP fill:#f3e8ff
 ```
 
 本库的概念映射到上述物理栈:
 
 | 物理层 | 本库在此做的事 |
 |---|---|
-| **应用层** | [L4 framework 验证](docs/testing.md#framework)（真实推理注入·调用计数·输出比对·黄金回归） |
-| **框架层** | [L2 op 验证](docs/testing.md#levels)（注册·分发·拦截）；A1 = torch 算子替换 注册，A2 = FlagOS 融合算子 注册 |
+| **应用层** | [framework 验证](docs/testing.md#framework)（真实推理注入·调用计数·输出比对·黄金回归） |
+| **框架层** | [op 验证（框架层）](docs/testing.md#levels)（注册·分发·拦截）；A1 = torch 算子替换 注册，A2 = FlagOS 融合算子 注册 |
 | **编译层** | [Triton 级](docs/architecture.md#levels)——Triton DSL 经此编译到设备码 |
-| **算子库层** | [L0 kernel 验证](docs/testing.md#kernel-level)（直测·[哨兵](docs/testing.md#sentinel)·性能）；[torch 级](docs/architecture.md#levels) = ATen 组合/C++ extension，[硬件级](docs/architecture.md#levels) = 厂商 kernel 直测；B = 厂商算子注册 注册 |
+| **算子库层** | [kernel 验证（算子库层）](docs/testing.md#kernel-level)（直测·[哨兵](docs/testing.md#sentinel)·性能）；[torch 级](docs/architecture.md#levels) = ATen 组合/C++ extension，[硬件级](docs/architecture.md#levels) = 厂商 kernel 直测；B = 厂商算子注册 注册 |
 | **硬件层** | [设备 profile](docs/device-profiles.md) 接入不同芯片 |
 
 <a id="quick"></a>
@@ -66,7 +66,7 @@ python3 run.py --list
 | **A2** [FlagOS 融合算子](docs/route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
 | **B** [厂商算子注册](docs/route-b-vendor.md) | **厂商 kernel 直测 + [C++ JIT 闭环](docs/route-b-vendor.md#csrc) + [哨兵检查](docs/testing.md#sentinel)** | vendor 注册/选择 | audit vendor 拦截 |
 
-另有 [`--consistency`](docs/testing.md#consistency) 同算子 L0↔L2 一致矩阵；
+另有 [`--consistency`](docs/testing.md#consistency) 同算子 算子库层↔框架层一致矩阵；
 **全链路开发**（单一算子贯穿三层）见[全链路指南](docs/fullstack-guide.md) ⭐。
 
 <a id="docs"></a>

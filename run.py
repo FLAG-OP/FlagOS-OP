@@ -119,7 +119,7 @@ def main() -> None:
         from tests.kernel_level import test_consistency
         print()
         print("=" * 64)
-        print(f"  CONSISTENCY: L0 <-> L2 device={device}")
+        print(f"  CONSISTENCY: 算子库层<->框架层 device={device}")
         print("=" * 64)
         t0 = time.perf_counter()
         try:
@@ -129,13 +129,13 @@ def main() -> None:
             ok = False
             err = traceback.format_exc()
             print(err)
-        (passed if ok else failed).append(("consistency", "l0-l2"))
+        (passed if ok else failed).append(("consistency", "算子库↔框架"))
         dt = time.perf_counter() - t0
         print(f"  CONSISTENCY RESULT: {'PASS' if ok else 'FAIL'} ({dt:.1f}s)")
         out = ROOT / "results" / f"{device}_consistency.json"
         out.parent.mkdir(exist_ok=True)
         out.write_text(json.dumps({
-            "device": device, "route": "consistency", "level": "l0-l2",
+            "device": device, "route": "consistency", "level": "算子库层↔框架层",
             "status": "PASS" if ok else "FAIL",
             "seconds": round(dt, 1),
             "error": err.splitlines()[-1] if err else None,

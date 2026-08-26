@@ -12,19 +12,19 @@ flowchart TB
     classDef hw fill:#ffedd5,stroke:#ea580c,color:#7c2d12
     classDef fs fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12
 
-    subgraph L0["算子库层 · L0 kernel 直测"]
+    subgraph L0["算子库层 · kernel 直测"]
         direction LR
         A1K["a1-kernel"]:::tr
         A2K["a2-kernel"]:::tr
         BK["b-kernel<br/>硬件+torch"]:::hw
     end
-    subgraph L2["框架层 · L2 op 注册/分发"]
+    subgraph L2["框架层 · op 注册/分发"]
         direction LR
         A1O["a1-op"]:::tr
         A2O["a2-op"]:::tr
         BO["b-op"]:::fw
     end
-    subgraph L4["应用层 · L4 framework"]
+    subgraph L4["应用层 · framework"]
         direction LR
         A1F["a1-framework"]:::fw
         A2F["a2-framework"]:::tr

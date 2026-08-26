@@ -13,9 +13,9 @@
 ```mermaid
 flowchart LR
     SRC["kernel 源码<br/>C++/Triton"] --> JIT["编译层<br/>Triton 编译 / cpp_extension"]
-    JIT --> L0["算子库层<br/>L0 kernel 直测<br/>精度·哨兵·性能"]
-    L0 -->|注册| L2["框架层<br/>L2 op 注册/分发<br/>impl 注册·PER_OP 钉选"]
-    L2 -->|注入| L4["应用层<br/>L4 framework<br/>调用计数·输出比对·黄金回归"]
+    JIT --> L0["算子库层<br/>kernel 直测<br/>精度·哨兵·性能"]
+    L0 -->|注册| L2["框架层<br/>op 注册/分发<br/>impl 注册·PER_OP 钉选"]
+    L2 -->|注入| L4["应用层<br/>framework<br/>调用计数·输出比对·黄金回归"]
     L4 --> FIN["一致性 + 报告"]
 ```
 
@@ -34,7 +34,7 @@ flowchart LR
 └──────────────┬─────────────────────────────┘
                │  注入（sitecustomize / PLUGIN_MODULES）
                ▼
-┌─ L4 framework 层 ─────────────────────────┐
+┌─ framework 层 ─────────────────────────┐
 │  真实推理: 调用计数 · 输出比对 · 黄金回归   │  run.py --level framework
 └───────────────────────────────────────────┘
                ＋  跨层一致性（--consistency）

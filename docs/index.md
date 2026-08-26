@@ -18,13 +18,13 @@
 ## 体系一图
 
 ```
-  应用层    vLLM · transformers           ← L4 framework 验证
+  应用层    vLLM · transformers           ← framework 验证
     ↓
-  框架层    PyTorch + FlagOS 融合算子     ← L2 op 验证 · A1/A2 路线
+  框架层    PyTorch + FlagOS 融合算子     ← op 验证（框架层） · A1/A2 路线
     ↓
   编译层    Triton → 芯片编译栈           ← TR 开发层级
     ↓
-  算子库层  FlagGems · 厂商 kernel        ← L0 kernel 验证 · B 路线 · FW/HW
+  算子库层  FlagGems · 厂商 kernel        ← kernel 验证（算子库层） · B 路线 · FW/HW
     ↓
   硬件层    XPU · GPU · NPU              ← 设备 profile
 ```
@@ -53,7 +53,7 @@
 | [kernel 层](testing.md#kernel-level) | 硬件语言 kernel 直测 | 测试体系 |
 | [哨兵检查](testing.md#sentinel) | 检测 kernel "不写输出"类 bug | 测试体系 |
 | [黄金输出](testing.md#golden) | 多快照共识回归锚点 | 测试体系 |
-| [跨层一致性](testing.md#consistency) | 同算子 L0↔L2 张量级比对 | 测试体系 |
+| [跨层一致性](testing.md#consistency) | 同算子 算子库层↔框架层比对 | 测试体系 |
 | PER_OP | 按算子钉选后端的策略 | [路线 A2](route-a2-dispatch.md) |
 | 厂商算子注册 | 厂商 kernel 的 Python 接入层 | [路线 B](route-b-vendor.md) |
 | 开发层级 | kernel 写在哪一层: torch 级 / Triton 级 / 硬件级 | [体系结构](architecture.md#levels) |

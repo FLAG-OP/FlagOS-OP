@@ -16,7 +16,7 @@ flowchart TD
     K["算子库层 · kernel 直测<br/>精度·哨兵·性能"] -->|"注册<br/>(aten impl / OpImpl / vendor)"| O["框架层 · op 注册/分发<br/>注册·分发·拦截"]
     O -->|"注入<br/>(PLUGIN_MODULES / PER_OP / sitecustomize)"| F["应用层 · framework<br/>真实推理·计数·比对"]
     F --> G["黄金回归<br/>跨会话漂移检测"]
-    K -.->|"同算子同输入"| C["跨层一致性<br/>L0↔L2 张量级"]
+    K -.->|"同算子同输入"| C["跨层一致性<br/>算子库层↔框架层"]
 ```
 
 
@@ -119,7 +119,7 @@ python3 run.py --consistency --device <profile>
 锚定算子 gelu_and_mul，同一输入张量在四处输出两两比对
 （张量级，bf16 容差 1e-2）:
 
-- L0 Triton 直调 · L0 自研 C++ 直调 · L2 dispatch `call_op` · PyTorch 参考
+- 算子库层直调 Triton/C++ · 框架层 dispatch `call_op` · PyTorch 参考
 
 参考实例结果: 4×4 全零误差矩阵。这是"同一算子在各层验证一致"的
 自动化形态；人工跟读版见[全链路指南](fullstack-guide.md)。

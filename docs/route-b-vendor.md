@@ -58,7 +58,7 @@ priority=BackendPriority.VENDOR)`（100）
 audit vendor = 计数 + 委托，双用途:
 
 1. 验证 vendor 路线的注册/选择/调用链路
-2. framework 验证层（L4）测试中拦截真实 vLLM 前向流量
+2. framework 验证（应用层）测试中拦截真实 vLLM 前向流量
 
 委托目标由设备 profile 的 `vendor_delegate` 字段驱动
 （由各设备 profile 的 `vendor_delegate` 字段驱动；未声明或厂商库缺失时自动退化 reference.torch）。
