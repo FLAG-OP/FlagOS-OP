@@ -2,6 +2,51 @@
 
 每个样例目录 = 一个矩阵格的完整可运行演示。
 
+<a id="map"></a>
+## 样例定位图（每个样例在矩阵中的位置与涵盖范围）
+
+```mermaid
+flowchart TB
+    classDef tr fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef fw fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef hw fill:#ffedd5,stroke:#ea580c,color:#7c2d12
+    classDef fs fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12
+
+    subgraph L0["L0 · kernel 直测层"]
+        direction LR
+        A1K["a1-kernel"]:::tr
+        A2K["a2-kernel"]:::tr
+        BK["b-kernel<br/>HW+FW"]:::hw
+    end
+    subgraph L2["L2 · op 注册/分发层"]
+        direction LR
+        A1O["a1-op"]:::tr
+        A2O["a2-op"]:::tr
+        BO["b-op"]:::fw
+    end
+    subgraph L4["L4 · framework 验证层"]
+        direction LR
+        A1F["a1-framework"]:::fw
+        A2F["a2-framework"]:::tr
+        BF["b-framework"]:::fw
+    end
+
+    BMM["bmm-fullstack ⭐<br/>A1 路线 · TR"]:::fs
+    BFS["b-fullstack ⭐<br/>B 路线 · FW"]:::fs
+
+    BMM -. "贯穿 L0→L2→L4" .-> A1K
+    BFS -. "贯穿 L0→L2→L4" .-> BK
+```
+
+**读图方式**:
+- 每行 = 一个验证层级（L0/L2/L4），行内左→右 = A1 / A2 / B 三条路线
+- 节点配色 = [开发层级](../docs/architecture.md#levels):
+  🔵 **TR**（Triton 层，自研设备码）· 🟢 **FW**（框架层）· 🟠 **HW**（硬件语言层）
+- ⭐ 全链路样例以虚线标注贯穿范围（bmm-fullstack 覆盖 A1 列三层，
+  b-fullstack 覆盖 B 列三层）
+- b-kernel 同时含 HW（厂商 kernel 直测）与 FW（csrc JIT 编译闭环）
+
+
 | 样例 | 内容 | 开发层级 |
 |---|---|---|
 | [a1-kernel](a1-kernel/) | Triton gelu 直测（精度+哨兵+性能） | **TR** |
