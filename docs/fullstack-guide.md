@@ -3,8 +3,8 @@
 [← 返回文档中心](index.md)
 
 > 可运行范本（互补的两条路线）:
-> - [b-fullstack](../examples/b-fullstack/)（L-K2, C++）: `python3 examples/b-fullstack/example.py`，约 3-4 分钟
-> - [bmm-fullstack](../examples/bmm-fullstack/)（L-K1, Triton）: `python3 examples/bmm-fullstack/example.py`，约 10 秒
+> - [b-fullstack](../examples/b-fullstack/)（框架层 FW, C++ 调 ATen）: `python3 examples/b-fullstack/example.py`，约 3-4 分钟
+> - [bmm-fullstack](../examples/bmm-fullstack/)（Triton 层 TR）: `python3 examples/bmm-fullstack/example.py`，约 10 秒
 
 <a id="pipeline"></a>
 ## 流水线总览

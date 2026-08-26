@@ -20,9 +20,9 @@
 ```mermaid
 flowchart LR
     subgraph DEV["开发层级（kernel 写在哪）"]
-        K1["L-K1 Triton DSL<br/>自研设备码"]
-        K2["L-K2 C++ extension<br/>工程链路"]
-        K3["L-K3 厂商预编译<br/>直测+哨兵"]
+        K1["Triton 层 TR<br/>自研设备码"]
+        K2["框架层 FW<br/>ATen 组合/委托"]
+        K3["硬件语言层 HW<br/>厂商 kernel"]
     end
     subgraph ROUTES["三条实现路线"]
         A1["A1 → aten dispatcher"]
@@ -40,7 +40,8 @@ flowchart LR
         S3["报告模板<br/>环境快照"]
     end
     K1 --> A1 & A2
-    K2 & K3 --> B
+    K2 --> A1 & A2 & B
+    K3 --> B
     A1 & A2 & B --> T1 --> T2 --> T3
     SUPPORT -.-> ROUTES & TEST
 ```
