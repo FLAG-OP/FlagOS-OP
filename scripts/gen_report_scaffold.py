@@ -33,6 +33,23 @@ def _fmt_cell(c: dict | None) -> str:
     return f"{'✅' if c['status'] == 'PASS' else '❌'} {c['status']} | {c['seconds']}s | <手填>"
 
 
+def _consistency_status(device: str) -> str:
+    p = ROOT / "results" / f"{device}_consistency.json"
+    if not p.exists():
+        return "⬜ 未跑 | — | <手填>"
+    c = json.loads(p.read_text())
+    return f"{'✅' if c['status'] == 'PASS' else '❌'} {c['status']} | {c['seconds']}s | <手填>"
+
+
+def _golden_status(device: str) -> str:
+    p = ROOT / "golden" / f"{device}_golden.json"
+    if not p.exists():
+        return "⬜ 未生成 | — | <手填>"
+    g = json.loads(p.read_text())
+    return (f"✅ {len(g['snapshots'])} 快照, 稳定前缀 "
+            f"{min(g['stable_prefix_lens'])} | — | <手填>")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--op", required=True, help="算子名（如 gelu_and_mul）")
@@ -96,6 +113,8 @@ def main() -> None:
 | kernel 直测 | {_fmt_cell(cells['kernel'])} |
 | op 注册/分发 | {_fmt_cell(cells['op'])} |
 | framework 真实推理 | {_fmt_cell(cells['framework'])} |
+| 跨层一致性 L0↔L2 | {_consistency_status(args.device)} |
+| 黄金回归 | {_golden_status(args.device)} |
 
 ### 4.1 kernel 层明细 `[手填]`
 

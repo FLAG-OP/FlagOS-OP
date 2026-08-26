@@ -2,8 +2,9 @@
 
 [← 返回文档中心](index.md)
 
-> 可运行范本: [examples/b-fullstack](../examples/b-fullstack/)
-> （`python3 examples/b-fullstack/example.py`，约 3-4 分钟）
+> 可运行范本（互补的两条路线）:
+> - [b-fullstack](../examples/b-fullstack/)（L-K2, C++）: `python3 examples/b-fullstack/example.py`，约 3-4 分钟
+> - [bmm-fullstack](../examples/bmm-fullstack/)（L-K1, Triton）: `python3 examples/bmm-fullstack/example.py`，约 10 秒
 
 <a id="pipeline"></a>
 ## 流水线总览
@@ -88,7 +89,9 @@ A1/A2 路线的全链路与之同构，差异仅在:
 | L2 注册 | vendor backend + OpImpl(VENDOR) | A1: aten `Library.impl()`；A2: dispatch 插件双后端 |
 | L4 注入 | PLUGIN_MODULES + PER_OP | A1 额外需 [sitecustomize 跨进程桥](route-a1-aten.md) + FlagGems 黑名单 |
 
-Triton 同算子贯穿的自动化验证见
+Triton 全链路的完整可运行范本见
+[examples/bmm-fullstack](../examples/bmm-fullstack/)（aten 路线三阶段）；
+同算子贯穿的自动化验证见
 [tests/kernel_level/test_consistency.py](../tests/kernel_level/test_consistency.py)。
 
 ## 常见坑（全链路视角）

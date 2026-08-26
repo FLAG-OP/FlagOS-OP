@@ -37,10 +37,10 @@
   通道异常史，固定 TP=2
 
 <a id="onboard"></a>
-## 新芯片接入（3 步）
+## 新芯片接入（4 步）
 
 1. 复制 `_template.yaml` 为 `<芯片名>.yaml` 并填写字段
-2. `python3 run.py --all --device <芯片名>` 跑 6 格矩阵
+2. `python3 run.py --all --device <芯片名>` 跑 9 格矩阵 + consistency
 3. 有厂商 C++ kernel 时按 [BUILD.md](../routes/b_vendor/csrc/BUILD.md) 编译接入，
    并在 `vendor_kernels` 声明（含[哨兵负例](testing.md#sentinel)）
 4. 建议立即: 生成[黄金](testing.md#golden) + 跑一次[漂移实验](testing.md#drift)

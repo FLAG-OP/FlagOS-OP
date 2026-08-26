@@ -64,9 +64,11 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 
 ## 全链路视角
 
-单格验证之外，[全链路指南](fullstack-guide.md) 演示同一算子贯穿三层
-（kernel 直测 → dispatch 注册 → 真实推理），旗舰样例
-[examples/b-fullstack](../examples/b-fullstack/) 可直接运行。
+单格验证之外，[全链路指南](fullstack-guide.md) 演示同一算子贯穿三层，
+两个可运行范本:
+
+- [b-fullstack](../examples/b-fullstack/)（L-K2）: C++ kernel → vendor 注册 → 真实 vLLM
+- [bmm-fullstack](../examples/bmm-fullstack/)（L-K1）: Triton BMM → aten 拦截 → 应用层
 
 <a id="tree"></a>
 ## 目录结构

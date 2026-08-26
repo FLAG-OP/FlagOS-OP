@@ -64,6 +64,20 @@ aten 路线框架级需 sitecustomize 注入桥（本库已内置）。
 池增长，均值被抬高一两个数量级（实测同 kernel 0.047ms vs 16ms）。
 基准一律用短采样（≤100 次）。
 
+### 11. ⚠️ 裸 Triton 启动缺 device 上下文 → 静默 no-op（严重）
+裸 `@triton.jit` kernel 启动若不包
+`flag_gems.runtime.torch_device_fn.device(...)` 上下文，**首次编译启动
+正常，之后所有启动静默 no-op**（输出为未初始化内存，不报任何错）。
+FlagGems 算子内部都包了上下文故从未暴露；自写 kernel 必踩。
+表现极具迷惑性：首次结果正确、性能基准测到假数据（实测同一 kernel
+假 0.19ms vs 真 0.030ms）。修复（bmm-fullstack 发现，见其 README）:
+
+```python
+from flag_gems.runtime import torch_device_fn
+with torch_device_fn.device(x.device):
+    my_kernel[grid](...)
+```
+
 <a id="method"></a>
 ## 通用检测方法（任何芯片栈适用）
 
@@ -73,4 +87,5 @@ aten 路线框架级需 sitecustomize 注入桥（本库已内置）。
 | 按设备分化的正确性 | 逐物理设备跑 `--level kernel` |
 | 栈升级数值漂移 | 黄金回归（`build_golden` + 框架测试自动比对） |
 | 跨进程非确定性 | `scripts/drift_study.py` |
+| 裸 Triton 启动静默 no-op | 哨兵检查（zeros 预填看零占比）+ 对照 `flag_gems` 同算子 |
 | embedding 越界 | tokenize 后比对词表上限；CPU transformers 交叉验证 |

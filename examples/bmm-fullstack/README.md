@@ -28,7 +28,7 @@ python3 examples/bmm-fullstack/example.py        # 约 10 秒
 mini-attention 触发 aten::bmm: 4 次, 输出位级一致
 ```
 
-## ⚠️ 厂商栈关键坑（known-issues #12）
+## ⚠️ 厂商栈关键坑（known-issues #11）
 
 本样例开发过程发现的**根本性问题**: 裸 `@triton.jit` kernel 启动
 若不包 `torch_device_fn.device(...)` 上下文，**首次编译启动正常，
@@ -71,5 +71,5 @@ xychart-beta
     bar [142, 89]
 ```
 
-> 修复 [#12](../../docs/known-issues.md) 前的"0.19ms"是 no-op 假数据；
+> 修复 [#11](../../docs/known-issues.md) 前的"0.19ms"是 no-op 假数据；
 > 真实测量下自研 Triton BMM 比原生快 1.59x（fp32 累加、64³ 分块）。
