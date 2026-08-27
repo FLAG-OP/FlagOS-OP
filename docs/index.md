@@ -32,13 +32,13 @@ flowchart TB
     style CHIP fill:#f3e8ff
 ```
 
-| 物理栈层 | 本库在此做的事 |
-|---|---|
-| **应用层** | [framework 验证](testing.md#framework)（真实推理注入） |
-| **框架层** | [op 验证](testing.md#levels)（注册/分发/拦截）· A1/A2 路线 |
-| **编译层** | [Triton 级](architecture.md#levels)开发——Triton DSL 编译到设备码 |
-| **算子库层** | [kernel 验证](testing.md#kernel-level)（直测+哨兵）· B 路线 · torch 级/硬件级 |
-| **硬件层** | [设备 profile](device-profiles.md) 接入 |
+| 物理栈层 | 验证 | 路线 | 开发级别 |
+|---|---|---|---|
+| **应用层** | [framework 验证](testing.md#framework) | — | — |
+| **框架层** | [op 验证](testing.md#levels) | [A1](route-a1-aten.md) · [A2](route-a2-dispatch.md) | — |
+| **编译层** | — | — | [Triton 级](architecture.md#levels) |
+| **算子库层** | [kernel 验证](testing.md#kernel-level) | [B](route-b-vendor.md) | [torch 级](architecture.md#levels) · [硬件级](architecture.md#levels) |
+| **硬件层** | — | — | —（[设备 profile](device-profiles.md)） |
 
 ## 按任务找入口
 
