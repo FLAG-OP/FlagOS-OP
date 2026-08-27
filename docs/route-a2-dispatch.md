@@ -50,6 +50,9 @@ export VLLM_FL_PLUGIN_MODULES=routes.a2_dispatch.plugin.register_ops
 4. 自定义数值实现的框架级断言用"前 2 token 一致率"而非全量一致
    （随机权重 + 贪心解码会把数值微差混沌放大为后期分叉）
 
+> ⚠️ 写 Triton kernel 时: 启动必须包 `torch_device_fn.device(...)` 上下文，
+> 否则首次后的启动静默 no-op（[known-issues #11](known-issues.md)）。
+
 ---
 
 **下一步**: [B 路线](route-b-vendor.md)——厂商算子注册。 · [全链路指南](fullstack-guide.md)
