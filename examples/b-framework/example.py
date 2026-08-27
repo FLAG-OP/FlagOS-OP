@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""样例 B×框架层: vendor backend 拦截真实 vLLM 前向 + 黄金回归。
+"""样例 B×框架层: 厂商 Backend 拦截真实 vLLM 前向 + 黄金回归。
 
 运行: python3 examples/b-framework/example.py [设备profile名]（约 2 分钟）
 """

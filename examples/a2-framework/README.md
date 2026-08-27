@@ -1,4 +1,4 @@
-# 样例: A2 路线 × framework 验证层
+# 样例: A2 路线 × 应用层（framework 验证）
 
 ## 目标
 

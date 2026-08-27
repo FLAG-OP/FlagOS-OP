@@ -1,4 +1,4 @@
-# audit vendor backend: 计数 + 委托（设备无关，委托目标来自设备 profile）
+# audit 厂商算子: 计数 + 委托。委托目标来自设备 profile。
 from __future__ import annotations
 
 import json

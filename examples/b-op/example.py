@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""样例 B×算子层: 自定义 vendor backend 注册/选择/计数。
+"""样例 B×算子层: 自定义厂商算子注册/选择/计数。
 
 自包含演示:
-  ① 定义 vendor backend（vendor 属性 / is_available / 算子方法）
+  ① 定义厂商 Backend（vendor 属性 / is_available / 算子方法）
   ② 以 VENDOR 类型注册进 dispatch registry
   ③ with_allowed_vendors 精确选择 + 调用计数 + 语义精度
 
@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 import torch
 
 
-# ============ ① vendor backend 定义 ============
+# ============ ① 厂商 Backend 定义 ============
 def register_builtins(registry) -> None:
     from vllm_fl.dispatch.types import OpImpl, BackendImplKind, BackendPriority
     from vllm_fl.dispatch.backends.base import Backend

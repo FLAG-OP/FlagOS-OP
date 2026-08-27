@@ -1,4 +1,4 @@
-# aten dispatcher 注册模板（设备无关: dispatch key 由 profile 提供）
+# torch 算子替换（aten 注册）模板。dispatch key 由设备 profile 提供。
 from __future__ import annotations
 
 import json

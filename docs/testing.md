@@ -43,7 +43,7 @@ flowchart TD
 <a id="kernel-level"></a>
 ## kernel 层（硬件语言直测）
 
-不经任何注册/分发，直接验证 kernel——**厂商语言路线的核心层**
+不经任何注册/分发，直接验证 kernel——**厂商算子注册路线的核心层**
 （详见[路线 B](route-b-vendor.md)）:
 
 1. **精度**: vs PyTorch 语义参考（`common/kernel_spec.py` 的

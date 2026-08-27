@@ -38,7 +38,7 @@ def register_builtins(registry) -> None:
     from vllm_fl.dispatch.backends.base import Backend
 
     class MyCppVendor(Backend):
-        """自研 C++ kernel 的 vendor backend。"""
+        """自研 C++ kernel 的厂商 Backend。"""
 
         @property
         def name(self): return "my-cpp"

@@ -3,7 +3,7 @@
 
 完全自包含（不依赖 routes/），演示 aten 路线四步:
   ① 写 Triton kernel
-  ② 注册进 aten dispatcher（dispatch key 来自设备 profile）
+  ② 注册进 aten（dispatch key 来自设备 profile）
   ③ 拦截验证（torch 真实调用命中我们的 kernel）
   ④ 精度 + 性能验证
 
