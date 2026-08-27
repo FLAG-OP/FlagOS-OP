@@ -2,8 +2,9 @@
 
 [← 返回文档中心](index.md)
 
-> 5 分钟跑通第一格。概念不清先看[体系结构](architecture.md)；
-> 完整开发流程见[全链路指南](fullstack-guide.md)。
+> 这一页帮你用 5 分钟跑通第一个验证。如果还不清楚这个库在做什么，
+> 先读[体系结构](architecture.md)；想完整开发一个算子，跟着
+> [全链路指南](fullstack-guide.md)走。
 
 ## 环境要求
 

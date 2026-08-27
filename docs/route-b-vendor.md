@@ -1,13 +1,15 @@
 # 路线 B: 厂商算子注册
 
-> 典型开发级别: torch 级（C++ 调 ATen）/ 硬件级（厂商 kernel）——路线只管接入，不限定级别。
-
 [← 返回文档中心](index.md)
 
 ## 适用场景
 
 用厂商 SDK / C++ / 芯片专用语言写的 kernel（经厂商 Python 绑定
 或 `.so` 暴露；参考实例 P800 上为昆仑芯 XPU 栈的 `xtorch_ops`）。
+
+这条路线上的 kernel 通常有两种来路：一种是 torch 级，用 C++ 调
+ATen 组合出融合算子（如 b-fullstack）；另一种是硬件级，厂商用专用
+语言写好、经 Python 绑定暴露。路线本身只负责注册与选择。
 
 <a id="kernelspec"></a>
 ## 泛化接口 KernelSpec
@@ -72,8 +74,6 @@ audit vendor = 计数 + 委托，双用途:
    是精确选择特定 vendor 的正规方式
 2. ⚠️ 本机 `xtorch_ops.swiglu` 独立调用**不写输出**（[known-issues #2](known-issues.md)），
    框架级恒等断言采用 reference 委托（厂商 kernel 无法保证数值恒等）
-
-本路线典型开发级别: **torch 级**（C++ 调 ATen）或 **硬件级**（厂商 kernel）
 
 > ⚠️ 写 Triton kernel 时: 启动必须包 `torch_device_fn.device(...)` 上下文，
 > 否则首次后的启动静默 no-op（[known-issues #11](known-issues.md)）。

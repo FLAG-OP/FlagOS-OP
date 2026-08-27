@@ -2,7 +2,7 @@
 
 [← 返回文档中心](index.md)
 
-## 定位
+## 它解决什么问题
 
 FlagOS 生态已有 **KernelGen**（Agent 驱动的 Triton kernel 生成→优化→
 测试平台）与 **KernelGenBench**（生成能力评测基准）。本库不做生成，

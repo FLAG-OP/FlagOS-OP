@@ -1,7 +1,5 @@
 # 路线 A2: FlagOS 融合算子
 
-> 典型开发级别: Triton 级 / torch 级——路线只管接入，不限定级别。
-
 [← 返回文档中心](index.md)
 
 ## 适用场景
@@ -9,6 +7,9 @@
 vLLM **融合算子**（silu_and_mul / rms_norm / rotary_embedding /
 自定义融合层）。它们不是 aten 算子，torch dispatcher 管不到，
 走 FlagOS 自研 dispatch（OpManager / OpRegistry / policy）。
+
+这条路线同样不限制开发级别：融合算子通常用 Triton 实现，但用 torch
+组合、或委托给厂商 kernel，也都能注册进来。
 
 ## 分发模型
 
