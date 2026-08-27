@@ -45,6 +45,8 @@ flowchart TB
 
 **读图方式**:
 - 每行 = 物理栈一层（算子库/框架/应用），行内左→右 = A1 / A2 / B 三条路线
+- 想按**开发步骤**（而非矩阵格）找范本，见
+  [全链路指南 · 步骤 × 样例覆盖矩阵](../docs/fullstack-guide.md#coverage)
 - 节点配色 = [开发层级](../docs/architecture.md#levels):
   🔵 **Triton**（Triton 层，自研设备码）· 🟢 **torch**（框架层）· 🟠 **硬件**（硬件语言层）
 - ⭐ 全链路/专项样例以虚线标注覆盖范围（bmm/b-fullstack/softmax 各覆盖

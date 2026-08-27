@@ -2,6 +2,10 @@
 
 [← 返回文档中心](index.md)
 
+> **读这一页能得到什么**: 本库全部验证机制的唯一参考——三层验证、
+> 哨兵、黄金、漂移、一致性与断言策略。按步骤开发见
+> [全链路指南](fullstack-guide.md)。
+
 ## 目录
 
 - [三层验证](#levels) · [kernel 层](#kernel-level) · [framework 层](#framework)
@@ -10,6 +14,7 @@
 - [黄金输出](#golden) · [漂移实验](#drift) · [跨层一致性](#consistency)
 - 性能维度单独成体系: [性能回归追踪](performance-regression.md)
 
+## 总览
 
 | 路线 \ 验证层级 | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
 |---|---|---|---|
