@@ -139,12 +139,63 @@ P800 硬件级开发层级:
   2. Triton 级（→ XMLIR → XPU 指令，已验证可用）
 """)
 
+    # ---- 5. SDK 可用性检测 ----
+    print("[3.5] 昆仑芯 SDK 检测:")
+    sdk_available = detect_kunlunxin_sdk()
+    if sdk_available:
+        print("    ✅ SDK 可用，尝试编译 SDK 模板...")
+        try:
+            mod_sdk = compile_sdk_template()
+            out_sdk = mod_sdk.silu_and_mul(x[:4, :1024])
+            print(f"    SDK kernel 输出 shape: {out_sdk.shape}")
+        except Exception as e:
+            print(f"    SDK 编译/执行失败: {e}")
+    else:
+        print("    ❌ SDK 不可用（容器未安装）")
+        print("    SDK 模板已就绪: sdk_template/xpu_kernel_template.cpp")
+        print("    SDK 到位后运行 example.py 将自动切换到 SDK 编译路径")
+        print("    编译指南: sdk_template/BUILD.md")
+
     # ---- 5. CUDA C++ 参考代码展示 ----
     print("[4] CUDA C++ 参考代码（供 NVIDIA 环境）:")
     print(CUDA_REFERENCE)
 
     print("=> hw-kernel-example PASS")
     return True
+
+
+def detect_kunlunxin_sdk():
+    """检测昆仑芯 SDK 是否可用。"""
+    import shutil
+    # [SDK-TODO] 替换为实际 SDK 检测命令
+    # 预期检测: xpu-cc 或 kunlunxin-cc 是否在 PATH 中
+    for cmd in ["xpu-cc", "kunlunxin-cc", "xpu-sdk"]:
+        if shutil.which(cmd):
+            return True
+    # 也检查头文件
+    import os
+    for header in ["/usr/local/xpu/include/xpu_runtime.h",
+                   "/opt/kunlunxin/include/xpu_runtime.h"]:
+        if os.path.exists(header):
+            return True
+    return False
+
+
+def compile_sdk_template():
+    """SDK 就绪后编译 sdk_template/ 中的 XPU kernel。"""
+    from torch.utils.cpp_extension import load
+
+    sdk_dir = Path(__file__).parent / "sdk_template"
+    src = sdk_dir / "xpu_kernel_template.cpp"
+
+    # [SDK-TODO] 替换为昆仑芯编译器标志
+    return load(
+        name="xpu_kernels",
+        sources=[str(src)],
+        extra_cuda_cflags=["-O3"],  # SDK 可能用 extra_xpu_cflags
+        build_directory="/tmp/flagos_xpu_sdk_build",
+        verbose=True,
+    )
 
 
 CUDA_REFERENCE = """

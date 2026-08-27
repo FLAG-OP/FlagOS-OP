@@ -30,3 +30,12 @@ python3 examples/hw-kernel-example/example.py
 2. 精度 vs PyTorch 参考 + 哨兵检查
 3. 性能对比（厂商原语 vs Triton vs PyTorch）
 4. CUDA C++ 参考代码（附 NV 版设备码）
+
+## SDK 就绪模板（sdk_template/）
+
+| 文件 | 用途 |
+|---|---|
+| [xpu_kernel_template.cpp](sdk_template/xpu_kernel_template.cpp) | 完整 XPU kernel 源码（[SDK-TODO] 标记待替换处） |
+| [BUILD.md](sdk_template/BUILD.md) | 编译指南 + SDK 到位后检查清单 |
+
+SDK 到位后:  自动检测并切换到 SDK 编译路径（无需改代码）。
