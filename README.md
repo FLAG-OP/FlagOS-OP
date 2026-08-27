@@ -51,7 +51,7 @@ python3 scripts/intake_validate.py --validate-only        # AI 生成算子契�
 |---|---|---|
 | 1 | [快速开始](docs/getting-started.md) | 5 分钟跑通第一格 |
 | 2 | [体系结构](docs/architecture.md) | 物理栈 · 开发级别 · 路线 · 3×3 矩阵 |
-| 3 | [全链路指南](docs/fullstack-guide.md) | 一个算子从源码到推理的完整流程 |
+| 3 | [全链路指南](docs/fullstack-guide.md) | 七步流水线 · 每步抽象动作 × 样例映射 |
 | 4 | [测试体系](docs/testing.md) | 验证层级 · 黄金 · 漂移 · 一致性 |
 | 5 | [性能回归追踪](docs/performance-regression.md) | 结构化记录 · 入库基线 · 双档门禁 |
 | 6 | [AI 生成算子接入](docs/ai-intake.md) | KernelGen/KernelBench 产物 → 三级验证 |
