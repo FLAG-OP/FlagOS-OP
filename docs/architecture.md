@@ -5,7 +5,7 @@
 <a id="matrix"></a>
 ## 3×3 验证矩阵
 
-**三条实现路线 × 三层验证层级**（对应[物理栈](../README.md#map)各层），每格独立可跑（`run.py --route X --level Y`）:
+**三条实现路线 × 三层验证层级**（对应[物理栈](index.md)各层），每格独立可跑（`run.py --route X --level Y`）:
 
 | | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
 |---|---|---|---|
