@@ -2,9 +2,9 @@
   "schema": 1,
   "device": "p800-kunlunxin",
   "created_at": "2026-08-27T10:31:10.880764+00:00",
-  "updated_at": "2026-08-27T10:34:48.447635+00:00",
-  "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-  "git_dirty": true,
+  "updated_at": "2026-08-27T10:39:07.562335+00:00",
+  "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+  "git_dirty": false,
   "env_fingerprint": {
     "torch": "2.9.0+cu129",
     "triton": "3.0.0",
@@ -15,13 +15,13 @@
   "cases": {
     "example.a2-op.gelu_and_mul.reference": {
       "metrics": {
-        "latency_ms": 3.692135
+        "latency_ms": 3.686182
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:33:13.621888+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:37:33.310969+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -32,14 +32,14 @@
     },
     "example.a2-op.gelu_and_mul.triton": {
       "metrics": {
-        "latency_ms": 0.051637,
-        "GBps": 7797.778
+        "latency_ms": 0.052473,
+        "GBps": 7673.591
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:32:33.295205+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:36:52.967718+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -50,14 +50,14 @@
     },
     "example.b-fullstack.silu_and_mul.cpp": {
       "metrics": {
-        "latency_ms": 0.311311,
-        "GBps": 323.353
+        "latency_ms": 0.308108,
+        "GBps": 326.714
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:33:22.381206+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:37:42.109308+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -68,13 +68,13 @@
     },
     "example.backward-example.gelu_and_mul.bwd": {
       "metrics": {
-        "latency_ms": 0.323013
+        "latency_ms": 0.338417
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:34:18.653573+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:38:38.247818+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -85,13 +85,13 @@
     },
     "example.backward-example.gelu_and_mul.fwd": {
       "metrics": {
-        "latency_ms": 0.03993
+        "latency_ms": 0.044112
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:34:09.375795+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:38:28.595167+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -102,14 +102,14 @@
     },
     "example.bmm-fullstack.bmm.torch": {
       "metrics": {
-        "latency_ms": 0.040268,
-        "TFLOPS": 106.66
+        "latency_ms": 0.04029,
+        "TFLOPS": 106.601
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:33:40.911107+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:38:00.873353+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -120,14 +120,14 @@
     },
     "example.bmm-fullstack.bmm.triton": {
       "metrics": {
-        "latency_ms": 0.033149,
-        "TFLOPS": 129.565
+        "latency_ms": 0.031828,
+        "TFLOPS": 134.944
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:33:31.735862+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:37:51.882071+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -138,14 +138,14 @@
     },
     "example.hw-kernel-example.silu_and_mul.pytorch": {
       "metrics": {
-        "latency_ms": 0.038162,
-        "GBps": 659.44
+        "latency_ms": 0.037551,
+        "GBps": 670.17
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:34:36.956180+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:38:55.472519+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -156,13 +156,13 @@
     },
     "example.hw-kernel-example.silu_and_mul.triton": {
       "metrics": {
-        "latency_ms": 0.080042
+        "latency_ms": 0.080334
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:34:46.275932+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:39:05.308774+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -173,13 +173,13 @@
     },
     "example.hw-kernel-example.silu_and_mul.vendor_primitives": {
       "metrics": {
-        "latency_ms": 0.038605
+        "latency_ms": 0.038618
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:34:27.986738+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:38:46.865211+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -190,13 +190,13 @@
     },
     "example.softmax-fullstack.softmax.torch": {
       "metrics": {
-        "latency_ms": 0.010412
+        "latency_ms": 0.01069
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:33:59.717653+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:38:19.406266+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -207,14 +207,14 @@
     },
     "example.softmax-fullstack.softmax.triton": {
       "metrics": {
-        "latency_ms": 0.035723,
-        "GBps": 117.411
+        "latency_ms": 0.037165,
+        "GBps": 112.855
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:33:50.908940+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:38:10.786416+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -225,14 +225,14 @@
     },
     "matrix-kernel.a1.gelu_tanh.triton": {
       "metrics": {
-        "latency_ms": 0.045418,
-        "GBps": 5910.353
+        "latency_ms": 0.045944,
+        "GBps": 5842.726
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:31:10.880764+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:35:29.772337+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -243,14 +243,14 @@
     },
     "matrix-kernel.a2.gelu_and_mul.triton": {
       "metrics": {
-        "latency_ms": 0.051636,
-        "GBps": 7797.899
+        "latency_ms": 0.054254,
+        "GBps": 7421.637
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:31:43.935442+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:36:02.981973+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
@@ -261,13 +261,13 @@
     },
     "matrix-kernel.b.my_vendor_ops.gelu_and_mul": {
       "metrics": {
-        "latency_ms": 1.771494
+        "latency_ms": 1.772686
       },
       "warmup": 20,
       "iters": 100,
-      "updated_at": "2026-08-27T10:32:24.029812+00:00",
-      "git_commit": "c7fd44088415592569c0255662c669443b3f1e7b",
-      "git_dirty": true,
+      "updated_at": "2026-08-27T10:36:43.115156+00:00",
+      "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
+      "git_dirty": false,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",
