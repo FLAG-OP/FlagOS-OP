@@ -1,59 +1,70 @@
-# FlagOS 算子开发模板库 · 文档中心
+# 文档中心
 
-<a id="top"></a>
-## 目录
+[← 返回仓库首页](../README.md)
 
-1. [快速开始](getting-started.md) — 5 分钟跑通第一格
-2. [体系结构](architecture.md) — 层次图 · 3×3 矩阵 · 目录导航
-3. 路线详解
-   - [路线 A1: torch 算子替换](route-a1-aten.md)
-   - [路线 A2: FlagOS 融合算子](route-a2-dispatch.md)
-   - [路线 B: 厂商算子注册](route-b-vendor.md)
-4. [测试体系](testing.md) — kernel/op/framework 三层 · 黄金 · 漂移 · 一致性
-5. [全链路开发指南](fullstack-guide.md) ⭐ — 一个算子从源码到真实推理
-6. [设备接入](device-profiles.md) — 新芯片接入
-7. [报告与环境快照](reporting.md) — 算子开发报告模板
-8. [已知问题](known-issues.md) — 参考 case 记录 + 通用检测方法
-
-## 体系一图
+## 阅读路径
 
 ```
-  应用层    vLLM · transformers           ← framework 验证
-    ↓
-  框架层    PyTorch + FlagOS 融合算子     ← op 验证（框架层） · A1/A2 路线
-    ↓
-  编译层    Triton → 芯片编译栈           ← Triton 级
-    ↓
-  算子库层  FlagGems · 厂商 kernel        ← kernel 验证（算子库层） · B 路线 · torch 级/硬件级
-    ↓
-  硬件层    XPU · GPU · NPU              ← 设备 profile
+新手:  1.快速开始 → 2.体系结构 → 3.全链路指南 → 4.测试体系 → 5.已知问题
+深入:  A1/A2/B 路线详解 · 设备接入 · 报告指南 · 样例索引
+排障:  已知问题(按类别检索) → 定位到检测方法 → 修正
 ```
 
-完整物理栈图与概念映射见[根 README](../README.md#map)。## 按任务找入口
+## 体系总览
+
+```mermaid
+flowchart TB
+    APP["应用层<br/>vLLM · transformers"]
+    FRAME["框架层<br/>PyTorch + FlagOS 融合算子"]
+    COMP["编译层<br/>Triton → 芯片编译栈"]
+    OPS["算子库层<br/>FlagGems · 厂商 kernel"]
+    CHIP["硬件层"]
+
+    APP -->|"A1: torch 算子替换<br/>A2: FlagOS 融合算子"| FRAME
+    FRAME -->|"Triton 级 kernel 编译"| COMP
+    COMP --> OPS
+    OPS -->|"B: 厂商算子注册"| CHIP
+
+    style APP fill:#e0e7ff
+    style FRAME fill:#dbeafe
+    style COMP fill:#dcfce7
+    style OPS fill:#ffedd5
+    style CHIP fill:#f3e8ff
+```
+
+| 物理栈层 | 本库在此做的事 |
+|---|---|
+| **应用层** | [framework 验证](testing.md#framework)（真实推理注入） |
+| **框架层** | [op 验证](testing.md#levels)（注册/分发/拦截）· A1/A2 路线 |
+| **编译层** | [Triton 级](architecture.md#levels)开发——Triton DSL 编译到设备码 |
+| **算子库层** | [kernel 验证](testing.md#kernel-level)（直测+哨兵）· B 路线 · torch 级/硬件级 |
+| **硬件层** | [设备 profile](device-profiles.md) 接入 |
+
+## 按任务找入口
 
 | 我想… | 去哪 |
 |---|---|
-| 跑通第一个测试 | [快速开始](getting-started.md) |
-| 理解三条路线区别 | [体系结构](architecture.md#routes) |
-| 开发 torch 算子替换 | [路线 A1](route-a1-aten.md) |
-| 开发 vLLM 融合算子 | [路线 A2](route-a2-dispatch.md) |
-| 接入厂商 C++ kernel | [路线 B](route-b-vendor.md) |
-| 完整走一遍开发到上线 | [全链路指南](fullstack-guide.md)（4 个范本） |
-| 理解每层验证断什么 | [测试体系](testing.md) |
-| 接入新芯片 | [设备接入](device-profiles.md#onboard) |
+| 5 分钟跑通 | [快速开始](getting-started.md) |
+| 理解整体设计 | [体系结构](architecture.md) |
+| 开发 torch 算子替换 | [A1 路线](route-a1-aten.md) |
+| 开发 FlagOS 融合算子 | [A2 路线](route-a2-dispatch.md) |
+| 接入厂商 kernel | [B 路线](route-b-vendor.md) |
+| 完整走一遍开发 | [全链路指南](fullstack-guide.md) |
+| 理解每层验证 | [测试体系](testing.md) |
+| 接入新芯片 | [设备接入](device-profiles.md) |
 | 写开发报告 | [报告指南](reporting.md) |
-| 排查数值问题 | [已知问题](known-issues.md#method) |
-| 看可运行样例 | [examples/](../examples/README.md) |
+| 排查问题 | [已知问题](known-issues.md) |
+| 看可运行样例 | [样例索引](../examples/README.md) |
 
-## 术语速查（带链接）
+## 术语
 
 | 术语 | 含义 | 详见 |
 |---|---|---|
+| 路线 | 接入机制: A1 torch 算子替换 / A2 FlagOS 融合算子 / B 厂商算子注册 | [体系结构](architecture.md#routes) |
+| 开发级别 | kernel 用什么写: torch 级 / Triton 级 / 硬件级 | [体系结构](architecture.md#levels) |
+| 验证层级 | 在物理栈哪一层验: 算子库层 / 框架层 / 应用层 | [测试体系](testing.md#levels) |
+| 哨兵检查 | 检测 kernel 是否真实产出 | [测试体系](testing.md#sentinel) |
+| 黄金输出 | 多快照共识回归锚点 | [测试体系](testing.md#golden) |
+| 跨层一致性 | 同算子在算子库层↔框架层张量级比对 | [测试体系](testing.md#consistency) |
 | 设备 profile | 芯片差异的 YAML 声明 | [设备接入](device-profiles.md) |
-| [kernel 层](testing.md#kernel-level) | 硬件语言 kernel 直测 | 测试体系 |
-| [哨兵检查](testing.md#sentinel) | 检测 kernel "不写输出"类 bug | 测试体系 |
-| [黄金输出](testing.md#golden) | 多快照共识回归锚点 | 测试体系 |
-| [跨层一致性](testing.md#consistency) | 同算子 算子库层↔框架层比对 | 测试体系 |
-| PER_OP | 按算子钉选后端的策略 | [路线 A2](route-a2-dispatch.md) |
-| 厂商算子注册 | 厂商 kernel 的 Python 接入层 | [路线 B](route-b-vendor.md) |
-| 开发层级 | kernel 写在哪一层: torch 级 / Triton 级 / 硬件级 | [体系结构](architecture.md#levels) |
+| aten | A Tensor Library，PyTorch 的算子分发库 | [体系结构](architecture.md#routes) |

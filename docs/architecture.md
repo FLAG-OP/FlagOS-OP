@@ -118,3 +118,7 @@ flagos-op-templates/
 - 框架级由 [harness](testing.md#framework) 拉起 vLLM 子进程，引擎参数与注入
   环境变量按 profile 与路线自动组装
 - 每格结果 JSON 落 `results/`，`scripts/report.py` 汇总成 Markdown
+
+---
+
+**下一步**: [全链路指南](fullstack-guide.md)——跟着一个算子从源码走到推理。

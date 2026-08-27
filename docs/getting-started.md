@@ -41,3 +41,7 @@ python3 run.py --all --device <profile名>     # 直接方式
 ```
 
 没有对应 profile 时会列出可用项；接入新芯片见 `device-profiles.md`。
+
+---
+
+**下一步**: [体系结构](architecture.md)——理解物理栈、路线与开发级别的设计。

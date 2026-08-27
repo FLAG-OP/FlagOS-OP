@@ -69,3 +69,7 @@ audit vendor = 计数 + 委托，双用途:
    是精确选择特定 vendor 的正规方式
 2. ⚠️ 本机 `xtorch_ops.swiglu` 独立调用**不写输出**（known-issues #5），
    框架级恒等断言采用 reference 委托（厂商 kernel 无法保证数值恒等）
+
+---
+
+**下一步**: [全链路指南](fullstack-guide.md)——三条路线的完整开发流程。 · [测试体系](testing.md)
