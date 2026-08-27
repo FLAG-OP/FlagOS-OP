@@ -65,7 +65,7 @@ flowchart TB
 | [b-op](b-op/) | 自定义 厂商算子注册 注册/选择/计数 | torch（委托） |
 | [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **Triton** |
 | [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **Triton** |
-| [hw-kernel-example](hw-kernel-example/) | 手写 CUDA C++ 设备码（编译✅/执行❌，记录环境限制） | **硬件级** |
+| [hw-kernel-example](hw-kernel-example/) | xtorch_ops 厂商原语组合 + CUDA C++ 参考（P800 硬件级） | **硬件级** |
 | [bmm-fullstack](bmm-fullstack/) | torch.bmm 贯穿 算子库层→框架层→应用层（含 [#11](../docs/known-issues.md) 根因发现） | **Triton** |
 | **[b-fullstack](b-fullstack/)** ⭐ | **旗舰: 同一 C++ kernel 贯穿 算子库层→框架层→应用层**（JIT 编译→vendor 注册→真实推理，附[开发报告](b-fullstack/report.md)） | **torch** |
 | [b-framework](b-framework/) | audit vendor 拦截真实 vLLM + 黄金回归 | torch（委托） |
@@ -82,7 +82,7 @@ kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为�
 | silu_and_mul 4096×8192 | Triton 融合 | 0.083ms（C++ 0.271 / 参考 0.651） | [b-fullstack](b-fullstack/) |
 | BMM 16×512³ | Triton 分块 | 0.030ms / 142 TFLOPS（原生 1.59x） | [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **Triton** |
 | [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **Triton** |
-| [hw-kernel-example](hw-kernel-example/) | 手写 CUDA C++ 设备码（编译✅/执行❌，记录环境限制） | **硬件级** |
+| [hw-kernel-example](hw-kernel-example/) | xtorch_ops 厂商原语组合 + CUDA C++ 参考（P800 硬件级） | **硬件级** |
 | [bmm-fullstack](bmm-fullstack/) |
 | gelu 8192² | Triton | 0.047ms（CPU 2341x） | [a1-op](a1-op/) |
 | gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | [a2-op](a2-op/) |

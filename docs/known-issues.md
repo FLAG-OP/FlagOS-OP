@@ -79,11 +79,14 @@ with torch_device_fn.device(x.device):
 ```
 
 <a id="method"></a>
-### 12. 自研 CUDA C++ 设备码无法在 XPU 执行
-nvcc 编译通过（`__global__` 函数语法正确），但运行时报
-`invalid device function`——XPU 硬件无法识别 NVIDIA PTX 指令集。
-XMLIR 兼容层只翻译 ATen/Triton 中间表示，不翻译 nvcc 二进制。
-硬件级开发需厂商提供自家 SDK/编译器（发现: hw-kernel-example）。
+### 12. CUDA C++ 设备码（NVIDIA）无法在 P800/XPU 执行
+nvcc 编译 NVIDIA CUDA C++ 通过，但 P800 的 XPU 硬件无法识别
+NVIDIA PTX 指令集（报 `invalid device function`）。XMLIR 兼容层
+只翻译 ATen/Triton 中间表示，不翻译 nvcc 二进制。
+
+P800 真正的硬件级开发需昆仑芯 SDK（本容器未提供）。当前最接近
+硬件级的方式是用 xtorch_ops 厂商原语组合（见 hw-kernel-example）
+或 Triton 级开发（→ XMLIR → XPU 指令）。
 
 ## 通用检测方法
 

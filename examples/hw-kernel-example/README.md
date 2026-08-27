@@ -1,26 +1,22 @@
-# hw-kernel-example: 手写硬件语言设备码
+# hw-kernel-example: P800 硬件级算子开发
 
 [← 样例索引](../README.md)
 
 ## 定位
 
-全库唯一的**硬件级**开发样例——手写 CUDA C++ `__global__` 设备函数，
-覆盖 vector_add 和 fused_silu_and_mul 两个 kernel。
+P800 硬件级开发样例。本容器无昆仑芯 SDK，用 **xtorch_ops 厂商原语**
+（预编译 XPU kernel）组合自定义算子，是当前环境下最接近硬件级的方式。
 
-## 实测结论（P800/XPU 栈）
+附 CUDA C++ 参考设备码（供 NVIDIA 环境直接复用）。
 
-| 阶段 | 结果 | 说明 |
+## 环境限制
+
+| 开发方式 | 状态 | 说明 |
 |---|---|---|
-| JIT 编译 | ✅ | nvcc 编译通过，产出 .so |
-| 设备执行 | ❌ | XPU 无法运行 NVIDIA PTX |
-
-**原因**: XMLIR 兼容层只翻译 ATen/Triton 中间表示，不翻译 nvcc
-直接产出的 NVIDIA 二进制码。
-
-**可行路径**:
-1. 厂商 SDK: 使用昆仑芯自家编译器（非 nvcc）
-2. Triton 级: 当前环境下最接近硬件的开发方式（→ XMLIR → XPU）
-3. torch 级: C++ 调 ATen（如 [b-fullstack](../b-fullstack/)）
+| 昆仑芯 SDK / XPU C++ | ❌ 本容器无 SDK | 真正的 P800 硬件级开发 |
+| xtorch_ops 厂商原语 | ✅ 307 个可用 | **本样例使用**（预编译 XPU kernel 组合） |
+| CUDA C++ (nvcc) | ⚠️ 编译✅ 执行❌ | XPU 无法运行 NVIDIA PTX |
+| Triton 级 | ✅ 已验证 | → XMLIR → XPU 指令 |
 
 ## 运行
 
@@ -28,7 +24,9 @@
 python3 examples/hw-kernel-example/example.py
 ```
 
-## CUDA C++ 参考实现
+## 内容
 
-本样例包含完整的 `__global__` 设备函数（vector_add + fused_silu_and_mul），
-在有 NVIDIA GPU 或厂商 SDK 的环境中可直接编译执行。
+1. 用 xtorch_ops 厂商原语组合 fused_silu_and_mul
+2. 精度 vs PyTorch 参考 + 哨兵检查
+3. 性能对比（厂商原语 vs Triton vs PyTorch）
+4. CUDA C++ 参考代码（附 NV 版设备码）
