@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """样例 B-fullstack: 单一算子（silu_and_mul）贯穿三层——旗舰样例。
 
-  kernel 层 层: 写 C++ kernel → JIT 编译 → 直测（精度/哨兵/性能）
-  op 层 层:     注册 vendor:my-cpp → PER_OP 钉选 → call_op 验证
-  framework 验证:    注入真实 vLLM → 前向调用计数 + 输出比对 + 黄金回归
+  算子库层: 写 C++ kernel → JIT 编译 → 直测（精度/哨兵/性能）
+  框架层:   注册 vendor:my-cpp → PER_OP 钉选 → call_op 验证
+  应用层:   注入真实 vLLM → 前向调用计数 + 输出比对 + 黄金回归
 
 运行: python3 examples/b-fullstack/example.py [设备profile名]（约 3-4 分钟）
 """

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.6] - 2026-08-27
+
+### Fixed
+- b-fullstack 三处历史重命名残留: "kernel 层 层"/"op 层 层"（README+docstring）
+  与 "厂商语言 kernel/厂商语言路线" 误称（该样例是 torch 级 C++ 调 ATen，
+  路线名为厂商算子注册）
+
 ## [0.5.5] - 2026-08-27
 
 ### Changed

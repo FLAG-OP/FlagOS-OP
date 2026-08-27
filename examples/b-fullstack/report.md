@@ -189,7 +189,7 @@ def reference(x):
 
 ### 3.1 路线选择理由
 
-厂商语言路线（B）：演示"自研 C++ kernel 从源码到真实推理"的完整闭环。
+厂商算子注册路线（B）：演示"自研 C++ kernel 从源码到真实推理"的完整闭环。
 csrc 经 `torch.utils.cpp_extension.load()` JIT 编译（ninja 缓存后
 重复加载近零耗时），Python 侧无手写构建。
 
