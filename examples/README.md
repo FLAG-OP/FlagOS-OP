@@ -31,6 +31,7 @@ flowchart TB
         BF["b-framework"]:::torch_level
     end
 
+    HWK["hw-kernel-example<br/>硬件级·SDK模板"]:::hw_level
     BMM["bmm-fullstack ⭐<br/>A1 · Triton 级 · GEMM"]:::fs
     BFS["b-fullstack ⭐<br/>B · torch 级 · fused"]:::fs
     SMX["softmax-fullstack ⭐<br/>A1 · Triton 级 · reduction"]:::fs

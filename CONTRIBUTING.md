@@ -64,6 +64,7 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 | 方向 | 说明 | 参考 |
 ---|---|---|
 | ~~reduction 类算子样例~~ | ✅ softmax-fullstack 已完成 | — |
-| autotune 集成 | `@triton.autotune` / FlagGems `libtuner` 分块参数搜索 | FlagGems `bmm.py` |
-| backward / autograd | 自定义算子的反向传播注册 | FlagGems `silu_and_mul_grad` |
-| 多芯片 CI | 矩阵在多设备上的自动回归 | GitHub Actions self-hosted runner |
+| ~~autotune 集成~~ | ✅ softmax-fullstack 已含 @triton.autotune | — |
+| ~~backward / autograd~~ | ✅ backward-example 已完成 | — |
+| ~~多芯片 CI~~ | 部分完成（链接/语法/YAML 检查已有，多设备运行待硬件） | GitHub Actions |
+| 昆仑芯 SDK 集成 | SDK 到位后激活 sdk_template 中的 XPU kernel | hw-kernel-example |

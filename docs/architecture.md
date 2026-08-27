@@ -24,7 +24,7 @@
 |---|---|---|---|
 | **torch 级** | PyTorch/FlagOS 框架内代码: ATen 算子组合、Python 委托、C++ extension 调 ATen | 计算由框架派发（不产生新设备码） | ✅ [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）、audit vendor |
 | **Triton 级** | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
-| **硬件级** | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；✅ xtorch_ops 厂商原语组合（[hw-kernel-example](../examples/hw-kernel-example/)）+ CUDA C++ 参考；昆仑芯 SDK 未提供 |
+| **硬件级** | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；✅ xtorch_ops 厂商原语组合（[hw-kernel-example](../examples/hw-kernel-example/)）+ CUDA C++ 参考；昆仑芯 SDK 未提供（[SDK 模板已就绪](../examples/hw-kernel-example/sdk_template/BUILD.md)） |
 
 **要点**:
 - 开发级别与[实现路线](#routes)正交——路线管"怎么接入"，级别管"用什么写"
@@ -81,7 +81,7 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 - [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + autotune
 - [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
 
-全部 13 个样例在 3×3 矩阵中的位置与涵盖范围见
+全部 14 个样例在 3×3 矩阵中的位置与涵盖范围见
 [样例定位图](../examples/README.md#map)。
 
 <a id="tree"></a>

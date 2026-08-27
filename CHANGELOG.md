@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.4.0] - 2026-08-27
+
+### Added
+- 硬件级开发样例 hw-kernel-example: xtorch_ops 厂商原语组合 + CUDA C++ 参考
+- SDK 就绪模板 sdk_template/: XPU kernel 源码 + 编译指南 + 自动检测
+- reduction 样例 softmax-fullstack（流式三遍归约 + @triton.autotune）
+- backward 样例 backward-example（autograd fwd+bwd + 训练冒烟）
+- 样例定位图: 14 个样例映射物理栈层 × 路线
+- 物理栈架构图: 应用→框架→编译→算子库→硬件 五层垂直视图
+
+### Changed
+- 路线名: aten dispatcher→torch 算子替换 / FlagOS dispatch→FlagOS 融合算子 / vendor backend→厂商算子注册
+- 开发级别: FW/TR/HW→torch 级/Triton 级/硬件级
+- 验证层级: L0/L2/L4 编号→物理栈层名（算子库层/框架层/应用层）
+- 体系图: 四子图平行结构→物理栈垂直视图
+- 根 README: 139→61 行（着陆页标准）
+- 全文档加"下一步"导航（6 个文档形成阅读链路）
+- 核心心智模型在需要处重复出现（不再只靠索引跳转）
+
+### Fixed
+- known-issues #12: CUDA C++(NVIDIA) 无法在 P800/XPU 执行
+- 报告模板与脚手架同步物理栈视角
+
 ## [0.3.0] - 2026-08-26
 
 ### Added
