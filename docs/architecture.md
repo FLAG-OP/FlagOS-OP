@@ -24,7 +24,7 @@
 |---|---|---|---|
 | **torch 级** | PyTorch/FlagOS 框架内代码: ATen 算子组合、Python 委托、C++ extension 调 ATen | 计算由框架派发（不产生新设备码） | ✅ [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）、audit vendor |
 | **Triton 级** | Triton DSL（`tl.dot`/`pointwise_dynamic`） | Triton 编译器 → 芯片编译栈 → 设备码 | ✅ 本库唯一**自研设备码**路径（[bmm-fullstack](../examples/bmm-fullstack/)、A1/A2 各算子） |
-| **硬件级** | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；csrc 模板预留自研接口 |
+| **硬件级** | 厂商定制语言 kernel（NPU C++/XPU C++/AscendC 等手写设备码） | 厂商工具链编译为 `.so` | ✅ 厂商预编译 kernel 直测+哨兵（[kernel 层](testing.md#kernel-level)）；csrc 模板 + [hw-kernel-example](../examples/hw-kernel-example/)（CUDA C++ 参考实现，本栈编译通过但执行受限） |
 
 **要点**:
 - 开发级别与[实现路线](#routes)正交——路线管"怎么接入"，级别管"用什么写"
