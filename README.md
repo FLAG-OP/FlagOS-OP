@@ -6,15 +6,23 @@ FlagOS 自定义算子开发与验证模板库。
 芯片差异通过设备 profile 接入。
 
 ```
-应用层    vLLM · transformers           ← framework 验证
+应用层    vLLM · transformers
+           └ 验证: framework 验证（真实推理）
   ↓
-框架层    PyTorch + FlagOS 融合算子     ← op 验证 · A1/A2 路线
+框架层    PyTorch + FlagOS dispatch
+           ├ 验证: op 验证（注册/分发/拦截）
+           └ 路线: A1 torch 算子替换 · A2 FlagOS 融合算子
   ↓
-编译层    Triton → 芯片编译栈           ← Triton 级开发
+编译层    Triton → 芯片编译栈
+           └ 开发: Triton 级（自研设备码）
   ↓
-算子库层  FlagGems · 厂商 kernel        ← kernel 验证 · B 路线
+算子库层  FlagGems · 厂商 kernel
+           ├ 验证: kernel 验证（直测+哨兵）
+           ├ 路线: B 厂商算子注册
+           └ 开发: torch 级 · 硬件级
   ↓
-硬件层    XPU · GPU · NPU              ← 设备 profile
+硬件层    XPU · GPU · NPU
+           └ 设备: profile 接入
 ```
 
 | | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
