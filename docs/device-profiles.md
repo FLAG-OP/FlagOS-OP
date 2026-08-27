@@ -45,6 +45,13 @@ python3 run.py --all --device p800-kunlunxin
 
 `scripts/check_env.py --require-model` 会按同一优先级解析并检查路径存在。
 
+**对冒烟模型的要求**（参考实例为 llama-3.1-8b-like 随机权重）:
+
+- 结构: Llama 系列 decoder-only，config 与所用 vLLM 版本兼容
+- 权重: safetensors 格式，随机权重即可（本库验证的是注入链路，不是生成质量）
+- 词表: 常规 Llama 词表大小（tokenizer 一并放入目录）；
+  [输入模板](testing.md#inputs)会在 tokenize 后钳制 token 上限
+
 <a id="onboard"></a>
 ## 新芯片接入（4 步）
 

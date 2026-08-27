@@ -30,7 +30,8 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 
 ### 修改核心测试
 
-- [ ] 保持 `run(profile) -> bool` 签名
+- [ ] 保持 `run(profile)` 签名；返回 `bool` 或
+      `{"ok": bool, ...指标}`（指标自动落盘到结果 JSON 的 `metrics`）
 - [ ] 不引入硬编码设备串/卡号/厂商库名
 - [ ] 修改后跑通该路线全部三层
 

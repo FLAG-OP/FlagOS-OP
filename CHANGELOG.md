@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.1] - 2026-08-27
+
+### Fixed
+- 文档-代码矛盾: 4 处仍写 run() 只返回 bool，与 0.6.0 的 dict 约定不一致
+- b-kernel 性能段静默吞异常（perf=null 无原因）→ 打印 SKIP 原因
+- perf_compare 常驻 "NEW 1" 噪音: intake 用例单独列出，不参与门禁与 NEW 统计
+- b-kernel 负例 flaky: gelu_tanh_and_mul 缺陷偶发（#5），"负例未复现"
+  误判整格 FAIL → 降级 WARN，通过不再依赖坏 kernel 每次都坏
+- p800 profile 该负例的 known-issues 引用误写 #10 → #5
+
+### Changed
+- device-profiles 补冒烟模型要求（结构/权重格式/词表与 tokenizer）
+
 ## [0.6.0] - 2026-08-27
 
 ### Added

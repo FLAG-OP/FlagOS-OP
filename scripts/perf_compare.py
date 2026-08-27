@@ -45,7 +45,10 @@ def main() -> int:
         base_path = baseline_path(args.device)
         base = load_baseline(args.device)
 
-    runs = load_run_records(args.device)
+    all_runs = load_run_records(args.device)
+    # intake 用例随验证产生、不入基线，单独列出，不参与门禁与 NEW 统计
+    runs = [r for r in all_runs if r.get("group") != "intake"]
+    n_intake = len(all_runs) - len(runs)
     if not runs:
         print(f"[perf-compare] 无运行记录: results/perf/runs/{args.device}/")
         print("先执行: python3 scripts/perf_run.py --device " + args.device)
@@ -98,12 +101,16 @@ def main() -> int:
     missing = sorted(base_ids - run_ids)
     if missing:
         lines += ["", "**本次未运行的基线用例**（不判失败）: " + ", ".join(missing)]
+    if n_intake:
+        lines += ["", f"intake 用例 {n_intake} 条（随 intake 验证产生，"
+                      "不入基线、不参与门禁）"]
 
     verdict = "FAIL" if n_fail else ("WARN" if n_warn else "OK")
     lines += [
         "",
         f"## 结论: {verdict}",
-        f"FAIL {n_fail} · WARN {n_warn} · NEW {n_new} · 共 {len(runs)} 条",
+        f"FAIL {n_fail} · WARN {n_warn} · NEW {n_new} · 共 {len(runs)} 条"
+        + (f"（另有 intake {n_intake} 条）" if n_intake else ""),
     ]
     text = "\n".join(lines)
     if args.out:

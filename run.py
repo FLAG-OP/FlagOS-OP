@@ -5,6 +5,9 @@
   python3 run.py --route a1 --level op --device p800-kunlunxin
   python3 run.py --all --device p800-kunlunxin
   python3 run.py --list
+
+测试模块约定: run(profile) 返回 bool，或 {"ok": bool, ...指标}——
+指标会合并进结果 JSON 的 metrics 字段。
 """
 from __future__ import annotations
 

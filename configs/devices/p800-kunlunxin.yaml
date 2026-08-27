@@ -41,7 +41,7 @@ vendor_kernels:
     adapter: gelu_tanh_and_mul
     n_inputs: 2
     expected_ok: false
-    known_issue: XPU2(=cuda:1) 上非确定且输出 inf; XPU1(=cuda:0) 上 err≈0.125 正常（按设备分化 bug，known-issues #10）
+    known_issue: XPU2(=cuda:1) 上非确定且输出 inf; XPU1(=cuda:0) 上 err≈0.125 正常（按设备分化 bug，known-issues #5；偶发，哨兵可能单次未复现）
   - name: xtorch_ops.silu
     op: silu
     out_mode: out_param
