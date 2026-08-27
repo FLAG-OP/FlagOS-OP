@@ -52,6 +52,11 @@ vLLM v1 的前向跑在 **EngineCore 子进程**，主进程的 torch.library
 3. CPU 张量不受设备 key 影响 → 天然的精度参考
 4. 性能基准用短采样（100 次内），长循环会触发输出分配器池增长失真
 
+本路线典型开发级别: **Triton 级**（自研设备码）或 **torch 级**（ATen 组合）
+
+> ⚠️ 写 Triton kernel 时: 启动必须包 `torch_device_fn.device(...)` 上下文，
+> 否则首次后的启动静默 no-op（[known-issues #11](known-issues.md)）。
+
 ---
 
 **下一步**: [A2 路线](route-a2-dispatch.md)——FlagOS 融合算子的开发方式。 · [全链路指南](fullstack-guide.md)

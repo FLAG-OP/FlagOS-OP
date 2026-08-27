@@ -9,6 +9,13 @@
 - [测试输入模板](#inputs)
 - [黄金输出](#golden) · [漂移实验](#drift) · [跨层一致性](#consistency)
 
+
+| 路线 \ 验证层级 | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
+|---|---|---|---|
+| **A1** torch 算子替换 | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
+| **A2** FlagOS 融合算子 | Triton kernel 直测 | dispatch 注册 | vendor 身份注入 |
+| **B** 厂商算子注册 | 厂商 kernel 直测+哨兵 | vendor 注册/选择 | audit vendor 拦截 |
+
 <a id="levels"></a>
 ## 三层验证
 ```mermaid

@@ -5,6 +5,18 @@ FlagOS 自定义算子开发与验证模板库。
 三条实现路线（怎么接入）× 三层验证（在哪验证）构成 9 格矩阵，
 芯片差异通过设备 profile 接入。
 
+```
+应用层    vLLM · transformers           ← framework 验证
+  ↓
+框架层    PyTorch + FlagOS 融合算子     ← op 验证 · A1/A2 路线
+  ↓
+编译层    Triton → 芯片编译栈           ← Triton 级开发
+  ↓
+算子库层  FlagGems · 厂商 kernel        ← kernel 验证 · B 路线
+  ↓
+硬件层    XPU · GPU · NPU              ← 设备 profile
+```
+
 | | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
 |---|---|---|---|
 | **A1** torch 算子替换 | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |

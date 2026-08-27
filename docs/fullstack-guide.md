@@ -44,6 +44,11 @@ flowchart LR
 
 ### 第 1 步: 写 kernel 并直测（算子库层）
 
+> ⚠️ 裸 Triton 启动必须包 `torch_device_fn.device(...)` 上下文，否则
+> 首次后的启动静默 no-op。这是本库开发过程中发现的最重要的坑
+> （[known-issues #11](known-issues.md)）——所有样例的 kernel 都包了此上下文。
+
+
 1. 参考 [routes/b_vendor/csrc/vendor_kernel.cpp](../routes/b_vendor/csrc/vendor_kernel.cpp)
    写 C++ kernel（pybind11 绑定）
 2. 在[设备 profile](device-profiles.md) 的 `vendor_kernels` 段声明

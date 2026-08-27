@@ -70,6 +70,11 @@ audit vendor = 计数 + 委托，双用途:
 2. ⚠️ 本机 `xtorch_ops.swiglu` 独立调用**不写输出**（known-issues #5），
    框架级恒等断言采用 reference 委托（厂商 kernel 无法保证数值恒等）
 
+本路线典型开发级别: **torch 级**（C++ 调 ATen）或 **硬件级**（厂商 kernel）
+
+> ⚠️ 写 Triton kernel 时: 启动必须包 `torch_device_fn.device(...)` 上下文，
+> 否则首次后的启动静默 no-op（[known-issues #11](known-issues.md)）。
+
 ---
 
 **下一步**: [全链路指南](fullstack-guide.md)——三条路线的完整开发流程。 · [测试体系](testing.md)
