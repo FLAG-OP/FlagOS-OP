@@ -28,7 +28,7 @@ def _load_csrc_module():
     )
 
 
-def run(profile) -> bool:
+def run(profile):
     import time
 
     import torch
@@ -111,6 +111,7 @@ def run(profile) -> bool:
     assert n_fail == 0, f"{n_fail} 个厂商 kernel 直测失败"
 
     # ---- 4. 性能（首个可用 return 模式 kernel） ----
+    perf_name, perf_ms = None, None
     for spec, status, _ in results:
         if status != "PASS" or spec.out_mode != "return":
             continue
@@ -126,6 +127,7 @@ def run(profile) -> bool:
                 spec.call(fn, *parts)
             torch.cuda.synchronize()
             t = (time.perf_counter() - t0) / 100 * 1000
+            perf_name, perf_ms = spec.name, t
             print(f"\n  性能: {spec.name} {t:.3f}ms/call")
         except Exception:
             pass
@@ -133,7 +135,9 @@ def run(profile) -> bool:
 
     print(f"\n  => B kernel PASS（{n_pass} pass / {n_fail} fail / "
           f"{len(results) - n_pass - n_fail} skip）")
-    return True
+    return {"ok": n_fail == 0, "pass": n_pass, "fail": n_fail,
+            "skip": len(results) - n_pass - n_fail,
+            "perf": f"{perf_name}={perf_ms:.3f}ms" if perf_ms else None}
 
 
 def perf_cases(profile):

@@ -145,7 +145,8 @@ def sentinel_check(spec: KernelSpec, fn, device: str,
                          dtype=x.dtype, device=x.device)
         try:
             spec.call(fn, *parts, out=out)
-            torch.cuda.synchronize()
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
         except Exception as e:
             return {"ok": False, "mode": "out_param",
                     "detail": f"调用异常: {e}"}
@@ -158,7 +159,8 @@ def sentinel_check(spec: KernelSpec, fn, device: str,
     try:
         o1 = spec.call(fn, *parts)
         o2 = spec.call(fn, *parts)
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
     except Exception as e:
         return {"ok": False, "mode": "return", "detail": f"调用异常: {e}"}
     deterministic = torch.equal(o1, o2)

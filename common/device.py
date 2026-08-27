@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -74,6 +75,9 @@ def load_profile(name: str) -> DeviceProfile:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     dev = raw.get("device", {})
     fw = raw.get("framework", {})
+    # 模型路径可被环境变量覆盖（换机器/换模型不改 profile）
+    if os.environ.get("FLAGOS_MODEL_PATH"):
+        fw["model_path"] = os.environ["FLAGOS_MODEL_PATH"]
     return DeviceProfile(
         name=raw["name"],
         vendor=raw["vendor"],

@@ -8,8 +8,15 @@
 
 ## 环境要求
 
-- FlagOS 生态: FlagGems + vllm-plugin-FL + vLLM
-  （本库基于 4.2.1rc0 / 0.1.0 / 0.13.0 实测）
+- FlagOS 生态: FlagGems + vllm-plugin-FL + vLLM + Triton（版本随共享镜像提供）
+- P800 共享镜像: 实测版本锁定在
+  [configs/env/p800-kunlunxin.lock.yaml](../configs/env/p800-kunlunxin.lock.yaml)，
+  用下面的命令核对当前容器是否仍与实测基线一致:
+
+```bash
+python3 scripts/check_env.py --device p800-kunlunxin --require-model
+```
+
 - Triton（随 FlagGems 提供）
 - 设备 profile: `configs/devices/` 下有你的芯片对应 YAML
   （参考实例 p800-kunlunxin；新芯片见 device-profiles.md 4 步接入）

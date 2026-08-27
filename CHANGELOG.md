@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.0] - 2026-08-27
+
+### Added
+- 环境锁定: configs/env/p800-kunlunxin.lock.yaml（共享镜像实测版本）
+  + scripts/check_env.py 核对（--require-model 一并检查模型路径）
+- 模型路径泛化: 环境变量 FLAGOS_MODEL_PATH 覆盖 profile，换机器不改 YAML
+- tests/unit/ 基础设施单测 20 个（intake 契约 / perf 记录与基线合并 /
+  门禁分级 / KernelSpec 适配器与哨兵 / profile 覆盖），CPU 即可运行
+- CI 新增 unit-tests job（CPU torch + pytest），从纯结构检查升级为跑真实测试
+
+### Changed
+- run() 约定支持返回 {"ok": bool, ...指标}，结果 JSON 新增 metrics 字段
+- kernel 层 a1/a2/b 测试落盘精度 max_err / 哨兵结论 / 性能延迟
+- 报告脚手架自动渲染 metrics（第 4 章不再全部手填）
+- perf_compare 门禁分级抽为 classify_delta 纯函数（可单测）
+- kernel_spec 哨兵检查的 synchronize 加可用性保护（CPU 单测可用）
+
 ## [0.5.6] - 2026-08-27
 
 ### Fixed

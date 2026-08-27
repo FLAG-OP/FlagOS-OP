@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from common.perf import baseline_path, load_baseline, load_run_records
+from common.perf import baseline_path, classify_delta, load_baseline, load_run_records
 
 
 def fmt_delta(d: float | None) -> str:
@@ -87,14 +87,9 @@ def main() -> int:
             continue
         old = bcase["metrics"].get("latency_ms")
         delta = (cur - old) / old if old else None
-        if delta is None or delta <= args.warn:
-            status = "OK"
-        elif delta <= args.fail:
-            status = "WARN"
-            n_warn += 1
-        else:
-            status = "FAIL"
-            n_fail += 1
+        status = classify_delta(delta, args.warn, args.fail)
+        n_warn += status == "WARN"
+        n_fail += status == "FAIL"
         lines.append(f"| {cid} | {old:.3f} | {cur:.3f} | "
                      f"{fmt_delta(delta)} | **{status}** | {extra_s} |")
 

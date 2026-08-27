@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-def run(profile) -> bool:
+def run(profile):
     import time
 
     import torch
@@ -15,6 +15,7 @@ def run(profile) -> bool:
     print("=" * 60)
 
     # ---- 精度 vs PyTorch 语义参考 ----
+    max_err = 0.0
     for shape in [(4096, 4096), (1, 14336), (128, 5120)]:
         for dt in (torch.bfloat16, torch.float16, torch.float32):
             x = torch.randn(*shape, dtype=dt, device=dev) * 2
@@ -22,7 +23,9 @@ def run(profile) -> bool:
             ref = K.gelu_and_mul_reference(x, y)
             out = K.gelu_and_mul_triton(x, y)
             tol = 1e-5 if dt == torch.float32 else 1e-2
-            assert (out.float() - ref.float()).abs().max().item() < tol
+            err = (out.float() - ref.float()).abs().max().item()
+            assert err < tol                       # 容差随 dtype 不同，逐组断言
+            max_err = max(max_err, err)
     print("  精度: 9/9 组合 PASS")
 
     # ---- 哨兵 ----
@@ -48,7 +51,9 @@ def run(profile) -> bool:
     bw = x.numel() * 2 * 3 / t / 1e9 * 1e3
     print(f"  性能: {t:.3f}ms ({bw:.0f} GB/s)")
     print("  => A2 kernel PASS")
-    return True
+    return {"ok": True, "max_err": round(max_err, 8),
+            "sentinel": "deterministic+sensitive",
+            "latency_ms": round(t, 4), "GBps": round(bw, 1)}
 
 
 def perf_cases(profile):

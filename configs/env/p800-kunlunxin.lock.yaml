@@ -1,0 +1,18 @@
+# P800 共享镜像环境锁定（2026-08-27 实测采集）
+#
+# 用途: 同一共享镜像上核对环境是否仍与实测基线一致
+#       python3 scripts/check_env.py --device p800-kunlunxin
+name: p800-kunlunxin
+description: Kunlunxin P800 共享镜像实测版本
+python: "3.10.18"
+packages:
+  torch: "2.9.0+cu129"
+  triton: "3.0.0+03c4c9be"
+  flag_gems: "4.2.1rc0"
+  vllm: "0.13.0"
+  vllm_fl: "0.1.0"
+  transformers: "4.57.1"
+notes: |-
+  flag_gems 与 vllm-plugin-fl 在共享镜像中为本地路径安装
+  （/env/FlagGems、/env/xvllm-plugin-FL），核对版本即可，
+  不建议 pip 覆盖安装。

@@ -37,6 +37,11 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 ## 提交前检查
 
 ```bash
+python3 -m pytest tests/unit -q                                            # 基础设施单测（无 GPU）
+python3 scripts/check_env.py --device p800-kunlunxin --require-model       # 共享镜像环境核对
+```
+
+```bash
 # 文档链接与 mermaid 完整性（0 错误才过）
 # Python 语法（0 错误才过）
 # 相关矩阵格全绿

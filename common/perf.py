@@ -149,6 +149,13 @@ def _safe_name(case_id: str) -> str:
     return "".join(c if c.isalnum() or c in "-." else "_" for c in case_id)
 
 
+def classify_delta(delta: float | None, warn: float, fail: float) -> str:
+    """按回归阈值分级: OK / WARN / FAIL（delta 为相对变慢比例）。"""
+    if delta is None or delta <= warn:
+        return "OK"
+    return "WARN" if delta <= fail else "FAIL"
+
+
 def save_run_record(rec: PerfRecord) -> Path:
     d = RUN_DIR / rec.device
     d.mkdir(parents=True, exist_ok=True)

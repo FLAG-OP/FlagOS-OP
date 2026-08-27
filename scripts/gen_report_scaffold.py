@@ -30,7 +30,10 @@ def _cell_status(device: str, route: str, level: str) -> dict | None:
 def _fmt_cell(c: dict | None) -> str:
     if c is None:
         return "⬜ 未跑 | — | <手填>"
-    return f"{'✅' if c['status'] == 'PASS' else '❌'} {c['status']} | {c['seconds']}s | <手填>"
+    metrics = c.get("metrics") or {}
+    detail = " ".join(f"{k}={v}" for k, v in metrics.items() if v is not None)
+    return (f"{'✅' if c['status'] == 'PASS' else '❌'} {c['status']} | "
+            f"{c['seconds']}s | {detail or '<手填>'}")
 
 
 def _consistency_status(device: str) -> str:

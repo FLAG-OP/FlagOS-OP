@@ -44,8 +44,15 @@ def run_cell(route: str, level: str, profile_name: str, *,
     print("=" * 64)
 
     t0 = time.perf_counter()
+    metrics = None
     try:
-        ok = bool(load_test(route, level)(profile))
+        ret = load_test(route, level)(profile)
+        # 约定: run() 可返回 bool，或 {"ok": bool, ...指标} 字典
+        if isinstance(ret, dict):
+            ok = bool(ret.pop("ok", True))
+            metrics = ret or None
+        else:
+            ok = bool(ret)
         err = None
     except Exception:
         ok = False
@@ -63,6 +70,7 @@ def run_cell(route: str, level: str, profile_name: str, *,
         out.write_text(json.dumps({
             "device": profile.name, "route": route, "level": level,
             "status": status, "seconds": round(dt, 1),
+            "metrics": metrics,
             "error": err.splitlines()[-1] if err else None,
         }, indent=2))
     return ok

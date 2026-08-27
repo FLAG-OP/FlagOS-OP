@@ -33,6 +33,18 @@
 - `require_two_visible_devices: true` — 单卡路径有厂商 reshape_and_cache
   通道异常史，固定 TP=2
 
+## 模型路径覆盖
+
+profile 里的 `model_path` 是参考实例所在共享镜像的路径。换机器或换模型时
+不用改 YAML，设环境变量即可（`load_profile` 统一生效）:
+
+```bash
+export FLAGOS_MODEL_PATH=/path/to/your-model   # 随机权重小模型即可
+python3 run.py --all --device p800-kunlunxin
+```
+
+`scripts/check_env.py --require-model` 会按同一优先级解析并检查路径存在。
+
 <a id="onboard"></a>
 ## 新芯片接入（4 步）
 
