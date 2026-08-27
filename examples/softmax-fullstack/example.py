@@ -96,6 +96,27 @@ def _bench(fn, iters=100, warm=20):
     return (time.perf_counter() - t0) / iters * 1000
 
 
+# ============ 性能回归用例（scripts/perf_run.py 消费） ============
+def perf_cases(profile):
+    from common.perf import PerfCase
+
+    def make(fn):
+        def _make(p):
+            x = torch.randn(1024, 1024, dtype=torch.bfloat16, device=p.torch_device)
+            return lambda: fn(x)
+        return _make
+
+    def bw_2t(t):
+        return {"GBps": 1024 * 1024 * 2 * 2 / t / 1e6}
+
+    return [
+        PerfCase("example.softmax-fullstack.softmax.triton", group="example",
+                 level="kernel", make_fn=make(softmax_triton), derived=bw_2t),
+        PerfCase("example.softmax-fullstack.softmax.torch", group="example",
+                 level="kernel", make_fn=make(lambda x: F.softmax(x, dim=-1))),
+    ]
+
+
 def stage_l0(dev: str) -> bool:
     print("-" * 60)
     print("Stage 1/3  kernel 层: Triton fused softmax (reduction + autotune)")

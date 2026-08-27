@@ -9,6 +9,7 @@
 | 报告模板 | [templates/op-development-report.md](../templates/op-development-report.md) | 手写完整报告的骨架（7 章+附录） |
 | 环境快照 | `scripts/env_snapshot.py` | 自动收集环境配置章节 |
 | 骨架生成器 | `scripts/gen_report_scaffold.py` | 一键生成半自动报告 |
+| 性能基线 | `scripts/perf_run.py` / `scripts/perf_compare.py` | 报告第 5 章可引用的回归数据（[性能回归追踪](performance-regression.md)） |
 
 <a id="scaffold"></a>
 ## 一键生成报告骨架

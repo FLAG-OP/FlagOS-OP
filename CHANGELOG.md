@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0] - 2026-08-27
+
+### Added
+- 性能回归追踪: 统一基准 harness（common/perf.py）+ 用例注册表 + 15 个首批用例（6 样例 + kernel 层矩阵格）
+- perf_run / perf_compare 脚本: 结构化运行记录（results/perf/runs/）+ 入库基线（perf/baselines/）+ 双档门禁（慢 20% WARN / 慢 30% FAIL）
+- AI 生成算子 intake 通道: manifest 契约（JSON Schema）+ 三级验证脚本 + KernelGen 正/负示例 case
+- 负例 kernelgen-gelu-no-device-context: 哨兵检查在 intake 阶段拦截 known-issues #11 类静默 no-op
+- 文档: 性能回归追踪 / AI 生成算子接入（含生命周期图与阈值语义）
+- CI: intake 契约校验 + 性能基线结构检查
+
+### Fixed
+- examples/README 性能速览表错行（BMM 行链到 softmax，混入 3 行样例表内容）
+
 ## [0.4.0] - 2026-08-27
 
 ### Added

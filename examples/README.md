@@ -76,15 +76,13 @@ flowchart TB
 样例与正式测试（`run.py`）复用同一套基础设施（harness / golden / 设备 profile）；
 kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为开发起点。
 
+<a id="perf"></a>
 ## 性能速览（参考实例实测）
 
 | 算子 @ shape (bf16) | 最优实现 | 关键数字 | 详见 |
 |---|---|---|---|
 | silu_and_mul 4096×8192 | Triton 融合 | 0.083ms（C++ 0.271 / 参考 0.651） | [b-fullstack](b-fullstack/) |
-| BMM 16×512³ | Triton 分块 | 0.030ms / 142 TFLOPS（原生 1.59x） | [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **Triton** |
-| [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **Triton** |
-| [hw-kernel-example](hw-kernel-example/) | xtorch_ops 厂商原语组合 + CUDA C++ 参考（P800 硬件级） | **硬件级** |
-| [bmm-fullstack](bmm-fullstack/) |
+| BMM 16×512³ | Triton 分块 | 0.030ms / 142 TFLOPS（原生 1.59x） | [bmm-fullstack](bmm-fullstack/) |
 | gelu 8192² | Triton | 0.047ms（CPU 2341x） | [a1-op](a1-op/) |
 | gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | [a2-op](a2-op/) |
 | softmax 1024² | Triton 流式归约 | 见样例输出 | [softmax-fullstack](softmax-fullstack/) |
@@ -92,3 +90,16 @@ kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为�
 
 > 所有数字: 健康态进程、短采样(≤100 次)。共享设备的进程内污染可致
 > 200x 级失真（[known-issues](../docs/known-issues.md) #10/#11），勿跨进程直接对比。
+
+一次性数字只作人读展示；可重复回归门禁见
+[性能回归追踪](../docs/performance-regression.md)。
+
+## AI 生成算子 intake
+
+[KernelGen](../docs/ai-intake.md) 等来源产出的 kernel 经
+[intake 契约](../intake/README.md) 自动进入三级验证:
+
+| case | 说明 | P800 实测 |
+|---|---|---|
+| [kernelgen-gelu-example](../intake/cases/kernelgen-gelu-example/) | 正例: 生成 kernel + A2 注册 | PROMOTED |
+| [kernelgen-gelu-no-device-context](../intake/cases/kernelgen-gelu-no-device-context/) | 负例: 静默 no-op | BLOCKED-OK（哨兵检出 [#11](../docs/known-issues.md)） |

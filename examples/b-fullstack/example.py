@@ -72,6 +72,27 @@ def stage_l0_kernel(profile) -> bool:
     return True
 
 
+# ============ 性能回归用例（scripts/perf_run.py 消费） ============
+def perf_cases(profile):
+    from common.perf import PerfCase
+
+    def make(p):
+        import torch
+        sys.path.insert(0, str(HERE))
+        from fullstack_plugin import _load_kernel
+        ops = _load_kernel()
+        x = torch.randn(4096, 8192, dtype=torch.bfloat16,
+                        device=p.torch_device)
+        return lambda: ops.silu_and_mul(x)
+
+    # 读 4096×8192 · 写 4096×4096（bf16）
+    def bw(t):
+        return {"GBps": (4096 * 8192 + 4096 * 4096) * 2 / t / 1e6}
+
+    return [PerfCase("example.b-fullstack.silu_and_mul.cpp", group="example",
+                     level="kernel", make_fn=make, derived=bw)]
+
+
 def stage_l2_dispatch(profile) -> bool:
     """框架层: 注册 vendor:my-cpp + PER_OP 语义验证（进程内 with_allowed_vendors）。"""
     import torch

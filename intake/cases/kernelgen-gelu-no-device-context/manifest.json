@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "kernelgen-gelu-no-device-context",
+  "source": "kernelgen",
+  "source_detail": "负例: 复现 known-issues #11",
+  "op": "gelu_and_mul",
+  "expect": "blocked",
+  "kernel": {"module": "kernel.py", "entry": "gelu_and_mul"},
+  "reference": {"module": "reference.py", "entry": "ref"},
+  "inputs": [
+    {"name": "x", "shape": [64, 1024], "dtype": "bfloat16", "scale": 2.0},
+    {"name": "gate", "shape": [64, 1024], "dtype": "bfloat16", "scale": 1.0}
+  ],
+  "tolerance": {"max_abs_err": 0.01},
+  "targets": {"routes": ["a2"], "levels": ["kernel"]},
+  "device": {"note": "P800 上可复现；NVIDIA 上裸启动通常正常，负例可能不触发"},
+  "notes": "验证哨兵检查能拦截生成 kernel 的静默 no-op 类缺陷"
+}

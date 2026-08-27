@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "name": "kernelgen-gelu-example",
+  "source": "kernelgen",
+  "source_detail": "kernelgen-demo: 手写 Triton 产物演示契约形状（非在线生成）",
+  "op": "gelu_and_mul",
+  "expect": "ok",
+  "kernel": {"module": "kernel.py", "entry": "gelu_and_mul"},
+  "reference": {"module": "reference.py", "entry": "ref"},
+  "inputs": [
+    {"name": "x", "shape": [64, 1024], "dtype": "bfloat16", "scale": 2.0},
+    {"name": "gate", "shape": [64, 1024], "dtype": "bfloat16", "scale": 1.0}
+  ],
+  "tolerance": {"max_abs_err": 0.01},
+  "perf": {"shape": [8192, 2048], "dtype": "bfloat16",
+           "warmup": 20, "iters": 100},
+  "framework": {
+    "a2": {"op_name": "gelu_and_mul",
+           "impl_id": "intake.kernelgen-gelu-example",
+           "vendor": "kernelgen-demo"}
+  },
+  "targets": {"routes": ["a2"], "levels": ["kernel", "op"]},
+  "device": {"note": "任意 CUDA-like 设备 profile（P800 经 XMLIR 为 cuda:N）"},
+  "notes": "正例: 应通过 kernel 层精度/哨兵/性能与框架层 A2 注册验证"
+}

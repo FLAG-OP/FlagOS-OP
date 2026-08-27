@@ -134,3 +134,34 @@ def run(profile) -> bool:
     print(f"\n  => B kernel PASS（{n_pass} pass / {n_fail} fail / "
           f"{len(results) - n_pass - n_fail} skip）")
     return True
+
+
+def perf_cases(profile):
+    """性能回归用例（scripts/perf_run.py 消费）: return 模式厂商 kernel。"""
+    import re
+
+    from common.kernel_spec import load_kernel_specs
+    from common.perf import PerfCase
+
+    cases = []
+    for spec in load_kernel_specs(profile):
+        if spec.out_mode != "return" or not spec.expected_ok:
+            continue
+        safe = re.sub(r"[^0-9A-Za-z._-]", "_", spec.name)
+
+        def make(sp):
+            def _make(p):
+                import torch
+                if sp.build == "csrc":
+                    mod = _load_csrc_module()
+                    fn = getattr(mod, sp.func_name)
+                else:
+                    fn = sp.load_callable()
+                parts = sp.make_inputs((8192, 4096), torch.bfloat16,
+                                       p.torch_device)
+                return lambda: sp.call(fn, *parts)
+            return _make
+
+        cases.append(PerfCase(f"matrix-kernel.b.{safe}", group="matrix-kernel",
+                              level="kernel", make_fn=make(spec)))
+    return cases

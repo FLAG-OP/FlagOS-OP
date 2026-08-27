@@ -94,3 +94,32 @@ jobs:
               sys.exit(1)
           print('YAML 检查通过')
           EOF
+
+      - name: Intake manifest 契约校验
+        run: python3 scripts/intake_validate.py --validate-only
+
+      - name: 性能基线结构检查
+        run: |
+          python3 - <<'EOF'
+          import json, glob, sys
+          fails = []
+          for f in glob.glob('perf/baselines/*.json') + ['intake/manifest.schema.json']:
+              try:
+                  d = json.load(open(f))
+              except Exception as e:
+                  fails.append(f'{f}: {e}')
+                  continue
+              if f.startswith('perf/'):
+                  for k in ('schema', 'device', 'created_at', 'updated_at',
+                            'git_commit', 'env_fingerprint', 'cases'):
+                      if k not in d:
+                          fails.append(f'{f}: 缺字段 {k}')
+                  for cid, c in d.get('cases', {}).items():
+                      if 'latency_ms' not in c.get('metrics', {}):
+                          fails.append(f'{f}: {cid} 缺 metrics.latency_ms')
+          if fails:
+              for x in fails:
+                  print(' -', x)
+              sys.exit(1)
+          print('性能基线结构检查通过')
+          EOF

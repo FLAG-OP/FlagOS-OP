@@ -45,6 +45,30 @@ def impl_reference(x, gate):
     return (0.5 * xf * (1.0 + torch.tanh(inner)) * gate.float()).to(x.dtype)
 
 
+# ============ 性能回归用例（scripts/perf_run.py 消费） ============
+def perf_cases(profile):
+    from common.perf import PerfCase
+
+    def make(fn):
+        def _make(p):
+            x = torch.randn(8192, 8192, dtype=torch.bfloat16,
+                            device=p.torch_device) * 2
+            y = torch.randn(8192, 8192, dtype=torch.bfloat16,
+                            device=p.torch_device)
+            return lambda: fn(x, y)
+        return _make
+
+    def bw_3t(t):  # 读 x,y 写 out → 3 张量 bf16
+        return {"GBps": 8192 * 8192 * 2 * 3 / t / 1e6}
+
+    return [
+        PerfCase("example.a2-op.gelu_and_mul.triton", group="example",
+                 level="op", make_fn=make(impl_triton), derived=bw_3t),
+        PerfCase("example.a2-op.gelu_and_mul.reference", group="example",
+                 level="op", make_fn=make(impl_reference)),
+    ]
+
+
 # ============ ② 插件注册（内联演示，与 routes/a2_dispatch 同模式） ============
 def register_builtins(registry) -> None:
     from vllm_fl.dispatch.types import OpImpl, BackendImplKind, BackendPriority

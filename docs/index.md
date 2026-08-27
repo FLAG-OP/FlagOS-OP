@@ -25,6 +25,8 @@ flowchart TB
     COMP --> OPS
     OPS -->|"B: 厂商算子注册"| CHIP
 
+    AIGEN["AI 生成源<br/>KernelGen · KernelBench"] -.->|"intake 契约（生成后验证）"| COMP
+
     style APP fill:#e0e7ff
     style FRAME fill:#dbeafe
     style COMP fill:#dcfce7
@@ -51,6 +53,8 @@ flowchart TB
 | 接入厂商 kernel | [B 路线](route-b-vendor.md) |
 | 完整走一遍开发 | [全链路指南](fullstack-guide.md) |
 | 理解每层验证 | [测试体系](testing.md) |
+| 追踪性能回归 | [性能回归追踪](performance-regression.md) |
+| 接入 AI 生成的算子 | [AI 生成算子接入](ai-intake.md) |
 | 接入新芯片 | [设备接入](device-profiles.md) |
 | 写开发报告 | [报告指南](reporting.md) |
 | 排查问题 | [已知问题](known-issues.md) |
@@ -68,3 +72,5 @@ flowchart TB
 | 跨层一致性 | 同算子在算子库层↔框架层张量级比对 | [测试体系](testing.md#consistency) |
 | 设备 profile | 芯片差异的 YAML 声明 | [设备接入](device-profiles.md) |
 | aten | A Tensor Library，PyTorch 的算子分发库 | [体系结构](architecture.md#routes) |
+| 性能基线 | 入库的结构化性能基准，供回归对比 | [性能回归追踪](performance-regression.md) |
+| intake 契约 | AI 生成算子落盘验证的 manifest 约定 | [AI 生成算子接入](ai-intake.md) |

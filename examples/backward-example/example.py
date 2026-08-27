@@ -121,6 +121,38 @@ def run(profile) -> bool:
     return True
 
 
+# ============ 性能回归用例（scripts/perf_run.py 消费） ============
+def perf_cases(profile):
+    from common.perf import PerfCase
+
+    def fwd(p):
+        x = torch.randn(64, 4096, dtype=torch.bfloat16, device=p.torch_device) * 2
+        g = torch.randn(64, 4096, dtype=torch.bfloat16, device=p.torch_device)
+        return lambda: GeluAndMulFunction.apply(x, g)
+
+    def bwd(p):
+        x = (torch.randn(64, 4096, dtype=torch.bfloat16,
+                         device=p.torch_device) * 2).requires_grad_(True)
+        g = torch.randn(64, 4096, dtype=torch.bfloat16,
+                        device=p.torch_device).requires_grad_(True)
+        go = torch.randn(64, 4096, dtype=torch.bfloat16, device=p.torch_device)
+
+        def step():
+            if x.grad is not None:
+                x.grad = None
+                g.grad = None
+            out = GeluAndMulFunction.apply(x, g)
+            return torch.autograd.grad(out, (x, g), go)
+        return step
+
+    return [
+        PerfCase("example.backward-example.gelu_and_mul.fwd", group="example",
+                 level="kernel", make_fn=fwd),
+        PerfCase("example.backward-example.gelu_and_mul.bwd", group="example",
+                 level="kernel", make_fn=bwd),
+    ]
+
+
 if __name__ == "__main__":
     from common.device import load_profile
     run(load_profile(sys.argv[1] if len(sys.argv) > 1 else "p800-kunlunxin"))

@@ -58,6 +58,41 @@ def silu_and_mul_via_vendor_primitives(x):
     return torch.nn.functional.silu(x1) * x2
 
 
+# ============ 性能回归用例（scripts/perf_run.py 消费） ============
+def perf_cases(profile):
+    from common.perf import PerfCase
+
+    def make_vendor(p):
+        import torch
+        x = torch.randn(1024, 4096, dtype=torch.float32, device=p.torch_device)
+        return lambda: silu_and_mul_via_vendor_primitives(x)
+
+    def make_torch(p):
+        import torch
+        import torch.nn.functional as F
+        x = torch.randn(1024, 4096, dtype=torch.float32, device=p.torch_device)
+        x1, x2 = x[..., :2048], x[..., 2048:]
+        return lambda: F.silu(x1) * x2
+
+    def make_triton(p):
+        import torch
+        from routes.a2_dispatch.plugin.kernels import silu_and_mul_triton_counted
+        x = torch.randn(1024, 4096, dtype=torch.bfloat16, device=p.torch_device)
+        return lambda: silu_and_mul_triton_counted(x)
+
+    def bw(t):  # 读 1024×4096 · 写 1024×2048（fp32）
+        return {"GBps": (1024 * 4096 + 1024 * 2048) * 4 / t / 1e6}
+
+    return [
+        PerfCase("example.hw-kernel-example.silu_and_mul.vendor_primitives",
+                 group="example", level="kernel", make_fn=make_vendor),
+        PerfCase("example.hw-kernel-example.silu_and_mul.pytorch",
+                 group="example", level="kernel", make_fn=make_torch, derived=bw),
+        PerfCase("example.hw-kernel-example.silu_and_mul.triton",
+                 group="example", level="kernel", make_fn=make_triton),
+    ]
+
+
 def run(profile) -> bool:
     import torch
     import torch.nn.functional as F

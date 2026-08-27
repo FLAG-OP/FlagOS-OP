@@ -104,6 +104,31 @@ def _bench(fn, iters=100, warm=20):
     return (time.perf_counter() - t0) / iters * 1000
 
 
+# ============ 性能回归用例（scripts/perf_run.py 消费） ============
+def perf_cases(profile):
+    from common.perf import PerfCase
+
+    B, M, K, N = 16, 512, 512, 512
+    FLOPS = 2 * B * M * K * N
+
+    def make(fn):
+        def _make(p):
+            x = torch.randn(B, M, K, dtype=torch.bfloat16, device=p.torch_device) * 0.3
+            y = torch.randn(B, K, N, dtype=torch.bfloat16, device=p.torch_device) * 0.3
+            return lambda: fn(x, y)
+        return _make
+
+    def tflops(t):
+        return {"TFLOPS": FLOPS / t / 1e9}
+
+    return [
+        PerfCase("example.bmm-fullstack.bmm.triton", group="example",
+                 level="kernel", make_fn=make(bmm_triton), derived=tflops),
+        PerfCase("example.bmm-fullstack.bmm.torch", group="example",
+                 level="kernel", make_fn=make(torch.bmm), derived=tflops),
+    ]
+
+
 def stage_l0(dev: str) -> bool:
     print("-" * 60)
     print("Stage 1/3  kernel 层: Triton 分块 BMM 直测")

@@ -47,3 +47,22 @@ def run(profile) -> bool:
     print(f"  性能: {t:.3f}ms ({bw:.0f} GB/s)")
     print("  => A1 kernel PASS")
     return True
+
+
+def perf_cases(profile):
+    """性能回归用例（scripts/perf_run.py 消费），与 run() 同口径。"""
+    from common.perf import PerfCase
+    from routes.a1_aten import register_aten as RA
+
+    K = RA._load_kernels()
+
+    def make(p):
+        import torch
+        x = torch.randn(8192, 8192, dtype=torch.bfloat16, device=p.torch_device) * 2
+        return lambda: K.gelu_tanh_triton(x)
+
+    def bw(t):
+        return {"GBps": 8192 * 8192 * 2 * 2 / t / 1e6}
+
+    return [PerfCase("matrix-kernel.a1.gelu_tanh.triton", group="matrix-kernel",
+                     level="kernel", make_fn=make, derived=bw)]

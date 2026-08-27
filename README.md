@@ -15,6 +15,7 @@ FlagOS 自定义算子开发与验证模板库。
   ↓
 编译层    Triton → 芯片编译栈
            └ 开发: Triton 级（自研设备码）
+           └ 旁路: AI 生成源（KernelGen）→ intake 契约验证
   ↓
 算子库层  FlagGems · 厂商 kernel
            ├ 验证: kernel 验证（直测+哨兵）
@@ -38,6 +39,8 @@ DEVICE=<profile名> ./scripts/run_all.sh     # 全矩阵 + 一致性
 python3 run.py --route a1 --level kernel    # 单格
 python3 run.py --list                       # 查看可用设备
 python3 examples/b-fullstack/example.py     # 全链路样例（约 3 分钟）
+python3 scripts/perf_compare.py --device p800-kunlunxin   # 性能回归门禁
+python3 scripts/intake_validate.py --validate-only        # AI 生成算子契约
 ```
 
 ## 文档
@@ -50,11 +53,14 @@ python3 examples/b-fullstack/example.py     # 全链路样例（约 3 分钟）
 | 2 | [体系结构](docs/architecture.md) | 物理栈 · 开发级别 · 路线 · 3×3 矩阵 |
 | 3 | [全链路指南](docs/fullstack-guide.md) | 一个算子从源码到推理的完整流程 |
 | 4 | [测试体系](docs/testing.md) | 验证层级 · 黄金 · 漂移 · 一致性 |
-| 5 | [已知问题](docs/known-issues.md) | 11 条实测记录 + 检测方法 |
+| 5 | [性能回归追踪](docs/performance-regression.md) | 结构化记录 · 入库基线 · 双档门禁 |
+| 6 | [AI 生成算子接入](docs/ai-intake.md) | KernelGen/KernelBench 产物 → 三级验证 |
+| 7 | [已知问题](docs/known-issues.md) | 11 条实测记录 + 检测方法 |
 
 深入主题: [A1](docs/route-a1-aten.md) / [A2](docs/route-a2-dispatch.md) / [B](docs/route-b-vendor.md) 路线详解 ·
 [设备接入](docs/device-profiles.md) · [报告](docs/reporting.md) ·
-[样例索引](examples/README.md)（13 个可运行样例 + 定位图）
+[性能回归](docs/performance-regression.md) · [AI 生成算子](docs/ai-intake.md) ·
+[样例索引](examples/README.md)（14 个可运行样例 + 定位图）
 
 ## 许可
 

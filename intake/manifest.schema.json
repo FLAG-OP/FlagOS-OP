@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FlagOS-OP AI generated kernel intake manifest",
+  "type": "object",
+  "required": ["schema", "name", "source", "op", "kernel", "inputs",
+               "tolerance", "targets"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "source": {"enum": ["kernelgen", "kernelbench", "manual"]},
+    "source_detail": {"type": "string"},
+    "op": {"type": "string",
+           "description": "语义锚点；为空时必须提供 reference"},
+    "expect": {"enum": ["ok", "blocked"],
+               "description": "blocked = 负例，验证体系应拦截"},
+    "kernel": {
+      "type": "object", "required": ["module", "entry"],
+      "additionalProperties": false,
+      "properties": {
+        "module": {"type": "string"},
+        "entry": {"type": "string"}
+      }
+    },
+    "reference": {
+      "type": "object", "required": ["module", "entry"],
+      "additionalProperties": false,
+      "properties": {
+        "module": {"type": "string"},
+        "entry": {"type": "string"}
+      }
+    },
+    "inputs": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["name", "shape", "dtype"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "shape": {"type": "array", "items": {"type": "integer",
+                                                "minimum": 1}},
+          "dtype": {"enum": ["float32", "float16", "bfloat16"]},
+          "scale": {"type": "number"},
+          "seed": {"type": "integer"}
+        }
+      }
+    },
+    "tolerance": {
+      "type": "object", "required": ["max_abs_err"],
+      "additionalProperties": false,
+      "properties": {"max_abs_err": {"type": "number", "exclusiveMinimum": 0}}
+    },
+    "perf": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shape": {"type": "array", "items": {"type": "integer"}},
+        "dtype": {"enum": ["float32", "float16", "bfloat16"]},
+        "warmup": {"type": "integer", "minimum": 0},
+        "iters": {"type": "integer", "minimum": 1, "maximum": 100}
+      }
+    },
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "a1": {
+          "type": "object", "required": ["aten_op"],
+          "properties": {"aten_op": {"type": "string"}}
+        },
+        "a2": {
+          "type": "object",
+          "required": ["op_name", "impl_id", "vendor"],
+          "properties": {
+            "op_name": {"type": "string"},
+            "impl_id": {"type": "string"},
+            "vendor": {"type": "string"}
+          }
+        }
+      }
+    },
+    "targets": {
+      "type": "object", "required": ["routes", "levels"],
+      "additionalProperties": false,
+      "properties": {
+        "routes": {"type": "array", "minItems": 1,
+                   "items": {"enum": ["a1", "a2"]}},
+        "levels": {"type": "array", "minItems": 1,
+                   "items": {"enum": ["kernel", "op", "framework"]}}
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profiles": {"type": "array",
+                     "items": {"type": "string"}},
+        "note": {"type": "string"}
+      }
+    },
+    "notes": {"type": "string"}
+  }
+}
