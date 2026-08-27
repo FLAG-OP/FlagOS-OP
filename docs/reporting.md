@@ -56,7 +56,7 @@ Python/PyTorch/vLLM/FlagGems/vllm-plugin-FL/Triton/transformers 版本 ·
 
 ## 与全链路开发的关系
 
-[全链路指南](fullstack-guide.md)的第 4 步即报告收尾——开发完成的
+[全链路指南](fullstack-guide.md)的第 6 步即报告收尾——开发完成的
 自然出口。`reports/` 已 gitignore（per-op 生成物不入库），
 `templates/` 入库。
 

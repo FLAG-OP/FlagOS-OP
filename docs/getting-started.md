@@ -11,7 +11,7 @@
   （本库基于 4.2.1rc0 / 0.1.0 / 0.13.0 实测）
 - Triton（随 FlagGems 提供）
 - 设备 profile: `configs/devices/` 下有你的芯片对应 YAML
-  （参考实例 p800-kunlunxin；新芯片见 device-profiles.md 3 步接入）
+  （参考实例 p800-kunlunxin；新芯片见 device-profiles.md 4 步接入）
 
 ## 5 分钟流程
 

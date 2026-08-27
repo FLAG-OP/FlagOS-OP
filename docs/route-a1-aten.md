@@ -1,8 +1,8 @@
 # 路线 A1: torch 算子替换
 
-> 典型 kernel 层级: Triton（Triton）/ torch（torch 算子组合）——路线只管接入，不限定层级。
+> 典型开发级别: Triton 级 / torch 级——路线只管接入，不限定级别。
 
-[← 返回文档中心](index.md): Triton → torch torch 算子替换
+[← 返回文档中心](index.md)
 
 ## 适用场景
 
@@ -44,6 +44,8 @@ vLLM v1 的前向跑在 **EngineCore 子进程**，主进程的 torch.library
 - 正式实现: `routes/a1_aten/`
 - 自包含样例: `examples/a1-op/`（从零写 relu）
 - 框架级样例: `examples/a1-framework/`
+- 全链路样例: [bmm-fullstack](../examples/bmm-fullstack/)（torch.bmm 拦截）·
+  [softmax-fullstack](../examples/softmax-fullstack/)（F.softmax 拦截）
 
 ## 注意事项
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.3] - 2026-08-27
+
+### Fixed
+- known-issues 错误引用 3 处: swiglu 不写输出是 #2（route-b/b-op/b-framework 误写 #5）
+- route-a1 错乱文本（"torch torch 算子替换"、"典型 kernel 层级: Triton（Triton）"）
+- route-b audit 段重复句、"kernel 层级"→"开发级别"
+- route 三篇 breadcrumb 残留旧路线名尾巴
+- device-profiles: 循环引言重写、"字段速查"空壳章节（表归位）
+- getting-started "3 步接入" 与 device-profiles "4 步" 不一致
+- reporting: 全链路步骤编号 4→6（指南重构后）
+
+### Changed
+- route-a1 样例补 bmm/softmax（A1 全链路）；route-b 样例补 b-kernel/b-fullstack/hw-kernel
+- routes README 标题统一正式路线命名
+- 新增 tests/kernel_level/README.md（与其他两层测试对称）
+
 ## [0.5.2] - 2026-08-27
 
 ### Changed

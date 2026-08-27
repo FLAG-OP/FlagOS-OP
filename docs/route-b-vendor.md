@@ -1,8 +1,8 @@
 # 路线 B: 厂商算子注册
 
-> 典型 kernel 层级: torch（C++ 调 ATen，如 b-fullstack）/ 硬件（厂商 kernel）——路线只管接入，不限定层级。
+> 典型开发级别: torch 级（C++ 调 ATen）/ 硬件级（厂商 kernel）——路线只管接入，不限定级别。
 
-[← 返回文档中心](index.md): 厂商语言 → 厂商算子注册
+[← 返回文档中心](index.md)
 
 ## 适用场景
 
@@ -52,6 +52,9 @@ priority=BackendPriority.VENDOR)`（100）
 - 正式实现: `routes/b_vendor/`（audit 计数+委托 backend）
 - 自包含样例: `examples/b-op/`
 - 框架级样例: `examples/b-framework/`
+- kernel 层样例: [b-kernel](../examples/b-kernel/)（直测+哨兵+JIT 闭环）
+- 全链路样例: [b-fullstack](../examples/b-fullstack/)（C++ 贯穿三层，附开发报告）
+- 硬件级开发: [hw-kernel-example](../examples/hw-kernel-example/)（厂商原语 + SDK 模板）
 
 ## audit 模式（模板库的核心工具）
 
@@ -61,13 +64,13 @@ audit vendor = 计数 + 委托，双用途:
 2. framework 验证（应用层）测试中拦截真实 vLLM 前向流量
 
 委托目标由设备 profile 的 `vendor_delegate` 字段驱动
-（由各设备 profile 的 `vendor_delegate` 字段驱动；未声明或厂商库缺失时自动退化 reference.torch）。
+（未声明或厂商库缺失时自动退化 reference.torch）。
 
 ## 注意事项
 
 1. `with_preference("vendor") + with_allowed_vendors("myvendor")`
    是精确选择特定 vendor 的正规方式
-2. ⚠️ 本机 `xtorch_ops.swiglu` 独立调用**不写输出**（known-issues #5），
+2. ⚠️ 本机 `xtorch_ops.swiglu` 独立调用**不写输出**（[known-issues #2](known-issues.md)），
    框架级恒等断言采用 reference 委托（厂商 kernel 无法保证数值恒等）
 
 本路线典型开发级别: **torch 级**（C++ 调 ATen）或 **硬件级**（厂商 kernel）

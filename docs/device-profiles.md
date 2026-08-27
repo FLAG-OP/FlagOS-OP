@@ -2,12 +2,15 @@
 
 [← 返回文档中心](index.md)
 
-> 字段是[设备 profile](#fields)机制的核心，也是[黄金](testing.md#golden)
-> 与[kernel 层](testing.md#kernel-level)跨设备可比的基础。
+> 把芯片差异收敛到一个 YAML 文件——测试代码只读 profile，
+> 不感知具体芯片。黄金、kernel 直测、性能基线因此跨设备可比。
 
 ## 设计
 
-芯片差异声明于 `configs/devices/<芯片名>.yaml`。字段速查:
+芯片差异声明于 `configs/devices/<芯片名>.yaml`。
+
+<a id="fields"></a>
+## 字段速查
 
 | 字段 | 作用 |
 |---|---|
@@ -21,11 +24,6 @@
 | `framework.quirks.*` | 设备怪癖开关（见下） |
 | `vendor_delegate` | audit 委托的厂商 kernel（"pkg.func"）；null→reference |
 | `vendor_kernels` | [kernel 层](testing.md#kernel-level)直测的厂商 kernel 清单（含 `expected_ok: false` 负例与 `build: csrc` JIT 项） |
-
-<a id="fields"></a>
-## 字段速查
-
-（见上表）
 
 ## quirks 说明
 

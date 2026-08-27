@@ -1,8 +1,8 @@
 # 路线 A2: FlagOS 融合算子
 
-> 典型开发级别: Triton / torch——路线管接入，级别管用什么写。
+> 典型开发级别: Triton 级 / torch 级——路线只管接入，不限定级别。
 
-[← 返回文档中心](index.md): Triton → FlagOS 融合算子
+[← 返回文档中心](index.md)
 
 ## 适用场景
 

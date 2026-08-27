@@ -1,4 +1,4 @@
-# 路线 A1: Triton 算子 → torch dispatcher (aten) 注册
+# 路线 A1: torch 算子替换（aten 注册）
 
 ## 适用场景
 

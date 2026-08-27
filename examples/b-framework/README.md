@@ -14,7 +14,7 @@
 
 ## 为什么委托 reference 而非厂商 kernel
 
-实测本机 `xtorch_ops.swiglu` 独立调用不写输出（已知问题#5），
+实测本机 `xtorch_ops.swiglu` 独立调用不写输出（[已知问题 #2](../../docs/known-issues.md)），
 厂商委托无法保证数值恒等；profile 无厂商委托时 audit 自动
 退化为 reference 委托。
 

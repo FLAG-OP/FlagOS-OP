@@ -31,5 +31,5 @@ python3 examples/b-op/example.py
 1. `with_preference("vendor") + with_allowed_vendors("myvendor")`
    是精确选择特定 vendor 的正规方式
 2. 真实厂商 kernel 接入见 `routes/b_vendor/csrc/`（C++ 模板 + 编译说明）
-3. 本机已知: `xtorch_ops.swiglu` 独立调用不写输出（已知问题#5），
+3. 本机已知: `xtorch_ops.swiglu` 独立调用不写输出（[已知问题 #2](../../docs/known-issues.md)），
    故样例用 fp32 语义实现替代
