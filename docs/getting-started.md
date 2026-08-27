@@ -31,6 +31,9 @@ DEVICE=p800-kunlunxin ./scripts/run_all.sh
 
 - 每格结果 JSON: `results/<device>_<route>_<level>.json`
 - 黄金输出: `golden/<device>_golden.json`
+- 性能运行记录: `results/perf/runs/<device>/`（对比基线:
+  [性能回归追踪](performance-regression.md)）
+- AI 生成算子报告: `results/intake/`（见 [AI 生成算子接入](ai-intake.md)）
 - 控制台有逐格 PASS/FAIL 摘要
 
 ## 换设备

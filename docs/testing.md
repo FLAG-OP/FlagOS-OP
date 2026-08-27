@@ -8,6 +8,7 @@
 - [断言策略](#assertions)
 - [测试输入模板](#inputs)
 - [黄金输出](#golden) · [漂移实验](#drift) · [跨层一致性](#consistency)
+- 性能维度单独成体系: [性能回归追踪](performance-regression.md)
 
 
 | 路线 \ 验证层级 | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
@@ -42,7 +43,8 @@ flowchart TD
 1. **精度**: vs PyTorch 语义参考（`common/kernel_spec.py` 的
    `SEMANTIC_REFS`），多 shape×dtype；容差 fp32=1e-5, bf16/fp16=1e-2
 2. **哨兵检查**: 见下
-3. **性能**: 短采样（≤100 次）+ synchronize
+3. **性能**: 短采样（≤100 次）+ synchronize；可重复的结构化记录与
+   回归门禁见[性能回归追踪](performance-regression.md)
 
 <a id="sentinel"></a>
 ### 哨兵健全性检查（`sentinel_check`）
@@ -130,3 +132,8 @@ python3 run.py --consistency --device <profile>
 
 参考实例结果: 4×4 全零误差矩阵。这是"同一算子在各层验证一致"的
 自动化形态；人工跟读版见[全链路指南](fullstack-guide.md)。
+
+---
+
+**下一步**: [性能回归追踪](performance-regression.md)——正确性之外，
+同一套用例的可持续性能门禁。

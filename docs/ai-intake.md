@@ -96,3 +96,8 @@ python3 scripts/intake_validate.py --validate-only     # 仅契约校验（CI）
 3. `python3 scripts/intake_validate.py intake/cases/<name>`
 4. PROMOTED 后可把实现迁入 `routes/` 或作为 [样例](../examples/README.md)，
    并保留 intake case 作为生成侧回归锚点
+
+---
+
+**下一步**: [已知问题](known-issues.md)——intake 拦截的典型缺陷
+（静默 no-op、不写输出）的完整归因与检测方法。

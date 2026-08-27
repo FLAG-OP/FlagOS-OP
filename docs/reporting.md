@@ -59,3 +59,8 @@ Python/PyTorch/vLLM/FlagGems/vllm-plugin-FL/Triton/transformers 版本 ·
 [全链路指南](fullstack-guide.md)的第 4 步即报告收尾——开发完成的
 自然出口。`reports/` 已 gitignore（per-op 生成物不入库），
 `templates/` 入库。
+
+---
+
+**下一步**: [已知问题](known-issues.md)——报告第 6 章"风险清单"
+可直接引用的问题库与检测方法。

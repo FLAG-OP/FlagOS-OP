@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.1] - 2026-08-27
+
+### Fixed
+- 根 README 已知问题计数 11→12
+- architecture: 全链路样例列表去重（softmax/backward 重复两次）
+- architecture: 路线图补 AI 生成源旁路（与根 README/docs index 三处一致）
+
+### Changed
+- architecture 目录树同步 intake/ 与 perf/ 目录、14 样例数、perf harness
+- docs index 阅读路径新增"性能"与"生成"两条线
+- testing/getting-started 挂接性能回归与 intake 产物入口
+- testing/perf/intake/reporting/device-profiles/known-issues 补齐"下一步"导航链
+- known-issues #10 补短采样不足的实测证据与子进程隔离防护；#11 补 intake 负例自动拦截
+
 ## [0.5.0] - 2026-08-27
 
 ### Added

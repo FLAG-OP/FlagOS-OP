@@ -49,6 +49,7 @@ flowchart TB
     FRAME -->|"Triton 级 kernel 编译"| COMP
     COMP --> OPS
     OPS -->|"B: 厂商算子注册<br/>硬件级: 厂商 kernel<br/>torch 级: ATen 组合"| CHIP
+    AIGEN["AI 生成源<br/>KernelGen · KernelBench"] -.->|"intake 契约（生成后验证）"| COMP
     style APP fill:#e0e7ff
     style FRAME fill:#dbeafe
     style COMP fill:#dcfce7
@@ -78,11 +79,10 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 - [bmm-fullstack](../examples/bmm-fullstack/)（Triton 级）: Triton BMM → aten 拦截 → 应用层
 - [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + autotune
 - [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
-- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + autotune
-- [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
 
 全部 14 个样例在 3×3 矩阵中的位置与涵盖范围见
 [样例定位图](../examples/README.md#map)。
+AI 生成产物的进入方式见 [AI 生成算子接入](ai-intake.md)。
 
 <a id="tree"></a>
 ## 目录结构
@@ -92,23 +92,27 @@ flagos-op-templates/
 ├── run.py                    统一矩阵入口（--route/--level/--device/--all/--consistency）
 ├── configs/devices/          [设备 profile](device-profiles.md)
 ├── docs/                     本文档
-├── common/                   设备抽象 / [kernel spec](route-b-vendor.md#kernelspec) / 输入模板 / 参考实现
+├── common/                   设备抽象 / [kernel spec](route-b-vendor.md#kernelspec) / 输入模板
+│                            / 参考实现 / [性能基准 harness](performance-regression.md)
 ├── routes/                   三条路线正式实现
 │   ├── a1_aten/              torch 算子替换
 │   ├── a2_dispatch/          Triton → FlagOS 融合算子 插件
 │   └── b_vendor/             厂商算子注册（csrc + audit）
-├── examples/                 9 个矩阵格样例 + [b-fullstack 旗舰](fullstack-guide.md)
+├── examples/                 14 个样例（9 矩阵格 + 全链路/专项，见[定位图](../examples/README.md#map)）
 ├── tests/
 │   ├── kernel_level/         [kernel 直测层](testing.md#kernel-level) + [一致性](testing.md#consistency)
 │   ├── op_level/             注册/分发/拦截层
 │   └── framework_level/      [真实推理层](testing.md#framework) + [黄金回归](testing.md#golden)
+├── intake/                   [AI 生成算子契约](ai-intake.md)（manifest + 正/负例 case）
 ├── injection/                A1 框架级 sitecustomize 跨进程注入桥
 ├── inputs/                   声明式输入模板（spec.yaml → [gen_inputs](testing.md#inputs)）
 ├── golden/                   [黄金输出](testing.md#golden)（多快照+共识前缀）
+├── perf/baselines/           [入库性能基线](performance-regression.md)（按设备 profile 一文件）
 ├── templates/                [算子开发报告模板](reporting.md)
 ├── reports/                  生成的报告骨架（gitignore）
 └── scripts/                  一键脚本 / [黄金构建](testing.md#golden) / [漂移实验](testing.md#drift)
                              / [输入生成](testing.md#inputs) / [环境快照](reporting.md#env) / [报告骨架](reporting.md#scaffold)
+                             / [性能基准与回归](performance-regression.md) / [intake 验证](ai-intake.md)
 ```
 
 ## 矩阵入口约定

@@ -62,7 +62,11 @@ aten 路线框架级需 sitecustomize 注入桥（本库已内置）。
 ### 10. 性能基准的分配器陷阱
 逐次新分配大输出的长循环基准（如 500 次 × 128MB）触发分配器
 池增长，均值被抬高一两个数量级（实测同 kernel 0.047ms vs 16ms）。
-基准统一采用短采样（≤100 次），以避免分配器池增长导致均值失真。
+两层防护: ① 短采样（≤100 次）；② 多用例不共进程——
+[perf_run](performance-regression.md) 对每个用例起独立子进程。
+短采样单独不够: 同一 C++ kernel 单独跑 0.311ms，与其他用例同进程
+顺序混跑（仍 20+100 短采样）被抬到 1.688ms；A2 参考实现
+3.69ms → 317ms。分配器状态污染跨用例传播，隔离后恢复健康态。
 
 ### 11. ⚠️ 裸 Triton 启动缺 device 上下文 → 静默 no-op（严重）
 裸 `@triton.jit` kernel 启动若不包
@@ -77,6 +81,10 @@ from flag_gems.runtime import torch_device_fn
 with torch_device_fn.device(x.device):
     my_kernel[grid](...)
 ```
+
+该缺陷已进入 [intake 负例](ai-intake.md): AI 生成 kernel 若漏包此
+上下文，[intake 验证](ai-intake.md)的哨兵检查会在 kernel 层直接
+拦截（确定性 ✗），返回机器可读的 BLOCKED 原因供生成侧迭代。
 
 <a id="method"></a>
 ### 12. CUDA C++ 设备码（NVIDIA）无法在 P800/XPU 执行
@@ -98,3 +106,8 @@ P800 真正的硬件级开发需昆仑芯 SDK（本容器未提供）。当前�
 | 跨进程非确定性 | `scripts/drift_study.py` |
 | 裸 Triton 启动静默 no-op | 哨兵检查（zeros 预填看零占比）+ 对照 `flag_gems` 同算子 |
 | embedding 越界 | tokenize 后比对词表上限；CPU transformers 交叉验证 |
+
+---
+
+**下一步**: [样例索引](../examples/README.md)（可运行范本）·
+[AI 生成算子接入](ai-intake.md)（缺陷自动拦截）。

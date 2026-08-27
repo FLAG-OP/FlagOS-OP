@@ -102,3 +102,8 @@ def perf_cases(profile):
 - 本页: 可重复回归门禁（机器判）
 - [测试体系](testing.md): 精度/哨兵/一致性（正确性维度）
 - [报告指南](reporting.md): 报告第 5 章性能数据可引用基线与对比结论
+
+---
+
+**下一步**: [AI 生成算子接入](ai-intake.md)——生成 kernel 的性能记录
+自动进入本体系（`intake` group）。

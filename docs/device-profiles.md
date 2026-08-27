@@ -59,3 +59,8 @@
 - `cpu`: transformers 黄金引擎已实测（确定性语义参考）
 
 其他芯片: 复制 `_template.yaml` 填写后即可进入同一体.
+
+---
+
+**下一步**: [报告指南](reporting.md)——环境配置章节直接复用
+profile 全文与环境快照。
