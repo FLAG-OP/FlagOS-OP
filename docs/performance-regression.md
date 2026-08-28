@@ -46,12 +46,16 @@ python3 scripts/perf_run.py --list
 
 | group | 来源 | 用例数 |
 |---|---|---|
-| `example` | 6 个含性能测量的样例（a2-op / b-fullstack / bmm / softmax / backward / hw-kernel） | 12 |
+| `example` | 6 个含性能测量的样例（a2-op / b-fullstack / bmm / softmax / backward / hw-kernel） | 16 |
 | `matrix-kernel` | kernel 层矩阵格（a1 / a2 / b） | 3 |
 | `intake` | [AI 生成算子](ai-intake.md)验证时的性能记录 | 按 case |
 
 op/framework 层暂不入基线：注册与分发开销混入计时会让数据解读复杂，
 `group` 字段为后续扩展预留。
+
+对比对象约定: 每个用例尽量包含 **自研 / 原生（PyTorch）/ FlagGems**
+三方——FlagGems 是 FlagOS 现网生产实现，是最有意义的性能基线；个别
+算子因 [#13](known-issues.md) 无 FlagGems 版本时在样例中注明。
 
 ## 阈值语义
 

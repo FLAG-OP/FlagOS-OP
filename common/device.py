@@ -9,6 +9,11 @@ from typing import Any, Optional
 
 import yaml
 
+# 尽早生效: 让 XPU Triton 编译失败暴露真实原因（known-issues #14）
+from common.xpu_compat import ensure_xpu_compiler_debuggable  # noqa: E402
+
+ensure_xpu_compiler_debuggable()
+
 DEVICES_DIR = Path(__file__).resolve().parents[1] / "configs" / "devices"
 
 

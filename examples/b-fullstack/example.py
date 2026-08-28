@@ -69,6 +69,25 @@ def stage_l0_kernel(profile) -> bool:
     torch.cuda.synchronize()
     t = (time.perf_counter() - t0) / 100 * 1000
     print(f"  性能: {t:.3f}ms/call")
+
+    # FlagGems 生产基线（无融合算子 → silu 单算子组合）
+    try:
+        from flag_gems import ops as FG
+        d = x.shape[-1] // 2
+
+        def fg_composed():
+            return FG.silu(x[..., :d]) * x[..., d:]
+        for _ in range(20):
+            fg_composed()
+        torch.cuda.synchronize()
+        t0 = time.perf_counter()
+        for _ in range(100):
+            fg_composed()
+        torch.cuda.synchronize()
+        t_fg = (time.perf_counter() - t0) / 100 * 1000
+        print(f"  FlagGems 基线(组合): {t_fg:.3f}ms（C++ 相对={t_fg/t:.2f}x）")
+    except Exception as e:
+        print(f"  FlagGems 基线: SKIP（{type(e).__name__}）")
     return True
 
 
@@ -89,8 +108,21 @@ def perf_cases(profile):
     def bw(t):
         return {"GBps": (4096 * 8192 + 4096 * 4096) * 2 / t / 1e6}
 
+    def make_fg(p):
+        # FlagGems 无 silu_and_mul 融合算子——用其 silu 单算子组合当生产基线
+        import torch
+        from flag_gems import ops
+        x = torch.randn(4096, 8192, dtype=torch.bfloat16, device=p.torch_device)
+        d = x.shape[-1] // 2
+
+        def composed():
+            return ops.silu(x[..., :d]) * x[..., d:]
+        return composed
+
     return [PerfCase("example.b-fullstack.silu_and_mul.cpp", group="example",
-                     level="kernel", make_fn=make, derived=bw)]
+                     level="kernel", make_fn=make, derived=bw),
+            PerfCase("example.b-fullstack.silu_and_mul.flaggems-composed",
+                     group="example", level="kernel", make_fn=make_fg, derived=bw)]
 
 
 def stage_l2_dispatch(profile) -> bool:

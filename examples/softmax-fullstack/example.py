@@ -114,7 +114,14 @@ def perf_cases(profile):
                  level="kernel", make_fn=make(softmax_triton), derived=bw_2t),
         PerfCase("example.softmax-fullstack.softmax.torch", group="example",
                  level="kernel", make_fn=make(lambda x: F.softmax(x, dim=-1))),
+        PerfCase("example.softmax-fullstack.softmax.flaggems", group="example",
+                 level="kernel", make_fn=make(_flaggems_softmax)),
     ]
+
+
+def _flaggems_softmax(x):
+    from flag_gems import ops
+    return ops.softmax(x, -1)
 
 
 def stage_l0(dev: str) -> bool:
@@ -138,6 +145,12 @@ def stage_l0(dev: str) -> bool:
     t_ref = _bench(lambda: F.softmax(x, dim=-1))
     bw = x.numel() * 2 * 2 / t_tri / 1e9 * 1e3
     print(f"  性能: Triton={t_tri:.3f}ms ({bw:.0f} GB/s)  F.softmax={t_ref:.3f}ms  相对={t_ref/t_tri:.2f}x")
+    try:
+        from flag_gems import ops as FG
+        t_fg = _bench(lambda: FG.softmax(x, -1))
+        print(f"  FlagGems 基线: {t_fg:.3f}ms（自研相对={t_fg/t_tri:.2f}x）")
+    except Exception as e:
+        print(f"  FlagGems 基线: SKIP（{type(e).__name__}）")
     print(f"  autotune: 已从 5 个 BLOCK_N 配置中自动选择（key=N）")
     return True
 

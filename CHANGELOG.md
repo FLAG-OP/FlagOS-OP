@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.2] - 2026-08-28
+
+### Added
+- FlagGems 生产基线接入性能对比与回归体系: softmax / bmm 直调，
+  silu_and_mul 用 FlagGems silu 单算子组合（无该融合算子）
+- known-issues #13（FlagGems gelu(tanh) 链接失败，XPU libdevice
+  tanh → "Unsupported"）与 #14（编译错误被 NameError:sys 掩盖）
+- common/xpu_compat.py: 经 backends 注册表给隐藏的 xpu compiler
+  第二实例注入 sys，编译失败暴露真实原因
+
+### Changed
+- bmm/softmax/b-fullstack/hw 样例的性能段输出 FlagGems 基线行（防御式）
+- A1/A2 因 #13 无同语义 FlagGems 基线，文档注明而非用 gelu(none) 冒充
+- 样例性能速览表增加 FlagGems 基线列（softmax 上 FlagGems 反超自研）
+
 ## [0.6.1] - 2026-08-27
 
 ### Fixed

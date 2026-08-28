@@ -50,6 +50,7 @@ def run(profile):
     t = (time.perf_counter() - t0) / 100 * 1000
     bw = x.numel() * 2 * 3 / t / 1e9 * 1e3
     print(f"  性能: {t:.3f}ms ({bw:.0f} GB/s)")
+
     print("  => A2 kernel PASS")
     return {"ok": True, "max_err": round(max_err, 8),
             "sentinel": "deterministic+sensitive",
@@ -71,5 +72,7 @@ def perf_cases(profile):
     def bw(t):
         return {"GBps": 8192 * 8192 * 2 * 3 / t / 1e6}
 
+    # 注: FlagGems 无 gelu_and_mul；其 gelu(tanh) 单算子在本栈也不可用
+    # （known-issues #13），故此算子无 FlagGems 生产基线。
     return [PerfCase("matrix-kernel.a2.gelu_and_mul.triton", group="matrix-kernel",
                      level="kernel", make_fn=make, derived=bw)]

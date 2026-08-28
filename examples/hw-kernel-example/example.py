@@ -80,6 +80,16 @@ def perf_cases(profile):
         x = torch.randn(1024, 4096, dtype=torch.bfloat16, device=p.torch_device)
         return lambda: silu_and_mul_triton_counted(x)
 
+    def make_flaggems(p):
+        import torch
+        from flag_gems import ops
+        x = torch.randn(1024, 4096, dtype=torch.float32, device=p.torch_device)
+        d = x.shape[-1] // 2
+
+        def composed():
+            return ops.silu(x[..., :d]) * x[..., d:]
+        return composed
+
     def bw(t):  # 读 1024×4096 · 写 1024×2048（fp32）
         return {"GBps": (1024 * 4096 + 1024 * 2048) * 4 / t / 1e6}
 
@@ -90,6 +100,8 @@ def perf_cases(profile):
                  group="example", level="kernel", make_fn=make_torch, derived=bw),
         PerfCase("example.hw-kernel-example.silu_and_mul.triton",
                  group="example", level="kernel", make_fn=make_triton),
+        PerfCase("example.hw-kernel-example.silu_and_mul.flaggems-composed",
+                 group="example", level="kernel", make_fn=make_flaggems),
     ]
 
 
@@ -155,6 +167,14 @@ P800 硬件级开发层级:
     print(f"    PyTorch:       {t_pt:.3f} ms")
     if t_tri:
         print(f"    Triton(bf16):  {t_tri:.3f} ms")
+
+    try:
+        from flag_gems import ops as FG
+        d = x.shape[-1] // 2
+        t_fg = bench(lambda: FG.silu(x[..., :d]) * x[..., d:])
+        print(f"    FlagGems(组合): {t_fg:.3f} ms")
+    except Exception as e:
+        print(f"    FlagGems(组合): SKIP（{type(e).__name__}）")
 
     # ---- 4. 环境限制说明 ----
     print("""

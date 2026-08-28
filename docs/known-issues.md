@@ -96,6 +96,26 @@ P800 真正的硬件级开发需昆仑芯 SDK（本容器未提供）。当前�
 硬件级的方式是用 xtorch_ops 厂商原语组合（见 hw-kernel-example）
 或 Triton 级开发（→ XMLIR → XPU 指令）。
 
+### 13. FlagGems `gelu(approximate="tanh")` 在本栈链接失败
+FlagGems 4.2.1rc0 的 `gelu_tanh` kernel 使用 `tanh` 内建函数，而本栈
+xtriton 的 XPU libdevice 表中该 fp32 重载映射到占位符符号
+`"Unsupported"`，`xpu*-elfconv` 链接时报
+`ld.lld: error: undefined symbol: Unsupported`。同栈实测:
+`gelu(none)` / `silu` / `softmax` / `bmm` 均正常，仅 tanh 路径损坏。
+
+影响: A1（gelu_tanh）与 A2（gelu_and_mul）**没有同语义的 FlagGems
+生产基线**；自研 kernel 用 `1 - 2/(exp(2x)+1)` 手写 tanh 故不受影响。
+
+### 14. XPU Triton 编译错误被 `NameError: sys` 掩盖
+两因叠加: ① xtriton `backends/xpu/compiler.py` 的 `run_cmd()` 使用了
+未 import 的 `sys`；② torch_xmlir 符号改写会重新导入 xpu backend，
+产生一份**不在 `sys.modules`** 的 compiler 实例——对
+`triton.backends.xpu.compiler` 打补丁无效。结果: 任何 elfconv 报错
+（含 #13）都被 NameError 吞掉。
+
+修复: `common/xpu_compat.py` 经 `triton.backends` 注册表直达第二实例
+注入 `sys`（`common/device.py` 导入时自动生效），此后真实错误可见。
+
 ## 通用检测方法
 
 | 问题类型 | 检测工具 |
@@ -106,6 +126,7 @@ P800 真正的硬件级开发需昆仑芯 SDK（本容器未提供）。当前�
 | 跨进程非确定性 | `scripts/drift_study.py` |
 | 裸 Triton 启动静默 no-op | 哨兵检查（zeros 预填看零占比）+ 对照 `flag_gems` 同算子 |
 | embedding 越界 | tokenize 后比对词表上限；CPU transformers 交叉验证 |
+| FlagGems 某算子链接失败 | `common/xpu_compat` 补丁后看 elfconv 真实 stderr；对照 #13 |
 
 ---
 

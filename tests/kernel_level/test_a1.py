@@ -48,6 +48,7 @@ def run(profile):
     t = (time.perf_counter() - t0) / 100 * 1000
     bw = x.numel() * 2 * 2 / t / 1e9 * 1e3
     print(f"  性能: {t:.3f}ms ({bw:.0f} GB/s)")
+
     print("  => A1 kernel PASS")
     return {"ok": True, "max_err": round(max_err, 8),
             "sentinel": "deterministic+sensitive",
@@ -69,5 +70,7 @@ def perf_cases(profile):
     def bw(t):
         return {"GBps": 8192 * 8192 * 2 * 2 / t / 1e6}
 
+    # 注: FlagGems 的 gelu(tanh) 在本栈不可用（known-issues #13），故无
+    # 同语义生产基线；gelu(none) 语义不同，不作对比。
     return [PerfCase("matrix-kernel.a1.gelu_tanh.triton", group="matrix-kernel",
                      level="kernel", make_fn=make, derived=bw)]

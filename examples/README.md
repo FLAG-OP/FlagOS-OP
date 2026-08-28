@@ -83,14 +83,18 @@ kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为�
 <a id="perf"></a>
 ## 性能速览（参考实例实测）
 
-| 算子 @ shape (bf16) | 最优实现 | 关键数字 | 详见 |
-|---|---|---|---|
-| silu_and_mul 4096×8192 | Triton 融合 | 0.083ms（C++ 0.271 / 参考 0.651） | [b-fullstack](b-fullstack/) |
-| BMM 16×512³ | Triton 分块 | 0.030ms / 142 TFLOPS（原生 1.59x） | [bmm-fullstack](bmm-fullstack/) |
-| gelu 8192² | Triton | 0.047ms（CPU 2341x） | [a1-op](a1-op/) |
-| gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | [a2-op](a2-op/) |
-| softmax 1024² | Triton 流式归约 | 见样例输出 | [softmax-fullstack](softmax-fullstack/) |
-| gelu_and_mul bwd | Triton autograd | dx_err=1.7e-06 | [backward-example](backward-example/) |
+| 算子 @ shape (bf16) | 最优实现 | 关键数字 | FlagGems 基线 | 详见 |
+|---|---|---|---|---|
+| silu_and_mul 4096×8192 | Triton 融合 | 0.083ms（C++ 0.311 / 参考 0.651） | 0.129ms（silu 组合†） | [b-fullstack](b-fullstack/) |
+| BMM 16×512³ | Triton 分块 | 0.031ms / 135 TFLOPS（原生 1.2x） | 0.038ms / 112 TFLOPS | [bmm-fullstack](bmm-fullstack/) |
+| gelu 8192² | Triton | 0.047ms（CPU 2341x） | ✗ [#13](../docs/known-issues.md) | [a1-op](a1-op/) |
+| gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | ✗ [#13](../docs/known-issues.md) | [a2-op](a2-op/) |
+| softmax 1024² | **FlagGems** | 自研流式归约 0.035ms | **0.029ms** | [softmax-fullstack](softmax-fullstack/) |
+| gelu_and_mul bwd | Triton autograd | dx_err=1.7e-06 | —（无对应） | [backward-example](backward-example/) |
+
+† FlagGems 无该融合算子，基线为其 `silu` 单算子组合；✗ 表示 FlagGems
+的 `gelu(tanh)` 在本栈链接失败（[#13](../docs/known-issues.md)）。
+FlagGems 基线随[性能基线](../docs/performance-regression.md)入库（子进程隔离采集）。
 
 > 所有数字: 健康态进程、短采样(≤100 次)。共享设备的进程内污染可致
 > 200x 级失真（[known-issues](../docs/known-issues.md) #10/#11），勿跨进程直接对比。

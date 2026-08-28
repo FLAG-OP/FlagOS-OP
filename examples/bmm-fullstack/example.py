@@ -126,7 +126,14 @@ def perf_cases(profile):
                  level="kernel", make_fn=make(bmm_triton), derived=tflops),
         PerfCase("example.bmm-fullstack.bmm.torch", group="example",
                  level="kernel", make_fn=make(torch.bmm), derived=tflops),
+        PerfCase("example.bmm-fullstack.bmm.flaggems", group="example",
+                 level="kernel", make_fn=make(_flaggems_bmm), derived=tflops),
     ]
+
+
+def _flaggems_bmm(x, y):
+    from flag_gems import ops
+    return ops.bmm(x, y)
 
 
 def stage_l0(dev: str) -> bool:
@@ -161,6 +168,12 @@ def stage_l0(dev: str) -> bool:
     tflops = 2 * B_ * M * K * N / t_tri / 1e9
     print(f"  性能: Triton={t_tri:.3f}ms ({tflops:.0f} TFLOPS)  "
           f"torch.bmm={t_ref:.3f}ms  相对={t_ref/t_tri:.2f}x")
+    try:
+        from flag_gems import ops as FG
+        t_fg = _bench(lambda: FG.bmm(x, y))
+        print(f"  FlagGems 基线: {t_fg:.3f}ms（自研相对={t_fg/t_tri:.2f}x）")
+    except Exception as e:
+        print(f"  FlagGems 基线: SKIP（{type(e).__name__}）")
     return True
 
 
