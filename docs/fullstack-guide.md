@@ -251,3 +251,4 @@ python3 scripts/gen_report_scaffold.py --op <算子> --route <路线> --device <
 ---
 
 **下一步**: [测试体系](testing.md)——理解每层验证的断言策略与工具。
+走完七步后，交付路径与分发开销见[集成指南](integration.md)。

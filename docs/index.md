@@ -61,6 +61,7 @@ flowchart TB
 | 开发 FlagOS 融合算子 | [A2 路线](route-a2-dispatch.md) |
 | 接入厂商 kernel | [B 路线](route-b-vendor.md) |
 | 完整走一遍开发 | [全链路指南](fullstack-guide.md)（七步流水线 + 覆盖矩阵） |
+| 开发完成后交付/集成 | [集成指南](integration.md)（路径选择 + 分发开销实测） |
 | 理解每层验证 | [测试体系](testing.md) |
 | 追踪性能回归 | [性能回归追踪](performance-regression.md) |
 | 接入 AI 生成的算子 | [AI 生成算子接入](ai-intake.md) |

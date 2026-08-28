@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.0] - 2026-08-28
+
+### Added
+- 算子集成指南 docs/integration.md: 四条交付路径选择（FlagGems 贡献 /
+  A1 aten / A2 插件 / B 厂商）、"要不要进 FlagGems"的判断依据、
+  交付 checklist
+- scripts/bench_dispatch.py: 分发开销可复现实测
+- P800 分发开销首次量化: A1 aten ≈2-3µs（可忽略，即 FlagGems 机制）；
+  A2 call_op ≈17-21µs（微 kernel 需注意，大 kernel 可忽略）；
+  本栈 kernel 启动 floor ~50µs（比两条分发开销都大，此前被忽视）
+
 ## [0.9.3] - 2026-08-28
 
 ### Changed
