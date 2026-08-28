@@ -61,7 +61,7 @@ python3 scripts/intake_validate.py --validate-only        # AI 生成算子契�
 | 5 | [性能回归追踪](docs/performance-regression.md) | 结构化记录 · 入库基线 · 双档门禁 |
 | 6 | [算子集成指南](docs/integration.md) | 交付路径选择 · FlagGems 贡献 · 分发开销实测 |
 | 7 | [AI 生成算子接入](docs/ai-intake.md) | KernelGen/KernelBench 产物 → 三级验证 |
-| 8 | [已知问题](docs/known-issues.md) | 15 条实测记录 + 检测方法 |
+| 8 | [已知问题](docs/known-issues.md) | 16 条实测记录 + 检测方法 |
 
 深入主题: [A1](docs/route-a1-aten.md) / [A2](docs/route-a2-dispatch.md) / [B](docs/route-b-vendor.md) 路线详解 ·
 [设备接入](docs/device-profiles.md) · [报告](docs/reporting.md) ·

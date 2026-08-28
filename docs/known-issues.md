@@ -86,6 +86,14 @@ with torch_device_fn.device(x.device):
 上下文，[intake 验证](ai-intake.md)的哨兵检查会在 kernel 层直接
 拦截（确定性 ✗），返回机器可读的 BLOCKED 原因供生成侧迭代。
 
+### 16. A2 `call_op` 长循环偶发挂起
+测量分发开销时发现: 对同一 op 连续 `call_op` 约 300 次的循环在
+本栈多次挂起（Ctrl-C 也难中断，需 kill 进程）；同一调用 100 次
+以内稳定。挂起出现在 `with_preference` 上下文内的纯 Python 循环，
+不涉及新 kernel 编译，复现条件尚不稳定（有时 300 次也能跑完）。
+缓解: `scripts/bench_dispatch.py` 默认 100 次短循环；如需复现
+排查，从 n=200 起逐步加长。
+
 <a id="method"></a>
 ### 12. CUDA C++ 设备码（NVIDIA）无法在 P800/XPU 执行
 nvcc 编译 NVIDIA CUDA C++ 通过，但 P800 的 XPU 硬件无法识别
@@ -145,6 +153,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 | embedding 越界 | tokenize 后比对词表上限；CPU transformers 交叉验证 |
 | FlagGems 某算子链接失败 | `common/xpu_compat` 补丁后看 elfconv 真实 stderr；对照 #13 |
 | 尾块归约静默错误 | 精度探针含非整倍数 N（`accuracy_report.py`）；对照 #15 |
+| call_op 长循环挂起 | 短循环（≤100 次）规避；排查见 #16 |
 
 ---
 

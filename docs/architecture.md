@@ -92,7 +92,9 @@ flowchart TB
 | B 厂商算子注册 | 以厂商身份提供的算子 | Backend 子类 + OpImpl VENDOR 注册 | torch 或硬件 |
 
 FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kernel），
-自研的是"分发"与"可移植"。
+自研的是"分发"与"可移植"。分发实际有两张网（aten dispatcher 与
+vllm_fl OpManager，FlagGems 同时在两张网里有身份），关系图与实测
+分发开销见[集成指南](integration.md)。
 
 ## 全链路视角
 
