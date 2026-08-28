@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.1] - 2026-08-28
+
+### Changed
+- 集成指南补"两张调度网"架构（实测源码验证）: FlagGems 不是调度器，
+  是 kernel 集合；它同时出现在两张网——aten dispatcher（enable 注册）
+  与 vllm_fl OpManager（backends/flaggems/ 包装为 default.flagos）。
+  修正"A2/B 无法统一调度"的误解: 它们的统一调度网是 vllm_fl，
+  且与 FlagGems 实现同网竞争
+
 ## [0.10.0] - 2026-08-28
 
 ### Added

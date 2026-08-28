@@ -6,6 +6,36 @@
 > aten 注册、vllm_fl 插件还是厂商身份），以及**走框架分发要付多少
 > 开销**——后者有本机实测数字，不靠推测。
 
+## 两张调度网（先纠正一个常见误解）
+
+FlagGems **本身不是调度器**——它是一个 kernel 集合，没有自己的分发
+机制。真正的统一调度有两张网，而 FlagGems 同时出现在两张网里:
+
+```
+调用方（vLLM / 业务代码）
+ │
+ ├─ torch.gelu / torch.softmax …（标准 aten 算子）
+ │    → 【网一】PyTorch aten dispatcher
+ │         └─ flag_gems.enable() 把 ~200 个 Triton kernel 注册到这里
+ │            （A1 机制；贡献进 FlagGems 的算子走这张网全局生效）
+ │
+ └─ call_op("silu_and_mul"/"rms_norm"/…)（vLLM 融合算子）
+      → 【网二】vllm_fl OpManager（A2/B 的统一调度网）
+           ├─ default.flagos  ← vllm_fl 的 flaggems backend，
+           │                      把 FlagGems 融合算子实现包装注册
+           │                      （实测源码: backends/flaggems/）
+           ├─ vendor:xxx        ← B 路线厂商实现（ascend/cuda/iluvatar…）
+           └─ reference.torch   ← 数值参考
+```
+
+所以准确的说法是: **A2/B 的统一调度网是 vllm_fl OpManager，而
+FlagGems 的融合算子实现已经在这张网里**——身份是 `default.flagos`
+（priority 150），你的 A2/B 实现注册后与它同网竞争，靠
+`with_allowed_vendors` / `VLLM_FL_PER_OP` 钉选。不能做的是把 A2/B
+算子"注册进 FlagGems"——FlagGems 是静态 kernel 集合，不消费外部
+注册。另外，若某个厂商 kernel 实现的是标准 aten 算子，它可以走 A1
+进【网一】——同一个 kernel 允许在两张网里各有一个身份。
+
 ## 四条交付路径怎么选
 
 选择只取决于一个问题: **你的算子的宿主是谁**。
@@ -26,9 +56,13 @@
 二是社区维护，多芯片 CI 替你兜底；三是本库的三层验证体系产出
 （精度数据、性能基线、哨兵结论）正好是上游 PR 需要的证据。
 
-反过来，**vLLM 融合算子不适合进 FlagGems**——它们不是 aten 算子，
-torch dispatcher 管不到，宿主在 vllm_fl 的 dispatch 体系里，走 A2。
-厂商专有 kernel（依赖特定 SDK）也不适合进通用库，走 B。
+反过来，**vLLM 融合算子不是"进不了统一调度"**——它们的宿主是
+vllm_fl OpManager（网二），而且 FlagGems 的融合算子实现本来就在
+这张网里当 `default.flagos`。你贡献一个融合算子到 FlagGems 后，
+vllm_fl 的 flaggems backend 适配层（`backends/flaggems/impl/`）
+可以为它做包装接入；但若适配层没覆盖你的算子，直接写 A2 插件注册
+更省事。厂商专有 kernel（依赖特定 SDK）不适合进通用库，走 B——
+但注意 B 与 FlagGems 同在网二，是竞争关系而非互斥。
 
 ## 分发开销（P800 实测）
 
