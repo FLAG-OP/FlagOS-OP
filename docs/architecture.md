@@ -112,7 +112,10 @@ flagos-op-templates/
 ├── inputs/                   声明式输入模板（spec.yaml → [gen_inputs](testing.md#inputs)）
 ├── golden/                   [黄金输出](testing.md#golden)（多快照+共识前缀）
 ├── perf/baselines/           [入库性能基线](performance-regression.md)（按设备 profile 一文件）
-├── templates/                [算子样板](../templates/operator/README.md) + 开发/测试报告模板
+├── templates/                模板中心: [算子样板](../templates/operator/README.md) + 报告模板
+│   └── operator/             单算子自包含样板: kernel/（三级）· test/（三层）
+│                             · goldendata/（规格+黄金）· script/（生成/精度/性能）
+│                             · REPORT.md（总报告）+ reports/（分册）
 ├── reports/examples/         [已填样例报告](../reports/examples/README.md)（其余 reports/ 生成物不入库）
 └── scripts/                  一键脚本 / [黄金构建](testing.md#golden) / [漂移实验](testing.md#drift)
                              / [输入生成](testing.md#inputs) / [环境快照](reporting.md#env) / [报告骨架](reporting.md#scaffold)

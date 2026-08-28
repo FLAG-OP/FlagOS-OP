@@ -10,7 +10,9 @@
 
 | 组件 | 位置 | 用途 |
 |---|---|---|
-| 报告模板 | [templates/op-development-report.md](../templates/op-development-report.md) | 手写完整报告的骨架（7 章+附录） |
+| 开发报告模板 | [templates/op-development-report.md](../templates/op-development-report.md) | 手写完整报告的骨架（7 章+附录） |
+| 测试报告模板 | [templates/op-test-report.md](../templates/op-test-report.md) | 聚焦验证结果（范围/精度/性能/风险） |
+| 算子总报告 + 分册 | [templates/operator/](../templates/operator/REPORT.md) | 单算子一页看全（REPORT.md + reports/ 精度·性能分册） |
 | 环境快照 | `scripts/env_snapshot.py` | 自动收集环境配置章节 |
 | 骨架生成器 | `scripts/gen_report_scaffold.py` | 一键生成半自动报告 |
 | 性能基线 | `scripts/perf_run.py` / `scripts/perf_compare.py` | 报告第 5 章可引用的回归数据（[性能回归追踪](performance-regression.md)） |

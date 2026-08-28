@@ -4,7 +4,7 @@
 
 | 模板 | 用途 | 使用方式 |
 |---|---|---|
-| **[operator/](operator/)** | **算子样板**——新算子的 copy-paste 起点（参考实现/kernel/三层测试/注册/性能，7 个文件） | `cp -r templates/operator <你的算子名>/` |
+| **[operator/](operator/)** | **算子样板**——单算子自包含: 三级 kernel（torch/Triton/硬件级）· 三层测试 · 黄金数据（声明式规格+生成脚本）· 精度/性能脚本 · REPORT 总报告+分册 | `cp -r templates/operator <你的算子名>/` |
 | [op-test-report.md](op-test-report.md) | 测试报告（聚焦验证结果） | 复制填写；已填样例见 [reports/examples](../reports/examples/) |
 | [op-development-report.md](op-development-report.md) | 开发报告（完整开发叙事，7 章） | 手写，或用脚手架自动生成骨架 |
 

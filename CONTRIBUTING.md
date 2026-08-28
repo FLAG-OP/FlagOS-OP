@@ -15,6 +15,8 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 
 - [ ] 优先从 [templates/operator](templates/operator/) 样板起步（已内置
       #11/#15 防护与 metrics 约定），或复制最接近的现有样例目录
+- [ ] 补 `goldendata/inputs_spec.yaml` 并生成黄金（含非整倍数维度与
+      zeros/large/boundary 特殊用例）
 - [ ] `example.py` 含 `main()` 入口 + 设备 profile 参数（不硬编码设备）
 - [ ] README 含: 定位 / 运行方式 / 预期输出 / 关键点
 - [ ] 若含新 kernel: 确认启动包了 `torch_device_fn.device` 上下文（[known-issues #11](docs/known-issues.md)）

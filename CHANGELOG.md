@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.3] - 2026-08-28
+
+### Changed
+- 文字与组织同步样板新结构: templates/README"7 个文件"描述改为单算子
+  自包含结构; architecture 目录树展开 operator/ 子树
+- docs index 按任务表新增"从样板开始开发新算子"入口
+- reporting 组成表纳入测试报告模板与算子总报告+分册
+- CONTRIBUTING 新增样例 checklist 补黄金数据项（含特殊用例要求）
+
 ## [0.8.2] - 2026-08-28
 
 ### Changed

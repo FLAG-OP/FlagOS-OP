@@ -55,6 +55,7 @@ flowchart TB
 | 我想… | 去哪 |
 |---|---|
 | 5 分钟跑通 | [快速开始](getting-started.md) |
+| 从样板开始开发新算子 | [算子样板](../templates/operator/README.md)（copy-paste 起点） |
 | 理解整体设计 | [体系结构](architecture.md) |
 | 开发 torch 算子替换 | [A1 路线](route-a1-aten.md) |
 | 开发 FlagOS 融合算子 | [A2 路线](route-a2-dispatch.md) |
