@@ -106,10 +106,10 @@ kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为�
 | 算子 @ shape (bf16) | 最优实现 | 关键数字 | FlagGems 基线 | 详见 |
 |---|---|---|---|---|
 | silu_and_mul 4096×8192 | Triton 融合 | 0.083ms（C++ 0.311 / 参考 0.651） | 0.129ms（silu 组合†） | [b-fullstack](b-fullstack/) |
-| BMM 16×512³ | Triton 分块 | 0.031ms / 135 TFLOPS（原生 1.2x） | 0.038ms / 112 TFLOPS | [bmm-fullstack](bmm-fullstack/) |
+| BMM 16×512³ | Triton 分块 | 0.032ms / 135 TFLOPS（原生 1.25x） | 0.038ms / 112 TFLOPS | [bmm-fullstack](bmm-fullstack/) |
 | gelu 8192² | Triton | 0.047ms（CPU 2341x） | ✗ [#13](../docs/known-issues.md) | [a1-op](a1-op/) |
 | gelu_and_mul 8192² | Triton 融合 | 0.052ms（vs 分解参考 6204x） | ✗ [#13](../docs/known-issues.md) | [a2-op](a2-op/) |
-| softmax 1024² | **FlagGems** | 自研流式归约 0.035ms | **0.029ms** | [softmax-fullstack](softmax-fullstack/) |
+| softmax 1024² | **原生 ATen** | 自研 0.060ms（#15 修复后，尾块安全） | 0.028ms ⚠[精度](#accuracy) | [softmax-fullstack](softmax-fullstack/) |
 | gelu_and_mul bwd | Triton autograd | dx_err=1.7e-06 | —（无对应） | [backward-example](backward-example/) |
 
 † FlagGems 无该融合算子，基线为其 `silu` 单算子组合；✗ 表示 FlagGems
@@ -133,7 +133,7 @@ FlagGems 基线随[性能基线](../docs/performance-regression.md)入库（子�
 **要点**:
 - **自研 15/15 全过**；softmax 修复尾块 bug（[#15](../docs/known-issues.md)）后，
   fp32 精度比 FlagGems 好 5 个数量级
-- **FlagGems softmax 三 dtype 全超差**（含 fp32 1.5e-2）——它 0.029ms 的
+- **FlagGems softmax 三 dtype 全超差**（含 fp32 1.5e-2）——它 0.028ms 的
   性能优势（见上表）是低精度换来的；对精度敏感场景自研实现更稳
 - gelu(tanh) 家族 FlagGems 在本栈不可用（#13），自研与原生等精度
 

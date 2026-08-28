@@ -73,7 +73,7 @@ flowchart LR
 | 级别 | 写什么 | 编译/执行 | 范本 |
 |---|---|---|---|
 | **torch 级** | C++ extension 调 ATen / Python 委托 | `cpp_extension.load()`，无新设备码 | [b-fullstack](../examples/b-fullstack/)（C++ 调 ATen）· [b-op](../examples/b-op/) |
-| **Triton 级** | `@triton.jit` / `@pointwise_dynamic` | Triton → 芯片编译栈 → 设备码 | [bmm-fullstack](../examples/bmm-fullstack/)（GEMM）· [softmax-fullstack](../examples/softmax-fullstack/)（归约+autotune）· [a1-kernel](../examples/a1-kernel/) · [a2-kernel](../examples/a2-kernel/) |
+| **Triton 级** | `@triton.jit` / `@pointwise_dynamic` | Triton → 芯片编译栈 → 设备码 | [bmm-fullstack](../examples/bmm-fullstack/)（GEMM）· [softmax-fullstack](../examples/softmax-fullstack/)（归约+尾块安全，样板同构）· [a1-kernel](../examples/a1-kernel/) · [a2-kernel](../examples/a2-kernel/) |
 | **硬件级** | 厂商语言设备码 / 厂商预编译原语 | 厂商工具链 → `.so` | [hw-kernel-example](../examples/hw-kernel-example/)（xtorch_ops 原语 + [SDK 模板](../examples/hw-kernel-example/sdk_template/BUILD.md)）· [b-kernel](../examples/b-kernel/)（厂商 kernel 直测清单） |
 
 **已有 AI 生成产物?** 直接走 [intake 契约](ai-intake.md)，
@@ -206,7 +206,7 @@ python3 scripts/gen_report_scaffold.py --op <算子> --route <路线> --device <
 | [b-framework](../examples/b-framework/) | ◐ | ◐ | — | ● audit | ● 黄金 | — | — |
 | **[b-fullstack](../examples/b-fullstack/)** ⭐ | ● | ● torch | ● | ● | ● | ◐ | ● 报告 |
 | **[bmm-fullstack](../examples/bmm-fullstack/)** ⭐ | ● | ● Triton | ● | ● aten | ● | ◐ | ◐ 性能 |
-| [softmax-fullstack](../examples/softmax-fullstack/) | ● | ● Triton | ● | ● aten | ● | ◐ | ◐ 性能 |
+| [softmax-fullstack](../examples/softmax-fullstack/) | ● | ● Triton | ● | ● aten | ● | ◐ | ● 报告 |
 | [backward-example](../examples/backward-example/) | ● 正反向 | ● Triton | ● 含 bwd | ◐ autograd | — | — | ◐ 性能 |
 | [hw-kernel-example](../examples/hw-kernel-example/) | ◐ | ● 硬件级 | ● | — | — | — | ◐ 性能 |
 | [intake 正例](../intake/cases/kernelgen-gelu-example/) | ● manifest | ● 生成产物 | ● | ● A2 | — | — | ◐ perf 记录 |

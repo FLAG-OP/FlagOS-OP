@@ -14,5 +14,5 @@
 - FlagGems 的 2.1x 优势伴随精度超差（见[精度报告](accuracy.md)），
   精度敏感场景不可用
 - 自研优化方向: 单遍在线归约（running max/sum，Flash 风格），
-  预期消掉三遍中的两遍访存；目标不降精度逼近 0.029ms
+  预期消掉三遍中的两遍访存；目标不降精度逼近 0.028ms
 - 本数字已入[性能基线](../../../docs/performance-regression.md)门禁

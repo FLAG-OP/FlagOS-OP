@@ -81,7 +81,7 @@ FlagOS **没有自有 kernel 语言**——编程层复用 Triton（+厂商 kern
 
 - [b-fullstack](../examples/b-fullstack/)（torch 级）: C++ kernel → vendor 注册 → 真实 vLLM
 - [bmm-fullstack](../examples/bmm-fullstack/)（Triton 级）: Triton BMM → aten 拦截 → 应用层
-- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + autotune
+- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + 尾块安全（样板同构样例）
 - [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
 
 全部 14 个样例在 3×3 矩阵中的位置与涵盖范围见
