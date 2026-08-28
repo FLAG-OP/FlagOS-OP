@@ -1,25 +1,25 @@
-// 硬件级实现 · CUDA C++（类 C 设备码参考实现）
+// 硬件级模板 · CUDA C++ 设备码骨架（占位符 + 文字说明）
 //
-// ⚠️ 目标定位: NVIDIA GPU。在 P800/XPU 上 nvcc 可编译但无法执行
-// （NVIDIA PTX 指令集不被 XPU 识别，known-issues #12）。
-// P800 当前可运行的"最接近硬件级"路径见同目录 xtorch_binding.cpp。
+// 定位: NVIDIA 目标的类 C 设备码起点。
+// ⚠️ P800/XPU: nvcc 可编译、无法执行（NVIDIA PTX 不被 XPU 识别，
+//    known-issues #12）；P800 真设备码需昆仑芯 XTC SDK
+//    （见 examples/hw-kernel-example/sdk_template/）。
 //
 // 编译: nvcc -O3 -shared -Xcompiler -fPIC kernel.cu -o libmyop.so
 #include <cuda_runtime.h>
-#include <cmath>
 
-__global__ void my_op_kernel(const float* __restrict__ x,
-                             const float* __restrict__ g,
-                             float* __restrict__ y, long n) {
-    long i = blockIdx.x * (long)blockDim.x + threadIdx.x;
-    if (i >= n) return;
-    float xf = x[i];
-    // <TODO: 与 reference.py 同语义的 fp32 计算>
-    y[i] = xf * g[i];
+// [TODO] 设备端 kernel —— 与 reference.py 同语义。要点:
+//   · 网格/块划分: 本库样例用 256 threads/block、grid=ceil(n/256)
+//   · 访存: coalesced（相邻线程读相邻地址），必要时向量化
+//   · 精度: 内部 fp32 累加，写出时 cast 回输入 dtype（与参考一致）
+//   · 尾块: 边界判断放设备码内时，务必实测非整倍数 N（#15a 同类陷阱）
+__global__ void my_op_kernel(/* [TODO] 输入/输出指针 + 维度参数 */) {
+    // [TODO] 设备码
 }
 
-extern "C" void my_op_launch(const float* x, const float* g, float* y,
-                             long n, cudaStream_t stream) {
-    long blocks = (n + 255) / 256;
-    my_op_kernel<<<blocks, 256, 0, stream>>>(x, g, y, n);
+// [TODO] host 启动器 —— 要点:
+//   · 绑定 stream（异步语义与 PyTorch 一致）
+//   · 错误检查（cudaGetLastError / cudaPeekAtLastError）
+extern "C" void my_op_launch(/* [TODO] ptr, n, cudaStream_t stream */) {
+    // [TODO] my_op_kernel<<<grid, block, smem, stream>>>(...);
 }

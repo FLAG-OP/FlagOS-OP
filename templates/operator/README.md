@@ -21,8 +21,8 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 │   ├── torch_level.py         torch 级（ATen 组合）
 │   ├── triton_level.py        Triton 级（内置 #11/#15 防护）
 │   └── hardware_level/        硬件级（类 C）
-│       ├── kernel.cu              CUDA C++（NVIDIA；P800 执行 ✗ #12）
-│       ├── xtorch_binding.cpp     厂商 C++ 绑定（P800 当前可跑）
+│       ├── kernel.cu              CUDA C++ 骨架（占位 + 要点；P800 ✗ #12）
+│       ├── xtorch_binding.cpp     厂商 C++ 绑定骨架（API 位置与坑已标注）
 │       └── BUILD.md               编译指南（含已验证 include 三链）
 ├── test/                三层测试
 │   ├── kernel_level.py        算子库层直测（精度/哨兵/性能 + metrics）

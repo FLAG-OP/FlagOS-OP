@@ -3,7 +3,7 @@
 | 目标 | 文件 | 本机状态 |
 |---|---|---|
 | NVIDIA GPU | [kernel.cu](kernel.cu) | nvcc 编译 ✓ / P800 执行 ✗（[#12](../../../../docs/known-issues.md)） |
-| P800/XPU（厂商库绑定） | [xtorch_binding.cpp](xtorch_binding.cpp) | ✅ 可编译可执行（ATen 回退占位） |
+| P800/XPU（厂商库绑定） | [xtorch_binding.cpp](xtorch_binding.cpp) | 骨架占位（API 位置与坑已标注，待填厂商调用） |
 | P800 真设备码 | [sdk_template](../../../../examples/hw-kernel-example/sdk_template/BUILD.md) | 待昆仑芯 SDK（XTC/xcc） |
 
 ## xtorch_binding.cpp 编译要点
