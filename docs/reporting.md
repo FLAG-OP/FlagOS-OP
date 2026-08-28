@@ -17,6 +17,12 @@
 | 骨架生成器 | `scripts/gen_report_scaffold.py` | 一键生成半自动报告 |
 | 性能基线 | `scripts/perf_run.py` / `scripts/perf_compare.py` | 报告第 5 章可引用的回归数据（[性能回归追踪](performance-regression.md)） |
 
+三类报告各司其职，典型用法是: 开发过程中随手维护**总报告**
+（REPORT.md，一页），数据沉淀进**分册**（reports/，精度和性能各一本，
+脚本可直接生成表格），评审或归档时再写完整的**开发报告**——它叙事
+最全但成本也最高，不必每个算子都写。已填样例见
+[reports/examples](../reports/examples/README.md)。
+
 <a id="scaffold"></a>
 ## 一键生成报告骨架
 

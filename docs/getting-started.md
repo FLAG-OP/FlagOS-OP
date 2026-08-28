@@ -35,6 +35,17 @@ python3 examples/a1-framework/example.py
 DEVICE=p800-kunlunxin ./scripts/run_all.sh
 ```
 
+第 2 步成功时你会看到类似输出（关键是最末的 `PASS`）:
+
+```
+  精度: 9/9 组合 PASS
+  拦截: torch.relu -> Triton kernel
+  CELL RESULT: PASS (5.8s)
+```
+
+如果 FAIL，先看控制台最后一段 traceback——每格测试都会把失败
+原因打印出来，且结果 JSON（`results/`）里留有 `error` 字段可回查。
+
 ## 结果在哪
 
 - 每格结果 JSON: `results/<device>_<route>_<level>.json`

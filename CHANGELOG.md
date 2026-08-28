@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.3] - 2026-08-28
+
+### Changed
+- 叙事水位拉平（0.9.2 只覆盖了 a2，本轮补齐其余干燥点）:
+  - route-a1: dispatch key 的两个误解（CPU 参考天然可用 / 同 key
+    覆盖竞争的 flag_gems 实战）、步骤排序理由（拦截确认先于精度）
+  - route-b: KernelSpec 声明式的动机（新 kernel = 一行 YAML 而非
+    新测试，5 个厂商 kernel 3 个缺陷全由此抓出）、audit 分离
+    "链路通/数值对"的归因价值
+  - getting-started: 补"成功长什么样"示例输出与 FAIL 排障入口
+  - reporting: 三类报告的分工与典型工作流（总报告随手维护 /
+    分册沉淀数据 / 开发报告评审时才写）
+
 ## [0.9.2] - 2026-08-28
 
 ### Changed

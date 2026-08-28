@@ -22,7 +22,18 @@ lib.impl("relu", my_triton_relu, dispatch_key)  # key 来自设备 profile
 这是 PyTorch 官方扩展机制（`FlagGems.enable()` 内部即此机制，
 批量注册 ~200 个算子），**不是 monkey patch**。
 
+两个容易误解的点。其一，dispatch key 决定了你的实现"对谁生效":
+注册到 CUDA key 只影响设备张量，CPU 张量照走原实现——这不是缺陷，
+反而让 CPU 参考实现天然可用（kernel 层精度对比就靠它）。其二，
+同一个 (算子, key) 后注册的会**覆盖**先注册的——本库实测踩过:
+框架级测试里 flag_gems.enable() 与本路线注册同名算子互相竞争，
+最后靠 `VLLM_FL_FLAGOS_BLACKLIST` 划清边界才稳定下来。
+
 ## 开发步骤
+
+这五步的顺序有讲究: 第 2 步"按 aten 签名包装"是最容易出错的一环
+（签名对不上时注册本身不报错，调用才报），所以第 4 步验证里专门
+有"拦截确认"这一项——先证明调用真的走到了你的 kernel，再谈精度。
 
 1. 写 Triton kernel（`@pointwise_dynamic` + `@triton.jit`）
 2. 按 aten 签名包装（如 `relu(Tensor self) -> Tensor`）
