@@ -25,6 +25,11 @@ flowchart LR
 
 ## 三条生成入口
 
+三条入口最终都收敛到同一个动作: 把产物放进 `intake/cases/<name>/`
+并填好 manifest。区别只在"谁来放"——Web 平台是人复制粘贴，MCP/
+skills 是 Agent 直接写文件，KernelBench 需要一次格式转换。对验证
+侧来说来源无关紧要，manifest 里的 `source` 字段只是留个溯源线索。
+
 | 入口 | 产出方式 | 落盘约定 |
 |---|---|---|
 | [KernelGen Web](https://kernelgen.flagos.io) | 平台导出生成 kernel | 复制到 `intake/cases/<name>/kernel.py` + 填 manifest |
@@ -79,6 +84,12 @@ python3 scripts/intake_validate.py --validate-only     # 仅契约校验（CI）
 性能记录自动进入 [性能回归](performance-regression.md) 的 `intake` group。
 
 ## 内置示例
+
+两个内置 case 一正一负，演示的正是这套通道的核心价值主张: 正例走完
+从落盘到 PROMOTED 的全流程；负例故意埋了本栈最常见的静默缺陷
+（裸 Triton 缺 device 上下文），看验证体系能不能自己抓出来——
+答案是哨兵检查在 kernel 层直接拦截，返回机器可读的失败原因。
+如果生成侧接的是 MCP/Agent，这个原因可以直接回喂给下一轮生成。
 
 | case | 演示 | P800 实测 |
 |---|---|---|

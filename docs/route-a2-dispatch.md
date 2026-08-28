@@ -13,6 +13,12 @@ vLLM **融合算子**（silu_and_mul / rms_norm / rotary_embedding /
 
 ## 分发模型
 
+A2 的调用链有三层，理解它才能定位"算子没被用上"卡在哪一层:
+调用点是否真的经过了 `call_op`（没经过就是 patch 没生效）、
+OpManager 的策略是否选了你的实现（没选就是优先级或 PER_OP 配置
+问题）、选中的实现是否真的执行了（没执行就是注册或可用性判断
+出了问题）。
+
 - 模型调用点（被 vllm_fl patch）→ `call_op("gelu_and_mul", ...)`
 - OpManager（缓存/策略/fallback）→ OpRegistry
 - OpRegistry: flagos(150) / vendor(100) / reference(50)
