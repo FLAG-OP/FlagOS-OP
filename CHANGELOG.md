@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0] - 2026-08-28
+
+### Added
+- softmax-fullstack 重组为与算子样板**完全同构**的教学样例:
+  kernel/ 三级（torch✅/Triton✅/硬件级⬜置空+说明）、test/ 三层、
+  goldendata/（规格含 #15 尾块形状）、script/（gen_golden 39 组 ✓ /
+  check_accuracy triton 39/39 ✓）、REPORT.md 总报告 + reports/ 分册
+  （真实数据已填）
+- examples/README 新增"与算子样板的对应"映射表（每个样例对应样板
+  哪个槽位；格级样例保持单文件聚焦的理由）
+
+### Fixed
+- test/ 目录名与标准库 test 包同名导致导入遮蔽——编排器按路径加载
+
 ## [0.8.3] - 2026-08-28
 
 ### Changed

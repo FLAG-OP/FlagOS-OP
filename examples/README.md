@@ -4,6 +4,26 @@
 或者一条贯穿三层的完整链路。先在定位图里找到你关心的路线和层级，
 再进对应目录看代码和 README。
 
+<a id="template-map"></a>
+## 与算子样板的对应
+
+[softmax-fullstack](softmax-fullstack/) 的目录结构与
+[templates/operator](../templates/operator/README.md) **完全同构**
+（kernel/ 三级 · test/ 三层 · goldendata/ · script/ · REPORT+reports/，
+硬件级置空并说明）——从样板开始开发的人切到它零认知切换。
+其余样例是**格级/专项教学**，保持单文件聚焦；新增完整算子样例时
+直接复制样板。
+
+| 样例 | 对应样板槽位 | 说明 |
+|---|---|---|
+| **softmax-fullstack** ⭐ | **全部**（结构同构） | 唯一按样板组织的完整算子样例 |
+| a1-kernel / a2-kernel | test/kernel_level | 算子库层直测教学 |
+| a1-op / a2-op / b-op | test/op_level + register | 框架层注册教学 |
+| a1/a2/b-framework | test/framework_level | 应用层注入教学 |
+| bmm-fullstack / b-fullstack | kernel+test 全线（单文件编排） | 全链路叙事版 |
+| backward-example | kernel/（反向）| autograd 专项 |
+| hw-kernel-example | kernel/hardware_level | 硬件级专项（厂商原语+SDK 模板） |
+
 <a id="map"></a>
 ## 样例定位图（每个样例在矩阵中的位置与涵盖范围）
 

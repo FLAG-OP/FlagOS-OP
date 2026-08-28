@@ -1,0 +1,25 @@
+# softmax 黄金数据规格（含 #15 尾块回归形状）
+op: softmax
+seed_base: 20260828
+cases:
+  - name: small
+    shapes: [[64, 1024], [128, 512]]
+    dtypes: [bfloat16, float16, float32]
+    distribution: normal
+    scale: 3.0
+    special: []
+  - name: tail
+    shapes: [[8, 5000], [16, 5120], [32, 3072]]
+    dtypes: [bfloat16, float32]
+    distribution: normal
+    scale: 3.0
+    special: []
+  - name: extreme
+    shapes: [[128, 5120]]
+    dtypes: [float32]
+    distribution: uniform
+    scale: 8.0
+    special: [zeros, large]
+seeds_per_case: 3
+tolerance:
+  pointwise_abs: {float32: 1.0e-5, float16: 1.0e-2, bfloat16: 1.0e-2}

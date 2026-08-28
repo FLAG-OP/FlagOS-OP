@@ -1,4 +1,19 @@
-# softmax-fullstack: 行归约（尾块安全 + 固定配置）
+# softmax-fullstack: 行归约算子贯穿三层（样板同构组织）
+
+本样例的目录结构与 [templates/operator](../../templates/operator/README.md)
+完全一致——从样板开始开发的人切到本样例**零认知切换**；未实现的
+级别置空并说明（[kernel/hardware_level](kernel/hardware_level/README.md)）。
+
+```
+softmax-fullstack/
+├── REPORT.md + reports/     总报告 + 精度/性能分册（已填真实数据）
+├── reference.py             语义参考
+├── register.py              A1 aten 注册
+├── kernel/                  torch ✅ · Triton ✅ · hardware ⬜置空
+├── test/                    算子库层 / 框架层 / 应用层
+├── goldendata/              规格含 #15 尾块回归形状
+└── script/                  gen_golden / check_accuracy
+```
 
 [← 样例索引](../README.md)
 
