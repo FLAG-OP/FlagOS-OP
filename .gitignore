@@ -7,5 +7,6 @@ bench_result.json
 run_baseline.json
 run_plugin.json
 
-# 生成的报告骨架（per-op 产物，不入库）
-reports/
+# 生成的报告骨架（per-op 产物，不入库；样例报告除外）
+reports/*
+!reports/examples/

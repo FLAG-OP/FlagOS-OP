@@ -43,6 +43,7 @@ DEVICE=<profile名> ./scripts/run_all.sh     # 全矩阵 + 一致性
 python3 run.py --route a1 --level kernel    # 单格
 python3 run.py --list                       # 查看可用设备
 python3 examples/b-fullstack/example.py     # 全链路样例（约 3 分钟）
+cp -r templates/operator my_op/             # ← 新算子从这里开始
 python3 scripts/perf_compare.py --device p800-kunlunxin   # 性能回归门禁
 python3 scripts/intake_validate.py --validate-only        # AI 生成算子契约
 ```
@@ -65,6 +66,16 @@ python3 scripts/intake_validate.py --validate-only        # AI 生成算子契�
 [设备接入](docs/device-profiles.md) · [报告](docs/reporting.md) ·
 [性能回归](docs/performance-regression.md) · [AI 生成算子](docs/ai-intake.md) ·
 [样例索引](examples/README.md)（14 个可运行样例 + 定位图）
+
+## 仓库分区
+
+| 分区 | 内容 | 何时进入 |
+|---|---|---|
+| [templates/](templates/) | **算子样板** + 报告模板 | 开发新算子的起点 |
+| [routes/](routes/) + [tests/](tests/) | 三路线正式实现 + 3×3 矩阵测试 | 实现稳定后合入 |
+| [examples/](examples/) | 14 个教学样例（按路线×层级定位） | 学习与对照 |
+| [intake/](intake/) + [perf/](perf/) | AI 生成算子通道 + 性能基线 | 自动化环节 |
+| [docs/](docs/) + [reports/examples/](reports/examples/) | 文档 + 示例报告 | 全程参考 |
 
 ## 许可
 

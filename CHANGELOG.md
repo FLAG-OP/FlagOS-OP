@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.0] - 2026-08-28
+
+### Added
+- 算子样板 templates/operator/（7 文件 copy-paste 起点 kit）: 语义参考 /
+  Triton kernel（内置 #11 device 上下文与 #15 尾块 pad 两条硬约束）/
+  kernel 层测试（metrics 落盘约定）/ 三路线注册 / op 与应用层测试骨架 /
+  性能回归用例
+- 测试报告模板 templates/op-test-report.md（测试范围/精度/性能/风险/结论）
+- reports/examples/ 入库: gelu_and_mul 已填测试报告（真实数据）+ 2 份
+  开发报告骨架 + 索引（原 reports/ 整体 gitignore，报告样例不可见）
+
+### Changed
+- 根 README 新增"仓库分区"表（样板/正式实现/教学样例/自动化/文档五区）
+- 全链路指南第 0 步、CONTRIBUTING、architecture 目录树接入样板入口
+- .gitignore: reports/* 但保留 reports/examples/
+
 ## [0.7.0] - 2026-08-28
 
 ### Added

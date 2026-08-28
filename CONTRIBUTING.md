@@ -13,12 +13,15 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 
 ### 新增样例
 
-- [ ] 复制最接近的现有样例目录为起点
+- [ ] 优先从 [templates/operator](templates/operator/) 样板起步（已内置
+      #11/#15 防护与 metrics 约定），或复制最接近的现有样例目录
 - [ ] `example.py` 含 `main()` 入口 + 设备 profile 参数（不硬编码设备）
 - [ ] README 含: 定位 / 运行方式 / 预期输出 / 关键点
 - [ ] 若含新 kernel: 确认启动包了 `torch_device_fn.device` 上下文（[known-issues #11](docs/known-issues.md)）
+- [ ] 归约类 kernel: 确认尾块安全（pad 或两阶段，[known-issues #15](docs/known-issues.md)）
 - [ ] 标注[开发层级](docs/architecture.md#levels)（Triton 级/torch 级/硬件级）
 - [ ] 更新 `examples/README.md` 索引表与定位图
+- [ ] 产出[测试报告](templates/op-test-report.md)（样例见 [reports/examples](reports/examples/)）
 
 ### 新增设备 profile
 
