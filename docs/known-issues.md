@@ -116,6 +116,23 @@ xtriton 的 XPU libdevice 表中该 fp32 重载映射到占位符符号
 修复: `common/xpu_compat.py` 经 `triton.backends` 注册表直达第二实例
 注入 `sys`（`common/device.py` 导入时自动生效），此后真实错误可见。
 
+### 15. ⚠️ XPU 栈两个 Triton 正确性陷阱（softmax 实测发现）
+
+**a) 尾块 masked load + `tl.sum` 归约错误**: N 非 BLOCK_N 整数倍时，
+尾块中 masked load 的结果污染归约——`other=0.0`、`other=-1e30`、
+`tl.where` 显式清洗**三种防护全部无效**；无 load 的纯归约正常，
+`tl.max` 归约正常，仅 `tl.sum` 中招。实测 N=3072/BN=2048 输出 inf，
+N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏测尾块。
+
+**b) autotuner 选出非法 `num_warps=5`**: 配置表只定义了 4/8/16，
+`best_config` 却显示 `num_warps: 5`（非 2 的幂），导致错误执行且
+**每次调优结果不同**——同一 kernel 时对时错，极具迷惑性。
+
+修复（softmax-fullstack 已落地）: wrapper 把输入 pad 到 2048 整数倍
+（实体填充 -60000，exp 后贡献为 0），kernel 固定 `BLOCK_N=2048`——
+全程无 mask、无调优，确定性路径；整数倍 N 零开销。测试形状补充
+3072/5000/5120 非整倍数回归。
+
 ## 通用检测方法
 
 | 问题类型 | 检测工具 |
@@ -127,6 +144,7 @@ xtriton 的 XPU libdevice 表中该 fp32 重载映射到占位符符号
 | 裸 Triton 启动静默 no-op | 哨兵检查（zeros 预填看零占比）+ 对照 `flag_gems` 同算子 |
 | embedding 越界 | tokenize 后比对词表上限；CPU transformers 交叉验证 |
 | FlagGems 某算子链接失败 | `common/xpu_compat` 补丁后看 elfconv 真实 stderr；对照 #13 |
+| 尾块归约静默错误 | 精度探针含非整倍数 N（`accuracy_report.py`）；对照 #15 |
 
 ---
 

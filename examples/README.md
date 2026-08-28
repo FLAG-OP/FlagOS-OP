@@ -54,7 +54,7 @@ flowchart TB
 - ⭐ 全链路/专项样例以虚线标注覆盖范围（bmm/b-fullstack/softmax 各覆盖
   对应列三层；backward-example 覆盖 A2 列的 fwd+bwd）
 - 全链路/专项: bmm-fullstack(GEMM) / b-fullstack(fused) /
-  softmax-fullstack(reduction+autotune) / backward-example(autograd)
+  softmax-fullstack(reduction+尾块安全) / backward-example(autograd)
 - b-kernel 同时含 硬件（厂商 kernel 直测）与 torch（csrc JIT 编译闭环）
 
 
@@ -68,7 +68,7 @@ flowchart TB
 | [a2-framework](a2-framework/) | Triton silu_and_mul 以 vendor 身份注入真实推理 | **Triton** |
 | [b-kernel](b-kernel/) | **厂商 kernel 直测 + C++ JIT 编译闭环 + 哨兵检查** | **硬件 + torch** |
 | [b-op](b-op/) | 自定义 厂商算子注册 注册/选择/计数 | torch（委托） |
-| [softmax-fullstack](softmax-fullstack/) | 行归约 + autotune 三层 | **Triton** |
+| [softmax-fullstack](softmax-fullstack/) | 行归约 + 尾块安全 三层 | **Triton** |
 | [backward-example](backward-example/) | autograd fwd+bwd + 训练冒烟 | **Triton** |
 | [hw-kernel-example](hw-kernel-example/) | xtorch_ops 厂商原语组合 + CUDA C++ 参考（P800 硬件级） | **硬件级** |
 | [bmm-fullstack](bmm-fullstack/) | torch.bmm 贯穿 算子库层→框架层→应用层（含 [#11](../docs/known-issues.md) 根因发现） | **Triton** |
@@ -95,6 +95,27 @@ kernel/op 层样例完全自包含（不依赖 routes/），可直接复制为�
 † FlagGems 无该融合算子，基线为其 `silu` 单算子组合；✗ 表示 FlagGems
 的 `gelu(tanh)` 在本栈链接失败（[#13](../docs/known-issues.md)）。
 FlagGems 基线随[性能基线](../docs/performance-regression.md)入库（子进程隔离采集）。
+
+<a id="accuracy"></a>
+## 精度速览（参考实例实测，2026-08-28）
+
+同输入同 fp32 参考的三方对比（`scripts/accuracy_report.py` 可复现）。
+完整口径: pointwise 用 abs err、带乘法放大的融合算子与 GEMM 用相对 err。
+
+| 算子 | dtype | 容差 | 自研 | FlagGems | 原生 |
+|---|---|---|---|---|---|
+| gelu(tanh) | bf16/fp16/fp32 | 1e-2/1e-2/1e-5 | 全 ✓（最差 7.8e-3） | ✗ [#13](../docs/known-issues.md) | 全 ✓ |
+| gelu_and_mul | bf16/fp16/fp32 | 5e-2 rel | 全 ✓（最差 3.0e-3） | 全 ✓ | 全 ✓ |
+| silu_and_mul | bf16/fp16/fp32 | 5e-2 rel | 全 ✓（最差 3.7e-3） | 全 ✓ | 全 ✓ |
+| softmax | bf16/fp16/fp32 | 1e-2/1e-2/1e-5 | **全 ✓**（fp32 2.4e-7） | **全 ⚠**（fp32 1.5e-2） | 全 ✓ |
+| bmm | bf16/fp16/fp32 | 5e-2 rel | 全 ✓（最差 9.1e-3） | 全 ✓（fp32 3.3e-7） | 全 ✓（fp32=0） |
+
+**要点**:
+- **自研 15/15 全过**；softmax 修复尾块 bug（[#15](../docs/known-issues.md)）后，
+  fp32 精度比 FlagGems 好 5 个数量级
+- **FlagGems softmax 三 dtype 全超差**（含 fp32 1.5e-2）——它 0.029ms 的
+  性能优势（见上表）是低精度换来的；对精度敏感场景自研实现更稳
+- gelu(tanh) 家族 FlagGems 在本栈不可用（#13），自研与原生等精度
 
 > 所有数字: 健康态进程、短采样(≤100 次)。共享设备的进程内污染可致
 > 200x 级失真（[known-issues](../docs/known-issues.md) #10/#11），勿跨进程直接对比。

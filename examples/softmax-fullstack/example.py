@@ -22,17 +22,12 @@ import triton
 import triton.language as tl
 
 
-# ============ Triton fused softmax（行归约 + autotune） ============
-@triton.autotune(
-    configs=[
-        triton.Config({"BLOCK_N": 128}, num_warps=4),
-        triton.Config({"BLOCK_N": 256}, num_warps=4),
-        triton.Config({"BLOCK_N": 512}, num_warps=8),
-        triton.Config({"BLOCK_N": 1024}, num_warps=8),
-        triton.Config({"BLOCK_N": 2048}, num_warps=16),
-    ],
-    key=["N"],
-)
+# ============ Triton fused softmax（行归约） ============
+# 注（known-issues #15）: 本栈 a) 尾块 masked load + tl.sum 归约错误，
+# other/tl.where 均无法补救；b) @triton.autotune 会选出配置表里不存在
+# 的非法 num_warps=5，导致错误执行且不可复现。
+# 对策: wrapper 把输入 pad 到 2048 整数倍（实体填充极低值，exp 后贡献
+# 为 0），kernel 固定 BLOCK_N=2048——全程无 mask、无调优，确定性路径。
 @triton.jit
 def _softmax_kernel(X, Y, N, sx, sy, BLOCK_N: tl.constexpr):
     row = tl.program_id(0)
@@ -64,11 +59,16 @@ def softmax_triton(x: torch.Tensor, dim: int = -1) -> torch.Tensor:
     from flag_gems.runtime import torch_device_fn
     assert dim == -1 or dim == x.dim() - 1, "仅支持最后一维"
     x2d = x.reshape(-1, x.shape[-1])
-    out = torch.empty_like(x2d)
     M, N = x2d.shape
+    pad = (-N) % 2048
+    if pad:
+        x2d = F.pad(x2d, (0, pad), value=-60000.0)  # fp16/bf16/fp32 均安全
+    N_p = N + pad
+    out = torch.empty_like(x2d)
     with torch_device_fn.device(x.device):
-        _softmax_kernel[(M,)](x2d, out, N, x2d.stride(0), out.stride(0))
-    return out.reshape(x.shape)
+        _softmax_kernel[(x2d.shape[0],)](
+            x2d, out, N_p, x2d.stride(0), out.stride(0), BLOCK_N=2048)
+    return out[..., :N].reshape(x.shape)
 
 
 # ============ aten 注册 ============
@@ -128,14 +128,16 @@ def stage_l0(dev: str) -> bool:
     print("-" * 60)
     print("Stage 1/3  kernel 层: Triton fused softmax (reduction + autotune)")
     print("-" * 60)
-    for shape in [(128, 512), (256, 1024), (64, 2048), (1, 4096), (512, 256)]:
+    # 含非整倍数 N（3072/5000/5120）——原测试全是整倍数，漏测尾块路径
+    for shape in [(128, 512), (256, 1024), (64, 2048), (1, 4096), (512, 256),
+                  (32, 3072), (8, 5000), (16, 5120)]:
         for dt in (torch.bfloat16, torch.float16, torch.float32):
             x = torch.randn(*shape, dtype=dt, device=dev) * 3
             ref = F.softmax(x.float(), dim=-1).to(dt)
             out = softmax_triton(x)
             err = (out.float() - ref.float()).abs().max().item()
             assert err < 1e-2, f"{shape} {dt} err={err}"
-    print("  精度: 15/15 组合 PASS（在线单遍归约）")
+    print("  精度: 24/24 组合 PASS（含非整倍数 N 尾块回归）")
     x = torch.randn(64, 512, dtype=torch.bfloat16, device=dev)
     o1, o2 = softmax_triton(x), softmax_triton(x)
     assert torch.equal(o1, o2) and not torch.equal(o1, softmax_triton(x + 1))
@@ -151,7 +153,7 @@ def stage_l0(dev: str) -> bool:
         print(f"  FlagGems 基线: {t_fg:.3f}ms（自研相对={t_fg/t_tri:.2f}x）")
     except Exception as e:
         print(f"  FlagGems 基线: SKIP（{type(e).__name__}）")
-    print(f"  autotune: 已从 5 个 BLOCK_N 配置中自动选择（key=N）")
+    print(f"  配置: BLOCK_N=2048 固定（本栈 autotune 不安全，known-issues #15b）")
     return True
 
 

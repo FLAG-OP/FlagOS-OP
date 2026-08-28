@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.0] - 2026-08-28
+
+### Added
+- scripts/accuracy_report.py: 自研/FlagGems/原生 三方同输入同参考精度对比
+- 样例索引新增"精度速览"表: 自研 15/15 全过；FlagGems softmax 三 dtype
+  全超差（fp32 1.5e-2）——其性能优势为低精度换取
+
+### Fixed
+- ⚠️ softmax 尾块正确性 bug（#15a，由精度探针发现）: N 非 BLOCK 整数倍时
+  masked load+tl.sum 污染结果（三种防护无效）；修复为 pad 到 2048 倍数
+- ⚠️ 移除 @triton.autotune（#15b）: 本栈 autotuner 选出非法 num_warps=5，
+  同 kernel 不可复现地时对时错；改固定 BLOCK_N=2048
+- softmax 测试形状补非整倍数 N（3072/5000/5120）——原测试全整倍数漏测
+
 ## [0.6.2] - 2026-08-28
 
 ### Added

@@ -70,7 +70,7 @@ python3 scripts/check_env.py --device p800-kunlunxin --require-model       # 共
 | 方向 | 说明 | 参考 |
 ---|---|---|
 | ~~reduction 类算子样例~~ | ✅ softmax-fullstack 已完成 | — |
-| ~~autotune 集成~~ | ✅ softmax-fullstack 已含 @triton.autotune | — |
+| ~~autotune 集成~~ | ⚠ 本栈 autotuner 选出非法 num_warps 导致错误结果，softmax 已改固定配置（known-issues #15b） | — |
 | ~~backward / autograd~~ | ✅ backward-example 已完成 | — |
 | ~~多芯片 CI~~ | 部分完成（链接/语法/YAML 检查已有，多设备运行待硬件） | GitHub Actions |
 | 昆仑芯 SDK 集成 | SDK 到位后激活 sdk_template 中的 XPU kernel | hw-kernel-example |
