@@ -1,0 +1,29 @@
+# 输入与黄金数据规格（声明式，gen_golden.py 消费）
+#
+# 设计参考: KernelBench 的 problem 声明（shape/dtype/分布显式写出）+
+# ONNX Runtime test-data 的"输入即目录"约定。
+op: my_op
+seed_base: 20260828
+cases:
+  - name: small
+    shapes: [[64, 1024]]
+    dtypes: [bfloat16, float16, float32]
+    distribution: normal          # normal | uniform
+    scale: 2.0
+    special: []                   # zeros | large | boundary（见 README）
+  - name: long_tail
+    shapes: [[1, 14336], [8, 5000]]
+    dtypes: [bfloat16, float32]
+    distribution: normal
+    scale: 2.0
+    special: [boundary]           # 含 dtype 边界值行
+  - name: extreme
+    shapes: [[128, 5120]]
+    dtypes: [float32]
+    distribution: uniform
+    scale: 8.0
+    special: [zeros, large]        # 全零行 + 大值行
+seeds_per_case: 3
+tolerance:
+  pointwise_abs: {float32: 1.0e-5, float16: 1.0e-2, bfloat16: 1.0e-2}
+  relative: 5.0e-2                # 带乘法放大/GEMM 用

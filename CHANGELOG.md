@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.8.1] - 2026-08-28
+
+### Changed
+- 算子样板按"单算子自包含"重组（采纳用户建议结构 + 相关工作对标）:
+  kernel/（三级实现: torch/Triton/硬件级类 C）· test/（三层测试）·
+  goldendata/（声明式规格 + 黄金数据）· script/（生成/精度/性能脚本）·
+  REPORT.md（总体报告）+ reports/（精度/性能分册）
+
+### Added
+- 硬件级模板: kernel.cu（CUDA C++，标注 #12 限制）+ xtorch_binding.cpp
+  （P800 当前可跑的厂商 C++ 绑定，含已验证 include 三链）+ BUILD.md
+- goldendata/inputs_spec.yaml: 维度/精度/数量/随机分布/特殊功能
+  （zeros/large/boundary）声明式规格（参考 KernelBench problem 声明）
+- script/gen_golden.py: 按规格生成黄金输入+参考输出+sha256 索引
+  （CPU 实测 24 组生成 ✓）
+- script/check_accuracy.py: 读黄金按容差判定（实测 24/24 pass ✓）
+- script/bench_perf.py: 单算子性能测试（复用 common.perf 口径）
+- REPORT.md 总体报告 + reports/accuracy|performance.md 分册模板
+
 ## [0.8.0] - 2026-08-28
 
 ### Added

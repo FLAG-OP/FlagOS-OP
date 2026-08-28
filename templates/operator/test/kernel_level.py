@@ -4,7 +4,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+OP_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(OP_DIR))                 # 引用同算子的 kernel/reference
+sys.path.insert(0, str(OP_DIR.parent.parent))   # 仓库根（common 等）
 
 
 def run(profile):
@@ -12,14 +14,14 @@ def run(profile):
 
     import torch
 
-    from kernel import my_op_triton
+    from kernel.triton_level import my_op_triton
     from reference import my_op_reference
 
     dev = profile.torch_device
     max_err = 0.0
 
     # 1) 精度: 多 shape × dtype vs 参考（容差随 dtype，逐组断言）
-    for shape in [(64, 1024), (1, 14336), (128, 5120)]:
+    for shape in [(64, 1024), (1, 14336), (8, 5000)]:   # 含非整倍数 N（#15）
         for dt in (torch.bfloat16, torch.float16, torch.float32):
             x = torch.randn(*shape, dtype=dt, device=dev) * 2
             g = torch.randn(*shape, dtype=dt, device=dev)
@@ -36,7 +38,7 @@ def run(profile):
     assert torch.equal(o1, my_op_triton(x, g)), "同输入两次调用不一致"
     assert not torch.equal(o1, my_op_triton(x + 1, g)), "输出不随输入变化"
 
-    # 3) 性能: 短采样（≤100 次；多用例回归用 perf.py 的子进程隔离）
+    # 3) 性能: 短采样（≤100 次；回归走 script/bench_perf 或 perf_registry）
     x = torch.randn(8192, 8192, dtype=torch.bfloat16, device=dev) * 2
     g = torch.randn_like(x)
     for _ in range(20):
@@ -62,10 +64,10 @@ def perf_cases(profile):
                         device=p.torch_device) * 2
         g = torch.randn(8192, 8192, dtype=torch.bfloat16,
                         device=p.torch_device)
-        from kernel import my_op_triton
+        from kernel.triton_level import my_op_triton
         return lambda: my_op_triton(x, g)
 
-    return [PerfCase("<group>.my_op.triton", group="example",
+    return [PerfCase("example.my_op.triton", group="example",
                      level="kernel", make_fn=make)]
 
 

@@ -1,12 +1,10 @@
-# Triton kernel 模板（占位名 my_op，使用时全局替换）。
+# Triton 级实现（占位名 my_op，使用时全局替换）。
 #
 # 硬约束（违反必错，均来自本库实测）:
 #   1. 启动必须包 torch_device_fn.device 上下文（known-issues #11）
 #   2. 尾块（N 非 BLOCK 整数倍）masked load + tl.sum 会被污染，other/
 #      tl.where 均无法补救——pad 到整倍数或两阶段归约（known-issues #15a）
 #   3. 不用 @triton.autotune（本栈会选出非法 num_warps=5，#15b）
-#
-# 全局替换: sed -i 's/my_op/<你的算子名>/g' *.py
 from __future__ import annotations
 
 import torch

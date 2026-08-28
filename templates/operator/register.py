@@ -6,7 +6,7 @@
 # ══════════ 路线 A1: torch 算子替换（aten 宿主）══════════
 def register_a1(dispatch_key: str):
     import torch
-    from kernel import my_op_triton
+    from kernel.triton_level import my_op_triton
 
     def aten_impl(self, *, approximate="none"):   # <TODO: 按 aten 签名>
         return my_op_triton(self, self)           # <TODO: 输入映射>
@@ -21,7 +21,7 @@ def register(registry) -> None:                  # ← 入口名固定（#8）
     from vllm_fl.dispatch.types import (OpImpl, BackendImplKind,
                                         BackendPriority)
     from vllm_fl.dispatch.backends.base import Backend
-    from kernel import my_op_triton
+    from kernel.triton_level import my_op_triton
     from reference import my_op_reference
 
     class MyOpBackend(Backend):
