@@ -22,6 +22,7 @@
 
 | 层级 | 入口 | 结果 | 详细报告 |
 |---|---|---|---|
+| 一键三层 | `python3 example.py <profile>` | | — |
 | kernel 层 | `python3 test/kernel_level.py --device <profile>` | | [reports/accuracy.md](reports/accuracy.md) |
 | 框架层 | `python3 test/op_level.py` | | |
 | 应用层 | `python3 test/framework_level.py` | | |
@@ -39,3 +40,12 @@
 ## 结论与遗留
 
 <可否合入 / 风险 / 后续优化>
+
+## 交付物清单
+
+| 交付物 | 位置 |
+|---|---|
+| 开发报告（7 章） | [reports/development.md](reports/development.md) |
+| 测试报告（范围矩阵） | [reports/test-report.md](reports/test-report.md) |
+| 精度分册 | [reports/accuracy.md](reports/accuracy.md) |
+| 性能分册 | [reports/performance.md](reports/performance.md) |

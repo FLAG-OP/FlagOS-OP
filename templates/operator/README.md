@@ -14,7 +14,8 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 ```
 <你的算子名>/
 ├── README.md            本说明
-├── REPORT.md            算子总体报告（一页看全，链到分册）
+├── REPORT.md            算子总体报告（一页看全 + 交付物清单）
+├── example.py           一键编排（三层一次跑完）+ perf_cases 入口
 ├── reference.py         fp32 语义参考——判卷标准，先写它
 ├── register.py          三路线注册（A1/A2/B 三选一）
 ├── kernel/              三级实现
@@ -35,10 +36,15 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 │   ├── gen_golden.py          黄金生成（按规格，含 sha256 索引）
 │   ├── check_accuracy.py      精度测试（读黄金 → 按容差判定）
 │   └── bench_perf.py          性能测试（短采样 + 同步）
-└── reports/             分册报告模板
-    ├── accuracy.md            精度详细报告
-    └── performance.md         性能详细报告
+└── reports/             交付报告模板（四件套）
+    ├── development.md         开发报告（7 章）
+    ├── test-report.md         测试报告（范围矩阵）
+    ├── accuracy.md            精度分册
+    └── performance.md         性能分册
 ```
+
+结构与已填范本 [softmax-fullstack](../../examples/softmax-fullstack/)
+完全同构——模板是空壳，它是实肉；从本模板复制出的目录长成它的样子。
 
 ## 开发顺序
 
@@ -47,12 +53,14 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
    `python3 script/gen_golden.py --device cpu`——黄金先行，任何实现
    出来就有判卷标准
 3. 实现三级 kernel 中需要的级别，
-   `python3 test/kernel_level.py --device <profile>` 全绿
+   `python3 test/kernel_level.py --device <profile>` 全绿；
+   三层就绪后 `python3 example.py <profile>` 一键跑完
 4. `python3 script/check_accuracy.py --impl <级别> --device <profile>` 过黄金
 5. 选路线（`register.py` 三选一）→ `test/op_level.py` → `test/framework_level.py`
-6. `script/bench_perf.py` 看性能；挂 `common/perf_registry.py` 进回归门禁
-7. 填 `REPORT.md` 总报告 + `reports/` 分册；已填样例见
-   [reports/examples](../../reports/examples/)
+6. `script/bench_perf.py` 看性能；把 `example.py` 的 `perf_cases` 登记
+   进 `common/perf_registry.py`，进回归门禁
+7. 填交付报告四件套（REPORT + development + test-report + 分册）；
+   已填范本: [softmax development](../../examples/softmax-fullstack/reports/development.md)
 
 ## 设计参考（相关工作）
 

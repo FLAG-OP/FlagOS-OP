@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.12.1] - 2026-09-14
+
+### Added
+- 算子样板向 softmax-fullstack 范本对齐（补 3 件）:
+  - example.py 一键编排（三层一次跑完）+ perf_cases 性能回归入口
+  - reports/development.md 开发报告模板（7 章，链验收标准分档）
+  - reports/test-report.md 测试报告模板（范围矩阵 + 一键命令）
+- REPORT.md 增"一键三层"行与交付物清单（四件套）
+
+### Changed
+- 样板 README 目录树/开发顺序同步（一键命令、perf_cases 登记方式、
+  四件套填写步骤）并注明与 softmax 范本"空壳↔实肉"关系
+- templates/README、ops/README（流程 4 步）、examples/README
+  （双向同构表述）同步
+
 ## [0.12.0] - 2026-09-14
 
 ### Added

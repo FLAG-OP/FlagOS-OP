@@ -7,10 +7,11 @@
 <a id="template-map"></a>
 ## 与算子样板的对应
 
-[softmax-fullstack](softmax-fullstack/) 的目录结构与
+[softmax-fullstack](softmax-fullstack/) 与
 [templates/operator](../templates/operator/README.md) **完全同构**
-（kernel/ 三级 · test/ 三层 · goldendata/ · script/ · REPORT+reports/，
-硬件级置空并说明）——从样板开始开发的人切到它零认知切换。
+（kernel/ 三级 · test/ 三层 · example.py 一键编排 · goldendata/ ·
+script/ · REPORT + 交付报告四件套；本算子硬件级置空并说明）——
+模板是空壳，本样例是实肉；从样板开始开发的人切到它零认知切换。
 其余样例是**格级/专项教学**，保持单文件聚焦；新增完整算子样例时
 直接复制样板。
 

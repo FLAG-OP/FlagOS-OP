@@ -14,10 +14,11 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 开发流程照[全链路指南](../docs/fullstack-guide.md)七步走；完成后:
 
-1. 补齐交付报告四件套（REPORT + development + test-report + 分册，
+1. `python3 example.py <profile>` 一键三层全绿
+2. 补齐交付报告四件套（REPORT + development + test-report + 分册，
    范本见 [softmax-fullstack](../examples/softmax-fullstack/reports/development.md)）
-2. 在下方索引表登记一行
-3. 交付路径选择见[集成指南](../docs/integration.md)（FlagGems 贡献 /
+3. 在下方索引表登记一行
+4. 交付路径选择见[集成指南](../docs/integration.md)（FlagGems 贡献 /
    aten 注册 / vllm_fl 插件 / 厂商身份）
 
 ## 算子索引
