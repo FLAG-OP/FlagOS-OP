@@ -52,9 +52,9 @@ flowchart TD
 错误稀释或掩盖。三个子项各管一类风险:
 
 1. **精度**: vs PyTorch 语义参考（`common/kernel_spec.py` 的
-   `SEMANTIC_REFS`），多 shape×dtype；容差 fp32=1e-5, bf16/fp16=1e-2——容差随 dtype
-   分档是经验值: bf16 自身的量化噪声就在 1e-2 量级，再收紧会把
-   正确实现误判为错误
+   `SEMANTIC_REFS`），多 shape×dtype。容差随 dtype 分档
+   （fp32=1e-5，bf16/fp16=1e-2），依据见[验收标准](acceptance.md#accuracy)
+   的容差权威表
 2. **哨兵检查**: 见下
 3. **性能**: 短采样（≤100 次）+ synchronize；可重复的结构化记录与
    回归门禁见[性能回归追踪](performance-regression.md)

@@ -147,8 +147,9 @@ flagos-op-templates/
 
 ## 矩阵入口约定
 
-- 所有测试模块统一签名 `run(profile)`（[设备 profile](device-profiles.md) 传入），
-  返回 `bool` 或 `{"ok": bool, ...指标}`——指标会落盘到结果 JSON 的 `metrics`
+- 所有测试模块统一签名 `run(profile)`，[设备 profile](device-profiles.md) 传入
+- 返回值两种: `bool`，或 `{"ok": bool, ...指标}` 字典；指标会落盘到
+  结果 JSON 的 `metrics` 字段
 - 设备参数全部来自 profile
 - 框架级由 [harness](testing.md#framework) 拉起 vLLM 子进程，引擎参数与注入
   环境变量按 profile 与路线自动组装

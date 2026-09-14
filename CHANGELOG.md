@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.3] - 2026-09-14
+
+### Fixed
+- getting-started 环境要求中 Triton 重复列出两次
+
+### Changed
+- 可读性润色（第一读者视角通读）:
+  - getting-started 环境要求改为三行表（替代嵌套 bullet）
+  - acceptance 开场去双破折号嵌套；参考实现约定拆为两段+误差类型表；
+    精度 Must 拆为三条独立判定；容差表依据列瘦身
+  - architecture run() 约定拆两行；fullstack-guide 起点句拆短；
+    testing 容差句改为指向验收权威表（消除口径重复）
+
 ## [0.12.2] - 2026-09-14
 
 ### Fixed
