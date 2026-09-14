@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.11.1] - 2026-09-14
+
+### Added
+- ops/ 目录: 存放按样板开发完成的算子（结构同构 + 索引表 + 约定:
+  未实现级别置空说明、#11/#15 硬约束、合入前三层全绿+黄金+门禁）
+- 全站 cp 目标统一为 ops/<算子名>/（README 快速开始、样板 README、
+  全链路指南起点、CONTRIBUTING）
+- README 仓库分区表、architecture 目录树、index 任务表与交付线、
+  集成指南交付 checklist 均接入 ops/
+
 ## [0.11.0] - 2026-09-14
 
 ### Added

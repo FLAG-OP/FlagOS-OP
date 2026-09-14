@@ -39,7 +39,7 @@ flowchart LR
 
 ## 第 0 步: 定义算子语义（先定判卷标准，再写实现）
 
-> **起点**: `cp -r templates/operator <你的算子名>/`——样板已含参考实现、
+> **起点**: `cp -r templates/operator ops/<你的算子名>/`——样板已含参考实现、
 > kernel 三级实现（内置 #11/#15 两条硬约束防护）、三层测试、黄金数据
 > 规格与生成脚本、精度/性能脚本和报告模板，逐个替换 `my_op` 即可。
 > 见[算子样板说明](../templates/operator/README.md)。

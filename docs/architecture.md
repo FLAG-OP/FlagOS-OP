@@ -120,6 +120,7 @@ flagos-op-templates/
 ├── docs/                     本文档
 ├── common/                   设备抽象 / [kernel spec](route-b-vendor.md#kernelspec) / 输入模板
 │                            / 参考实现 / [性能基准 harness](performance-regression.md)
+├── ops/                      已开发算子（样板同构，见 ops/README 索引）
 ├── routes/                   三条路线正式实现
 │   ├── a1_aten/              torch 算子替换
 │   ├── a2_dispatch/          Triton → FlagOS 融合算子 插件

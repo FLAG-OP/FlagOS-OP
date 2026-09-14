@@ -101,7 +101,9 @@ LLM 推理的主力 kernel（attention/GEMM）耗时 100µs~10ms，A2 的
 - [ ] 哨兵: 确定性 + 输入敏感（防 #11/#15 类静默缺陷）
 - [ ] 性能: 挂入 `perf_registry` 过回归门禁；与原生/FlagGems 三方对比
 - [ ] 分发开销: 对微小算子跑一次 `bench_dispatch.py` 确认可接受
-- [ ] 报告: `REPORT.md` 总报告 + 分册齐备（[样例](../reports/examples/)）
+- [ ] 位置: 算子目录位于 [ops/](../ops/README.md) 并已登记索引
+- [ ] 报告: 交付报告四件套齐备（REPORT + development + test-report
+      + 分册，[样例](../examples/softmax-fullstack/REPORT.md)）
 - [ ] 交付: 按上表选路径；贡献 FlagGems 时把精度/性能数据附进 PR
 
 ---

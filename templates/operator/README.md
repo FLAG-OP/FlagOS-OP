@@ -3,7 +3,7 @@
 开发一个新算子，从这里开始:
 
 ```bash
-cp -r templates/operator <你的算子名>/
+cp -r templates/operator ops/<你的算子名>/
 cd <你的算子名>/
 grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 # 逐个把 <TODO> 替换为你的实现
