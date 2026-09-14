@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.0] - 2026-09-14
+
+### Added
+- docs/acceptance.md 交付验收标准（收拢此前散在 5 处的定义为唯一口径）:
+-  - 精度: 参考实现约定（fp32+cast 回）、容差分档权威表、必测矩阵
+-    5 维（含非整倍数 shape 与特殊用例）、判定分级
+-  - 性能: 测量口径 4 条、判定（门禁 - 微算子分发开销附加项）、
+-    三方对比 Should 级
+-  - Must/Should/Info 分级总表与 Must 清单（ops/ 合入门槛）
+-  - 环境变更重验 runbook（维护层，此前无家）:
+-    check_env→黄金 CPU 重建→基线重采→门禁→三方复测
++- integration 交付 checklist 精简为指向验收标准；index/README 接入
+
 ## [0.11.1] - 2026-09-14
 
 ### Added

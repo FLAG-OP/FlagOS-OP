@@ -15,7 +15,7 @@
 深入:  A1/A2/B 路线详解 · 设备接入 · 报告指南 · 样例索引
 性能:  perf_run 采集 → perf_compare 门禁 → 基线更新规范
 生成:  KernelGen/KernelBench 产物 → intake 契约 → 三级验证
-交付:  ops/ 登记 → 宿主定路径 → 分发开销实测 → FlagGems 贡献或插件注册
+交付:  验收标准 → ops/ 登记 → 宿主定路径 → FlagGems 贡献或插件注册
 排障:  已知问题(按类别检索) → 定位到检测方法 → 修正
 ```
 
@@ -63,6 +63,7 @@ flowchart TB
 | 接入厂商 kernel | [B 路线](route-b-vendor.md) |
 | 完整走一遍开发 | [全链路指南](fullstack-guide.md)（七步流水线 + 覆盖矩阵） |
 | 开发完成后交付/集成 | [集成指南](integration.md)（路径选择 + 分发开销实测） |
+| 确认"精度/性能够不够" | [验收标准](acceptance.md)（口径 + Must/Should 分级 + 重验 runbook） |
 | 存放/查找已开发算子 | [ops/](../ops/README.md)（样板同构 + 索引表） |
 | 理解每层验证 | [测试体系](testing.md) |
 | 追踪性能回归 | [性能回归追踪](performance-regression.md) |
