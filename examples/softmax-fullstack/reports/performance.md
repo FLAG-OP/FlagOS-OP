@@ -16,3 +16,11 @@
 - 自研优化方向: 单遍在线归约（running max/sum，Flash 风格），
   预期消掉三遍中的两遍访存；目标不降精度逼近 0.028ms
 - 本数字已入[性能基线](../../../docs/performance-regression.md)门禁
+
+## 4. 复现
+
+```bash
+cd ../../..   # 仓库根
+python3 scripts/perf_run.py --pattern softmax --device p800-kunlunxin
+python3 scripts/perf_compare.py --device p800-kunlunxin
+```

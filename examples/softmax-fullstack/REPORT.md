@@ -39,3 +39,12 @@ FlagGems 的快以精度超差为代价（fp32 误差 5 个数量级），自研
 正确性优先。后续优化方向: 单遍在线归约（Flash 风格），目标在
 不降精度下逼近 0.028ms。本样例同时是 **#15（尾块归约污染 +
 autotuner 非法 num_warps）的发现与修复载体**。
+
+## 交付物清单
+
+| 交付物 | 位置 |
+|---|---|
+| 开发报告（7 章: 环境/定义/实现/验证/性能/风险/结论） | [reports/development.md](reports/development.md) |
+| 测试报告（范围矩阵/精度/性能/风险/结论） | [reports/test-report.md](reports/test-report.md) |
+| 精度分册（含黄金与复现命令） | [reports/accuracy.md](reports/accuracy.md) |
+| 性能分册（含门禁与复现命令） | [reports/performance.md](reports/performance.md) |

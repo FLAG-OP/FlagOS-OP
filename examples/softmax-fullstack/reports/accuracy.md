@@ -29,3 +29,12 @@
 
 修复: wrapper pad 到 2048 整倍数 + 固定 BLOCK_N=2048；测试形状补
 非整倍数 N 堵住漏测缺口。
+
+## 4. 复现
+
+```bash
+python3 script/gen_golden.py --device cpu                             # 39 组
+python3 script/check_accuracy.py --impl reference --device cpu        # 39/39
+python3 script/check_accuracy.py --impl triton --device p800-kunlunxin
+python3 ../../../scripts/accuracy_report.py --device p800-kunlunxin   # 三方
+```

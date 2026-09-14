@@ -6,7 +6,7 @@
 
 ```
 softmax-fullstack/
-├── REPORT.md + reports/     总报告 + 精度/性能分册（已填真实数据）
+├── REPORT.md + reports/     总报告 + 交付报告四件套（开发/测试/精度/性能，已填真实数据）
 ├── reference.py             语义参考
 ├── register.py              A1 aten 注册
 ├── kernel/                  torch ✅ · Triton ✅ · hardware ⬜置空
