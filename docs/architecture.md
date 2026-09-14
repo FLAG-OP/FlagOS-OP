@@ -137,8 +137,8 @@ flagos-op-templates/
 ├── perf/baselines/           [入库性能基线](performance-regression.md)（按设备 profile 一文件）
 ├── templates/                模板中心: [算子样板](../templates/operator/README.md) + 报告模板
 │   └── operator/             单算子自包含样板: kernel/（三级）· test/（三层）
-│                             · goldendata/（规格+黄金）· script/（生成/精度/性能）
-│                             · REPORT.md（总报告）+ reports/（分册）
+│                             · example.py（一键编排+perf_cases）· goldendata/
+│                             · script/ · REPORT + reports/（交付四件套模板）
 ├── reports/examples/         [已填样例报告](../reports/examples/README.md)（其余 reports/ 生成物不入库）
 └── scripts/                  一键脚本 / [黄金构建](testing.md#golden) / [漂移实验](testing.md#drift)
                              / [输入生成](testing.md#inputs) / [环境快照](reporting.md#env) / [报告骨架](reporting.md#scaffold)

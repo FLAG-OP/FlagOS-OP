@@ -188,6 +188,7 @@ python3 run.py --consistency --device <profile>
 ## 第 6 步: 性能基线与报告
 
 ```bash
+python3 example.py <profile>                                      # 三层一键复跑
 python3 scripts/perf_run.py  --device <profile> --update-baseline  # 有意更新时
 python3 scripts/perf_compare.py --device <profile>                 # 回归门禁
 python3 scripts/gen_report_scaffold.py --op <算子> --route <路线> --device <profile>
@@ -196,7 +197,9 @@ python3 scripts/gen_report_scaffold.py --op <算子> --route <路线> --device <
 - 性能: 结构化记录 + 入库基线 + 20%/30% 双档门禁
   （[性能回归追踪](performance-regression.md)）
 - 报告: 7 章骨架自动填环境与矩阵状态（[报告指南](reporting.md)）
-- 完整报告范本: [b-fullstack 开发报告](../examples/b-fullstack/report.md)
+- 交付报告四件套: REPORT + development + test-report + 分册
+  （范本: [softmax](../examples/softmax-fullstack/REPORT.md)）
+- "够不够"的判定: [验收标准](acceptance.md)（Must/Should 分级）
 
 ---
 

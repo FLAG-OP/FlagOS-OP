@@ -98,7 +98,8 @@ op/framework 层暂不入基线：注册与分发开销混入计时会让数据�
 
 ## 新增用例
 
-样例或矩阵测试中实现 `perf_cases(profile)`:
+推荐位置: 算子目录的 `example.py`（样板的既定约定，一键编排与
+perf_cases 同文件）；教学样例与矩阵测试中亦可实现 `perf_cases(profile)`:
 
 ```python
 def perf_cases(profile):
@@ -121,5 +122,6 @@ def perf_cases(profile):
 
 ---
 
-**下一步**: [AI 生成算子接入](ai-intake.md)——生成 kernel 的性能记录
-自动进入本体系（`intake` group）。
+**下一步**: [验收标准](acceptance.md)——性能数字怎么才算"够"；
+验收通过后走[集成指南](integration.md)。（生成 kernel 的性能记录自动
+进入本体系 `intake` group，专题见 [AI 生成算子接入](ai-intake.md)。）

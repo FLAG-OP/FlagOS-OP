@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.2] - 2026-09-14
+
+### Fixed
+- 阅读链顺序矛盾: README 表"集成(6)→验收(7)"与 acceptance 的
+  下一步（验收→集成）及 index 交付线相反——交换为 验收(6)→集成(7)
+- perf-regression 下一步跳过验收（直连 AI 接入）——改接验收标准，
+  主链闭合为 性能→验收→集成
+
+### Changed
+- architecture 模板子树补 example.py（一键编排+perf_cases）
+- perf"新增用例"明确推荐位置为算子 example.py（样板既定约定）
+- 全链路第 6 步补 example.py 一键复跑、交付四件套与验收标准链接
+
 ## [0.12.1] - 2026-09-14
 
 ### Added
