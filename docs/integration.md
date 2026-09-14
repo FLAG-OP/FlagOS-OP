@@ -92,6 +92,7 @@ LLM 推理的主力 kernel（attention/GEMM）耗时 100µs~10ms，A2 的
    （64×1024 与 8192×8192 直调同为 ~52µs），优化微小算子时先看
    启动成本再谈分发
 
+<a id="checklist"></a>
 ## 交付 checklist
 
 开发完成（[全链路指南](fullstack-guide.md) 七步走完）后，交付前确认:

@@ -39,4 +39,4 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
   Triton kernel 必须内置 [#11](../docs/known-issues.md) device 上下文与
   [#15](../docs/known-issues.md) 尾块防护两条硬约束
 - 合入本目录前: 三层测试全绿 + 黄金回归 + perf 门禁通过
-  （见[集成指南交付 checklist](../docs/integration.md#交付-checklist)）
+  （见[集成指南交付 checklist](../docs/integration.md#checklist)）
