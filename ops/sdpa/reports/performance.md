@@ -45,6 +45,28 @@ bf16 与 fp16 逐 shape 基本同速（3.28-10.49x vs 原生）；fp32 差距
 与原生逐位相同，diff=0.0——torch_npu 在 PrivateUse1 有 C++ 注册，
 Python 侧 enable 不覆盖），故以其直调口径对照。
 
+## 2.5 多尺度扫描（S×D 网格，18 点，fp16 causal H=16）
+
+数据: `reports/perf_sweep.json` · 图: `script/make_sweep_figs.py`
+
+![S 扫描](figs/sweep_S.png)
+
+*图5: 延迟随 S 变化（每 D 一列；上=三方绝对延迟 log 轴，下=Ours/Native
+比值）。三条规律: ①小 S（≤512）差距仅 1.4-1.8x——单块/双块内 Triton
+与 native 同水位；②比值随 S 单调爬升至 10-22x；③D=256 时 FlagGems
+全部编译失败（UB 溢出，红叉），我们 64×64 tile 仍可跑。*
+
+![D 扫描](figs/sweep_D.png)
+
+*图6: head_dim 扫描（S=2048）。D 64→256 我们比值 6.5x→18x——D 增大
+时 UB 限制的 64×64 tile 劣势放大（native 大 tile 受益）。*
+
+![S×D 热力图](figs/sweep_heatmap.png)
+
+*图7: 差距在全网格的分布。左下角（小 S 小 D）接近 1x 的"可用区"，
+右上角（大 S 大 D）>20x——**差距是二维放大的**，单一 shape 的结论
+不可外推，这正是多尺度扫描的必要性。*
+
 ## 3. 差距根因（vs 原生 CANN）
 
 详见 [perf_analysis.md](perf_analysis.md)。三层证据:
