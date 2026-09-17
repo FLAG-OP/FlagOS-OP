@@ -45,6 +45,8 @@ sdpatten-op/
 │   ├── perf_explore.py/.2    根因: tile 扫描 + matmul 天花板 + 带宽核算
 │   └── perf_variants.py      写法变体单项 A/B（V1-V5）
 ├── probes/                   开发过程证据链（12 探针 + 日志 + guard_check）
+├── intake_llm/               AI 生成对照实验（KernelGen 官方 MCP + 本地
+│                             LLM-Track vs 手写，两份报告）
 └── reports/                  交付四件套 + perf_analysis 根因专项 + perf json
 ```
 
@@ -82,6 +84,9 @@ softmax-fullstack 的先例（"attention scores 消费 softmax"），应用层�
    fp32 默认 tf32（须显式 ieee）· exp2 慢路径（FA2 惯例负优化）
 4. **causal 循环截断 1.93x**: 编译器无法从运行时 where 推断循环边界
    收缩——写法粒度决定 cube 利用率的实例
+6. **AI 生成对照实测**（[intake_llm/](intake_llm/)）: KernelGen 官方版
+   性能达手写 94% 但 mask 4D 语义缺失 + CUDA 方言在 ascend 编译失败；
+   裸 LLM 3/5——四阶段验证每关都拦到真问题（验证层价值实证）
 5. **平台防误引三层机制**: 元数据（`PLATFORM`）+ 调用守卫 + 注册守卫
    （`probes/guard_check.py` 全部实测）——函数名不改，防的是跨平台
    静默误用（[PLATFORM.md](PLATFORM.md) §5）
