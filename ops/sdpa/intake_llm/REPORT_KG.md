@@ -5,6 +5,11 @@ generate_kernel 官方工具 · 参数按 flagos-skills 协议（arg_* 为逗号
 
 ## 三方终态对比（同一四阶段验证协议）
 
+![正确性矩阵](../reports/figs/gen_vs_hand_heatmap.png)
+
+*图4: 正确性热力图（绿→红 = 误差量级，灰 = 未覆盖）。肉眼可见的
+分界: 手写全绿、KernelGen 官方仅 mask 两列红、裸 LLM 大面积红。*
+
 | 维度 | 手写版 | KernelGen 官方版 | 本地 LLM-Track |
 |---|---|---|---|
 | 编译 | ✅ | ⚠️ 需人工 patch ×1（if/else 运行时赋值，ascend codegen 不支持） | ✅ |

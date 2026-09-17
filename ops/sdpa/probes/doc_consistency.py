@@ -21,6 +21,10 @@ for d in docs:
             continue
         if not (base / target).exists():
             errors.append(f"{d}: 死链 {target}")
+    # 图片引用存在性（相对路径 png/pdf）
+    for m in re.finditer(r"!\[([^\]]*)\]\(([^)]+\.p(?:ng|df))\)", text):
+        if not (base / m.group(2)).exists():
+            errors.append(f"{d}: 图片缺失 {m.group(2)}")
 
 # 2) 反引号引用的本地文件存在（.py/.json/.yaml；相对文档所在目录；
 #    排除 "X.py/.log" 速记与通配式写法）

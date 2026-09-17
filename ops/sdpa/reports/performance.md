@@ -2,6 +2,26 @@
 
 ## 1. 方法
 
+> 图表: `script/make_figs.py` 从实测 JSON 自动生成（`reports/figs/`，
+> PDF+PNG），数据口径与本表一致。
+
+![三方性能对比](figs/perf_breakdown.png)
+
+*图1: 三方性能分组柱状（log 轴）。柱顶蓝字为 Ours/Native 比值——
+FlagGems（灰，斜纹）在所有 prefill 形状慢一个数量级，decode 形状
+三方接近。*
+
+![优化历程](figs/optimization_ablation.png)
+
+*图2: 写法粒度贡献分解。causal 循环截断一项贡献 1.93x（-48%），
+逼近该栈 Triton 水位线；绿色虚线为原生 CANN 参照。*
+
+![有效算力 scaling](figs/tflops_scaling.png)
+
+*图3: 有效算力随序列长度变化（log-log）。Native 随 S 增长爬升
+（36→132 TFLOPS，tiling 效率改善），Ours 基本持平（~12 TFLOPS）——
+差距在长序列拉大（3.3x→10.8x）的根因可视化。*
+
 短采样（warmup 15-20 + iters 50-100）+ `torch.npu.synchronize()`
 双口径；输入 CPU 生成后搬 NPU；数据文件 `reports/perf_fp16.json` /
 `perf_bf16.json`。根因专项实验: `script/perf_explore*.py` /
