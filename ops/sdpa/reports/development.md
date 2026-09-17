@@ -154,7 +154,7 @@ dQ=dA·s·K · dK=dAᵀ·s·Q；GQA 梯度按组求和折叠回 Hkv。
 | 框架层 | ✅ | A1 拦截命中（count>0）；注册路径 vs 直调**逐位一致**；vs 原生 1.2e-4；撤销恢复经独立进程验证 |
 | 梯度 | ✅ | 三梯度 vs 原生子进程 ≤3.9e-3 |
 | 黄金 | ✅ | 265 组（CPU fp32 生成，双向互验）triton 265/265 |
-| 应用层 | ⬜ | 本栈无可用推理框架（§7） |
+| 应用层 | ✅ | mini-decoder 消费方双跑: 拦截 28 · logits 1.95e-3 · 贪心续写一致率 1.00（§4.4） |
 
 ### 4.2 黄金生成的双向互验
 
@@ -164,7 +164,23 @@ expected 同时用 sdpa_reference 与 CPU `F.scaled_dot_product_attention`
 （softmax 饱和下 fp32 累加顺序差异 ~3e-4 属正常，实测**原生实现与
 黄金同为 3.381e-4**，两实现互咬合在 3.8e-6）。
 
-### 4.3 开发过程中的三次误归因（记录为方法论）
+### 4.3 应用层: mini-decoder 消费方双跑（轻量真实计算任务）
+
+本栈 vllm 空壳，按 softmax-fullstack 先例构建 Python 层消费方:
+Llama 风格 4 层 decoder（GQA 8/2 · causal · LayerNorm · MLP · fp16），
+业务代码只调 `F.scaled_dot_product_attention`（aten 路径零改动），
+基线/注册双跑同 seed 同输入:
+
+| 断言 | 结果 |
+|---|---|
+| 拦截计数（4 层 × 7 forward） | 28 ✓ |
+| logits max_diff | 1.95e-3（4 层深网络 fp16 容差内） |
+| 全位置 top-1 一致率 | 1.00 |
+| 贪心续写序列一致率 | 1.00（阈值 2/3，未用到余量） |
+
+入口: `test/framework_level.py`。
+
+### 4.4 开发过程中的三次误归因（记录为方法论）
 
 1. mask 路径"编译失败" → 实为 flag_gems rand kernel UB 溢出（mask
    构造被接管），SDPA 本体正常——输入改 CPU 生成后消除
@@ -215,4 +231,5 @@ Triton 级 SDPA 在 Ascend 910 上交付: 两层验证全绿、黄金 265/265、
 3. **第二平台扩展**: 按 [MERGE.md](../MERGE.md) 七步合入——黄金
    265 组与 kernel 层 36 case 直接复用，只写 kernel 本体 + §2 八项
    绑定重验
-4. **应用层补全**: 待本栈有可用推理框架后按 FlagOS-OP 第 4 步注入
+4. **真实 vLLM 补验**: 应用层已以 mini-decoder 双跑收口；待本栈
+   有可用推理引擎后平移注入（A1 经 sitecustomize 进子进程）

@@ -11,7 +11,7 @@
 | 平台 | **ascend910 专属**——绑定项清单与移植指引见 [PLATFORM.md](PLATFORM.md) |
 | 多平台 | 第二平台实现后按 [MERGE.md](MERGE.md) 合入（黄金/测试/注册链复用，旧引用零改动） |
 | 语义 | softmax(QKᵀ·scale + mask)·V · GQA · causal · bool/float mask · fp32 内部 |
-| 验证 | kernel 层 37/37 · 黄金 265/265 · 框架层拦截+梯度 ✅ |
+| 验证 | kernel 层 37/37 · 黄金 265/265 · 框架层拦截+梯度 ✅ · 应用层 mini-decoder 双跑 ✅ |
 | 性能 | vs FlagGems Triton SDPA **3.3-17.6x 快**；vs 原生 CANN 1.9-10.8x 慢（根因: 栈 GEMM 5.2x × UB tile 上限，见[性能分册](reports/performance.md)） |
 
 ## 目录
@@ -25,7 +25,7 @@ sdpatten-op/
 ├── requirement.md            原始需求
 ├── reference.py              fp32 语义参考（判卷标准，手写不调 F.sdpa）
 ├── register.py               A1 注册（autograd.Function 包装 + 注册守卫 + 计数）
-├── example.py                一键两层复跑
+├── example.py                一键三层复跑
 ├── _profile.py               本地设备 profile（ascend910）
 ├── kernel/
 │   ├── triton_level.py       主实现（online-softmax two-pass + causal 截断
@@ -35,7 +35,8 @@ sdpatten-op/
 ├── test/
 │   ├── kernel_level.py       精度 36 组 + 哨兵 + 快速性能
 │   ├── op_level.py           拦截命中 / 逐位一致 / 梯度 vs 原生子进程
-│   └── op_phase2_native.py   原生梯度采集（独立进程）
+│   ├── op_phase2_native.py   原生梯度采集（独立进程）
+│   └── framework_level.py    应用层（mini-decoder 双跑 + 行为一致性）
 ├── goldendata/               黄金（inputs_spec.yaml + data/ 265 组 + index）
 ├── script/
 │   ├── gen_golden.py         黄金生成（双向互验）
@@ -50,7 +51,8 @@ sdpatten-op/
 ## 快速开始
 
 ```bash
-python3 example.py                    # 两层一键复跑
+python3 example.py                    # 三层一键复跑
+python3 test/framework_level.py        # 应用层单独跑
 python3 test/kernel_level.py          # kernel 层
 python3 test/op_level.py              # A1 拦截 + 梯度
 python3 script/gen_golden.py          # 黄金（CPU，265 组）
@@ -60,10 +62,14 @@ python3 script/bench_perf.py --json-out /tmp/perf.json
 
 ## <a id="应用层"></a>应用层说明
 
-FlagOS-OP 流程第 4 步（注入真实推理）在本栈不可执行: vllm
-0.20.2+empty 为空壳安装。已按 A1 机制准备好后续条件——`register.py`
-的注册函数可直接经 sitecustomize/`VLLM_FL_PLUGIN_MODULES` 类通道注入
-子进程，待环境具备后按模板第 4 步补验。
+本栈 vllm 0.20.2+empty 为空壳，无法注入真实推理引擎——按 FlagOS-OP
+softmax-fullstack 的先例（"attention scores 消费 softmax"），应用层以
+**轻量消费方**落地: `test/framework_level.py` 构建 mini-decoder
+（Llama 风格 4 层 · GQA 8/2 头 · causal · fp16），业务代码只调
+`F.scaled_dot_product_attention`（标准 aten 路径零改动），基线/注册
+双跑断言: 拦截命中（count=28）· logits 数值一致（1.95e-3）·
+贪心续写序列一致率 1.00。待本栈有可用 vllm 后可平移到真实引擎
+（A1 注册经 sitecustomize 注入子进程）。
 
 ## 本栈关键发现（对上游有价值）
 
