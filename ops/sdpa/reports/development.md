@@ -233,3 +233,57 @@ Triton 级 SDPA 在 Ascend 910 上交付: 两层验证全绿、黄金 265/265、
    绑定重验
 4. **真实 vLLM 补验**: 应用层已以 mini-decoder 双跑收口；待本栈
    有可用推理引擎后平移注入（A1 经 sitecustomize 进子进程）
+
+## 8. 生态位分析: FlagGems / 厂商原生 / KernelGen 的分工
+
+> 开发中反复遇到的"为什么 FlagGems 不直接包装 CANN 原生"之问，
+> 答案沉淀于此，供后来者选路线参考。
+
+### 8.1 "包装厂商原生"的角色已有人承担
+
+`F.scaled_dot_product_attention` 在 NPU 上调用的本来就是 CANN 闪电
+注意力——torch_npu 的 C++ aten 注册（PrivateUse1 +
+AutogradPrivateUse1，不 redispatch）即 CANN 库的包装层，本报告性能
+对照中的"原生"就是它。用户侧已在享受厂商原生性能，FlagGems 再包
+一层无增量价值（除非其 Triton 版更快——本机实测反而慢 3.3-17.6x）。
+
+### 8.2 FlagGems 的定位: 跨平台长尾，不是峰值超越
+
+FlagGems 是 **Triton 单源库**（`runtime/backend/_<vendor>/` 收源码
+差异，不收厂商二进制），赌的是三件事:
+
+1. **长尾覆盖**: 厂商库只在商业重点算子投入专家（GEMM/attention/
+   卷积），vLLM 生态的融合算子长尾（silu_and_mul/paged attention
+   变体/FP8 核）没有厂商跟得动——FlagGems 用社区 Triton 单源补位
+2. **迁移成本对冲**: N 块芯片 = 一份 kernel 源码多芯片编译，
+   而非 N 套厂商绑定代码。前提是各芯片 Triton 后端成熟——本算子
+   实测暴露了裂缝（UB 封死 tile / exp2 慢路径 / dot 同 dtype，
+   见 [PLATFORM.md](../PLATFORM.md) §2），"同一份 Triton"在不同
+   芯片上性能水位差异巨大
+3. **差距在收敛**: 栈成熟度问题（num_warps 非法值/UB 溢出）逐版
+   在补，非终态
+
+准确的世界观: FlagGems 不是"比原生快的库"，是"**在原生不覆盖/
+不开放处保证有能用的跨平台实现**"的库。峰值性能永远是硬件级/
+厂商库的地盘（本算子硬件级置空的依据，§3.7）。
+
+### 8.3 KernelGen: 把长尾的编写成本也打掉
+
+KernelGen 2.0（生成→优化→测试→集成→自动 PR）目的是用 AI 把
+"写长尾 Triton kernel"的成本下降一个量级。效果（KernelGenBench，
+arXiv:2607.27231，210 算子 × 6 芯片）:
+
+| 维度 | 实测 | 解读 |
+|---|---|---|
+| 正确性 Pass@K | Claude Code (Opus-4.6) 各平台 88-96% | 常规算子 Agent 已相当可用 |
+| 难点边界 | vLLM 类（paged attn/KV cache/FP8）显著掉分 | 复杂内存布局+推理语义是 LLM 硬边界 |
+| 加速比 | Pass@5 最优 ~1.0-1.3x（几何均值 vs 各芯片基线） | 可达原生持平，无免费超越 |
+| 权衡规律 | kernel 专精 Agent 换速度牺牲正确率 | 正确性与性能仍是跷跷板 |
+
+与本算子开发的对标: 本次开发的大头恰是 KernelGenBench 证明 LLM
+最弱的三处——①平台特调（exp2 负优化/UB tile 上限，跑实验才知）
+②注册机制考古（AutogradPrivateUse1，dispatch dump 才知）
+③验收体系（黄金双向互验/哨兵/三方对照）。FlagOS-OP 的 intake
+通道（生成产物→契约→哨兵自动拦截→机器可读失败原因回喂）正是
+给"AI 生成 + 人工验证"补的闭环件。结论: KernelGen 把"从零写"
+变成"从 70-90% 起步 + 验证收敛"，**验证层短期内不可替代**。
