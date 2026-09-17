@@ -28,6 +28,12 @@
 | 性能 | `script/bench_perf.py` 三方对照 | ✅ | [reports/performance.md](reports/performance.md) |
 | 平台守卫 | `probes/guard_check.py`（元数据/调用/注册三层） | ✅ | [PLATFORM.md](PLATFORM.md) §5 |
 
+## 多尺度速览（18 点扫描，详见性能分册 §2.5）
+
+小 S（≤512）差距仅 **1.4-1.8x**；差距随 S、D **二维放大**至 22x；
+FlagGems D=256 **全部编译失败**（UB 溢出），本实现 64×64 tile 仍可跑。
+图: `reports/figs/`（7 张，顶会图式，`script/make_figs.py` 生成）。
+
 ## 关键数字（fp16，S=2k D=128 H=16 causal）
 
 | 指标 | 自研 Triton | FlagGems 5.3.5 | 原生 CANN |

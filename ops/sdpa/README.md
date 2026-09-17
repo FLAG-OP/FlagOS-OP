@@ -43,7 +43,9 @@ sdpatten-op/
 │   ├── check_accuracy.py     精度判定（--impl triton|native|reference）
 │   ├── bench_perf.py         三方性能对照
 │   ├── perf_explore.py/.2    根因: tile 扫描 + matmul 天花板 + 带宽核算
-│   └── perf_variants.py      写法变体单项 A/B（V1-V5）
+│   ├── perf_variants.py      写法变体单项 A/B（V1-V5）
+│   ├── perf_sweep.py         多尺度扫描（S×D 18 点）
+│   └── make_figs.py / make_sweep_figs.py  顶会图式绘图（7 图）
 ├── probes/                   开发过程证据链（12 探针 + 日志 + guard_check）
 ├── intake_llm/               AI 生成对照实验（KernelGen 官方 MCP + 本地
 │                             LLM-Track vs 手写，两份报告）
