@@ -1,0 +1,43 @@
+# Ascend 910 (初代, 910_9382) — 首个接入本库的 NPU 设备 profile
+# 实测环境: CANN 9.0.0 / torch_npu 2.10.0 / triton-ascend 3.5.1
+# 首个算子: ops/sdpa（A1 路线，注册点 AutogradPrivateUse1——见该算子 PLATFORM.md）
+name: ascend910
+vendor: ascend                 # 与 flag_gems DeviceDetector().vendor_name 一致
+
+auto_detect:
+  module: torch_npu            # 可 import 即识别
+
+device:
+  torch_device: "npu:0"
+  visible_devices: "0"
+  # 注意（与 CUDA 系后端不同）: torch_npu 在 PrivateUse1 有 C++ 注册且其
+  # AutogradPrivateUse1 包装不 redispatch——A1 aten 拦截必须注册
+  # AutogradPrivateUse1（ops/sdpa 的 probes/debug_reg*.py 实测证据链）
+  dispatch_key: AutogradPrivateUse1
+
+framework:
+  # 本栈 vllm 0.20.2+empty 为空壳安装——框架级/应用级测试暂不可跑，
+  # 仅 kernel 层与 op 层有效（算子交付以两层 + 黄金 + 性能对照收口）
+  tensor_parallel_size: 1
+  distributed_executor_backend: mp
+  max_model_len: 4096
+  max_num_seqs: 50
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  enable_prefix_caching: false
+  load_format: safetensors
+  seed: 20260823
+  model_path: /path/to/model    # 待可用 vllm 环境后填
+  quirks:
+    keep_default_prefer: false
+    require_two_visible_devices: false
+    no_vllm_runtime: true       # 空壳 vllm: 跳过框架/应用层入口
+
+vendor_delegate: null
+
+reference_fallback: reference.torch
+
+# 厂商 kernel 直测清单（可选）: 初代 910 无独立厂商 kernel 包，
+# 原生参照走 torch_npu 的 F.scaled_dot_product_attention（CANN 内核）
+vendor_kernels: []
