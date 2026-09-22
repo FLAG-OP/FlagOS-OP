@@ -60,6 +60,7 @@ Triton→BiShengIR 栈的 GEMM 效率与 UB 约束下的 tile 上限，非 kerne
 | 精度分册（含复现命令） | [reports/accuracy.md](reports/accuracy.md) |
 | 性能分册（含根因分析与复现） | [reports/performance.md](reports/performance.md) |
 | 性能根因专项（变体实验） | [reports/perf_analysis.md](reports/perf_analysis.md) |
+| A100 对标（FA2 协议） | [reports/perf_a100.md](reports/perf_a100.md) |
 | 平台绑定清单与移植指引 | [PLATFORM.md](PLATFORM.md) |
 | 多平台合并指南 | [MERGE.md](MERGE.md) |
 | 开发证据链（探针归档） | [probes/](probes/README.md) |

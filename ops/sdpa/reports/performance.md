@@ -67,6 +67,11 @@ Python 侧 enable 不覆盖），故以其直调口径对照。
 右上角（大 S 大 D）>20x——**差距是二维放大的**，单一 shape 的结论
 不可外推，这正是多尺度扫描的必要性。*
 
+## 2.7 A100 对标（FA2 论文协议，详见 [perf_a100.md](perf_a100.md)）
+
+CANN 原生 157 TFLOPS = A100·FA2 的 67%，利用率 61% vs 75%——硬件同档；
+本实现 12.8 TFLOPS 的差距全部在 Triton 栈层。
+
 ## 3. 差距根因（vs 原生 CANN）
 
 详见 [perf_analysis.md](perf_analysis.md)。三层证据:
