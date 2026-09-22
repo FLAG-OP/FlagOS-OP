@@ -1,6 +1,7 @@
 # 多平台合并指南（MERGE.md）
 
-> 何时用: 第二个平台的 SDPA Triton 实现开发完成后，合入本目录。
+> 何时用: 新平台的 SDPA 实现开发完成后，合入本目录。
+> 当前已合并: ascend910（Triton）与 p800-kunlunxin（厂商委托）。
 > 前置阅读: [PLATFORM.md](PLATFORM.md)（当前平台的绑定清单）。
 > 原则: **黄金/测试/注册链是平台无关资产，直接复用；只有 kernel 本体按平台分文件**。
 
@@ -18,7 +19,7 @@
 ## 1. 结构级合并: 目录操作
 
 ```
-sdpatten-op/
+sdpa/
 ├── reference.py              # 不动（fp32 语义，平台无关判卷标准）
 ├── goldendata/               # 不动（265 组黄金直接复用，见 §2 Step3）
 ├── register.py               # 不动（dispatch_key 已参数化）
@@ -28,8 +29,8 @@ sdpatten-op/
 │   ├── triton_level.py       # 变薄 facade（保持 sdpa_triton 入口不变，见 §3）
 │   └── backends/             # ★ 新建
 │       ├── __init__.py       #   平台选择器（按 device.type 分发）
-│       ├── ascend910.py      #   现 triton_level.py 主体移入（函数名不变）
-│       └── <platform2>.py    #   新实现（三件套照抄: 签名+元数据+守卫）
+│       ├── ascend910.py      #   Triton 主体（函数名不变）
+│       └── p800_kunlunxin.py #   厂商 efficient-attention 委托
 ├── test/                     # kernel_level.py 不动（36 case 换 profile 即跑）
 └── reports/
     ├── perf_fp16.json        #   保留为 ascend910 数据（或改名加平台后缀）
@@ -56,9 +57,10 @@ def sdpa_triton(query, key, value, ...):  # 同签名，同名（有意，见 §
     ...
 ```
 
-### Step 2 — PLATFORM.md §2 清单逐项重验（不可跳过）
+### Step 2 — PLATFORM.md 平台绑定逐项重验（不可跳过）
 
-每项都有现成实验脚本，直接跑:
+Ascend Triton 项按现成实验脚本重跑；若新平台选择 Route B / 厂商委托，
+对应项改为验证 vendor API、精度、mask 语义、异常与注册 key：
 
 | 绑定项 | 重验方法 |
 |---|---|
@@ -97,12 +99,13 @@ python3 test/kernel_level.py <新平台profile>
 
 ```python
 from register import register_a1
-lib = register_a1("CUDA")        # ascend910 用 "AutogradPrivateUse1"
+lib = register_a1("AutogradCUDA") # ascend910 用 "AutogradPrivateUse1"
 ```
 
 注意新平台可能不需要 autograd.Function 包装（那是 torch_npu 的
 AutogradPrivateUse1 不 redispatch 逼出来的），先试朴素注册，
-`test/op_level.py` 的拦截+梯度检查会告诉你答案。
+`test/op_level.py` 的拦截+梯度检查会告诉你答案。P800 实测
+`AutogradCUDA` 可拦截，但 schema 默认参数会被省略，需要 wrapper 补齐。
 
 ### Step 6 — 性能三方对照
 
@@ -120,25 +123,23 @@ python3 script/bench_perf.py --json-out reports/perf_fp16_<plat2>.json
 - reports/performance.md: 新平台小节
 - README: 快速开始加新 profile 用法
 
-## 3. 平台选择器（kernel/backends/ 的 __init__，合并时创建）
+## 3. 平台选择器（已落地）
 
 ```python
-import torch
-
-from . import ascend910
+import importlib
 
 _IMPL_BY_DEVICE = {
-    "npu": ascend910,
-    # "cuda": cuda_backend,   # Step 1 完成后取消注释
+    "npu": "ascend910",
+    "cuda": "p800_kunlunxin",  # backend 内部再校验 torch_xmlir
 }
 
 def get_impl(device_type: str):
-    mod = _IMPL_BY_DEVICE.get(device_type)
-    if mod is None:
+    name = _IMPL_BY_DEVICE.get(device_type)
+    if name is None:
         raise RuntimeError(
             f"sdpa 无 {device_type!r} 平台实现，已注册: "
             f"{list(_IMPL_BY_DEVICE)}（见 MERGING 指南/PLATFORM.md）")
-    return mod
+    return importlib.import_module(f".{name}", __package__)
 ```
 
 `kernel/triton_level.py` 退化为 facade:
@@ -146,7 +147,8 @@ def get_impl(device_type: str):
 ```python
 """兼容 facade: sdpa_triton 按输入设备自动路由到平台实现。"""
 from kernel.backends import get_impl
-from kernel.backends.ascend910 import PLATFORM, SUPPORTED_DEVICE_TYPES
+PLATFORM = "multi(ascend910,p800-kunlunxin)"
+SUPPORTED_DEVICE_TYPES = ("npu", "cuda")
 
 def sdpa_triton(q, k, v, *a, **kw):
     return get_impl(q.device.type).sdpa_triton(q, k, v, *a, **kw)
@@ -165,8 +167,8 @@ _kunlunxin/...` 各厂商目录并列，已实际存在），所以:
 
 ## 5. 合并完成判据（checklist）
 
-- [ ] 新平台: 黄金 265/265 + kernel 层 36/36 + op 层拦截/梯度绿
-- [ ] PLATFORM.md §2 有新平台小节，相反结论显式标注
-- [ ] 旧引用零改动（grep 确认 import 路径未变）
-- [ ] 误配平台触发调用守卫（probes/guard_check.py 各平台各跑一次）
-- [ ] 性能 JSON 按平台命名，报告不跨平台引用数字
+- [x] p800-kunlunxin: 黄金 265/265 + kernel 层 37/37 + op 层拦截/梯度绿
+- [x] PLATFORM.md 有 p800-kunlunxin 小节，相反结论已显式标注
+- [x] 旧引用零改动（`kernel.triton_level.sdpa_triton` 保留）
+- [x] 误配平台触发调用守卫（`probes/guard_check.py p800-kunlunxin`）
+- [x] 性能 JSON 按平台命名，报告不跨平台引用数字

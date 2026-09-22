@@ -11,8 +11,8 @@
   S∈{512,1k,2k,4k,8k}，causal，fp16 前向。
   实现三路: torch 原生 F.sdpa（各平台最优后端自动生效）/
            flash-attn 包（若已安装——A100 上的论文同款）/
-           本库 Triton 自研（NPU 上可用; CUDA 上按 PLATFORM.md §2
-           需先移植, 未移植时自动跳过）
+           本库实现（ascend910 Triton / p800-kunlunxin 厂商委托，
+           未支持平台自动跳过）
 
 输出: reports/cross_platform_<device>.json（与 910 实测同 schema，
       可直接对比 / 画同图）
@@ -103,8 +103,6 @@ def main() -> int:
 
     try:
         from kernel.triton_level import sdpa_triton
-        import torch_npu  # noqa: F401
-        # 平台守卫: 自研 kernel 仅 ascend910 绑定（PLATFORM.md §2）
         from kernel.triton_level import PLATFORM, SUPPORTED_DEVICE_TYPES
         if dev.split(":")[0] in SUPPORTED_DEVICE_TYPES:
             impls["ours_triton"] = sdpa_triton

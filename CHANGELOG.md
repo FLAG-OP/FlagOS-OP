@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **SDPA 第二平台: p800-kunlunxin**（Kunlun XPU / torch_xmlir）
+  - 新增多平台 backend facade：旧 `kernel.triton_level.sdpa_triton` 引用零改动
+  - fp16/bf16 委托厂商 `aten::_scaled_dot_product_efficient_attention`；
+    bool mask / 全遮蔽行语义补偿；fp32 走精确 ATen 组合并绕开 XMLIR
+    `S∈(320,640]` bmm JIT 缺陷
+  - direct autograd 按需计算 log-sumexp；可微 float mask 复用 A1 数学
+    backward，规避厂商 `bias_requires_grad` 限制
+  - A1 `AutogradCUDA` 拦截 + 数学 backward；P800 kernel 37/37、黄金
+    265/265、mini-decoder 与平台守卫全绿
+- [ops/sdpa/reports/p800-kunlunxin.md](ops/sdpa/reports/p800-kunlunxin.md)
+  与平台化性能 JSON，沉淀 FlagGems/Triton 平移失败原因与复现命令
+
 ## [0.13.0] - 2026-09-17
 
 ### Added

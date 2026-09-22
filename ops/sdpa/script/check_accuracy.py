@@ -3,7 +3,7 @@
 
 用法:
   python3 script/check_accuracy.py --impl reference --device cpu
-  python3 script/check_accuracy.py --impl triton   --device npu:0
+  python3 script/check_accuracy.py --impl triton   --device npu:0|cuda:1
   python3 script/check_accuracy.py --impl native   --device npu:0  # 原生对照
 """
 from __future__ import annotations
@@ -11,12 +11,14 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import torch
 import yaml
 
 HERE = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(HERE))
 
 IMPLS = {
     "reference": ("reference.py", "sdpa_reference"),

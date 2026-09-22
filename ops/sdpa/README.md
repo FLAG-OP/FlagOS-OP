@@ -1,100 +1,104 @@
-# sdpatten-op: aten::scaled_dot_product_attention 的 Triton 级实现（Ascend 910）
+# sdpa-op: `aten::scaled_dot_product_attention` 多平台实现
 
 按 [FlagOS-OP](https://github.com/FLAG-OP/FlagOS-OP) 算子模板开发，
-组织结构对齐 `templates/operator` 与 softmax-fullstack 范本。
+复用同一语义参考、黄金数据、三层测试与 A1 注册链。
 
 ## 一页看全
 
 | 项 | 值 |
 |---|---|
-| 路线 / 级别 | **A1**（aten 拦截，注册点 `AutogradPrivateUse1`）/ **Triton 级** |
-| 平台 | **ascend910 专属**——绑定项清单与移植指引见 [PLATFORM.md](PLATFORM.md) |
-| 多平台 | 第二平台实现后按 [MERGE.md](MERGE.md) 合入（黄金/测试/注册链复用，旧引用零改动） |
-| 语义 | softmax(QKᵀ·scale + mask)·V · GQA · causal · bool/float mask · fp32 内部 |
-| 验证 | kernel 层 37/37 · 黄金 265/265 · 框架层拦截+梯度 ✅ · 应用层 mini-decoder 双跑 ✅ |
-| 性能 | vs FlagGems Triton SDPA **3.3-17.6x 快**；vs 原生 CANN 1.9-10.8x 慢（根因: 栈 GEMM 5.2x × UB tile 上限，见[性能分册](reports/performance.md)） |
+| 算子 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
+| 语义 | `softmax(QKᵀ·scale + mask)·V` · GQA · causal · bool/float mask · fp32 内部 |
+| 路线 | **A1** aten 拦截，旧业务代码零改动 |
+| 平台 | **ascend910**: 自研 Triton online-softmax；**p800-kunlunxin**: 厂商 efficient-attention 委托 + fp32 精度补偿 |
+| 公共入口 | `kernel/triton_level.py` facade → `kernel/backends/{ascend910,p800_kunlunxin}.py` |
+| 验证 | P800: kernel 37/37 · 黄金 265/265 · A1 拦截/梯度 · mini-decoder ✅；Ascend 原验证保留 |
+| P800 性能 | fp16 100 次采样相对 Python `F.sdpa` 加速 **1.27-15.54x**；FlagGems 2k/4k 比 ours 慢 21-72x |
 
-## 目录
-
-```
-sdpatten-op/
-├── REPORT.md                 总报告（一页看全 + 交付物清单）
-├── README.md                 本文件
-├── PLATFORM.md               平台绑定清单（8 项 Ascend 绑定 + 移植指引 + 引用防误用）
-├── MERGE.md                  多平台合并指南（七步流程 + 选择器 + FlagGems 上游路径）
-├── requirement.md            原始需求
-├── reference.py              fp32 语义参考（判卷标准，手写不调 F.sdpa）
-├── register.py               A1 注册（autograd.Function 包装 + 注册守卫 + 计数）
-├── example.py                一键三层复跑
-├── _profile.py               本地设备 profile（ascend910）
-├── kernel/
-│   ├── triton_level.py       主实现（online-softmax two-pass + causal 截断
-│   │                         + PLATFORM 元数据 + 调用守卫）
-│   ├── torch_level.py        ATen 组合（第二判卷人）
-│   └── _native_shim.py       原生对照（NPU causal+mask 并存的折叠适配）
-├── test/
-│   ├── kernel_level.py       精度 36 组 + 哨兵 + 快速性能
-│   ├── op_level.py           拦截命中 / 逐位一致 / 梯度 vs 原生子进程
-│   ├── op_phase2_native.py   原生梯度采集（独立进程）
-│   └── framework_level.py    应用层（mini-decoder 双跑 + 行为一致性）
-├── goldendata/               黄金（inputs_spec.yaml + data/ 265 组 + index）
-├── script/
-│   ├── gen_golden.py         黄金生成（双向互验）
-│   ├── check_accuracy.py     精度判定（--impl triton|native|reference）
-│   ├── bench_perf.py         三方性能对照
-│   ├── perf_explore.py/.2    根因: tile 扫描 + matmul 天花板 + 带宽核算
-│   ├── perf_variants.py      写法变体单项 A/B（V1-V5）
-│   ├── perf_sweep.py         多尺度扫描（S×D 18 点）
-│   └── make_figs.py / make_sweep_figs.py  顶会图式绘图（7 图）
-├── probes/                   开发过程证据链（12 探针 + 日志 + guard_check）
-├── intake_llm/               AI 生成对照实验（KernelGen 官方 MCP + 本地
-│                             LLM-Track vs 手写，两份报告）
-└── reports/                  交付四件套 + perf_analysis 根因专项 + perf json
-```
+平台绑定与坑位见 [PLATFORM.md](PLATFORM.md)，多平台扩展流程见
+[MERGE.md](MERGE.md)。
 
 ## 快速开始
 
 ```bash
-python3 example.py                    # 三层一键复跑
-python3 test/framework_level.py        # 应用层单独跑
-python3 test/kernel_level.py          # kernel 层
-python3 test/op_level.py              # A1 拦截 + 梯度
-python3 script/gen_golden.py          # 黄金（CPU，265 组）
-python3 script/check_accuracy.py --impl triton --device npu:0
-python3 script/bench_perf.py --json-out /tmp/perf.json
-python3 script/bench_cross_platform.py     # 跨平台统一基准（A100 迁移即测, 见 script/BENCH_CROSS.md）
+# 本机有 torch_xmlir 时自动选 p800；Ascend 机器可显式传 ascend910
+python3 example.py p800-kunlunxin
+
+python3 test/kernel_level.py p800-kunlunxin
+python3 test/op_level.py p800-kunlunxin
+python3 test/framework_level.py p800-kunlunxin
+python3 probes/guard_check.py p800-kunlunxin
+
+# CPU 黄金生成后，同一 265 组可直接测任意平台
+python3 script/gen_golden.py
+python3 script/check_accuracy.py --impl triton --device cuda:1
+
+python3 script/bench_perf.py --device cuda:1 \
+  --json-out reports/perf_fp16_p800-kunlunxin.json
+python3 script/bench_cross_platform.py --device cuda:1
 ```
 
-## <a id="应用层"></a>应用层说明
+设备映射遵循 `configs/devices/p800-kunlunxin.yaml` 与当前共享镜像的
+`CUDA_VISIBLE_DEVICES=1,2`：稳定直测设备为 `cuda:1`。`cuda:0` 上厂商
+SDPA 曾挂起，请先不要把它作为默认回归设备。
 
-本栈 vllm 0.20.2+empty 为空壳，无法注入真实推理引擎——按 FlagOS-OP
-softmax-fullstack 的先例（"attention scores 消费 softmax"），应用层以
-**轻量消费方**落地: `test/framework_level.py` 构建 mini-decoder
-（Llama 风格 4 层 · GQA 8/2 头 · causal · fp16），业务代码只调
-`F.scaled_dot_product_attention`（标准 aten 路径零改动），基线/注册
-双跑断言: 拦截命中（count=28）· logits 数值一致（1.95e-3）·
-贪心续写序列一致率 1.00。待本栈有可用 vllm 后可平移到真实引擎
-（A1 注册经 sitecustomize 注入子进程）。
+## 目录要点
 
-## 本栈关键发现（对上游有价值）
+```
+sdpa/
+├── reference.py              # CPU fp32 语义参考
+├── register.py               # A1 注册 + autograd.Function
+├── _profile.py               # ascend910 / p800-kunlunxin 本地 profile
+├── kernel/
+│   ├── triton_level.py       # 兼容 facade（旧 import 不变）
+│   ├── backends/ascend910.py
+│   ├── backends/p800_kunlunxin.py
+│   ├── torch_level.py        # ATen 组合对照
+│   └── _native_shim.py
+├── test/                     # kernel / op / framework 三层
+├── goldendata/               # 声明式 265 组黄金
+├── script/                   # 精度、性能、跨平台基准
+├── probes/                   # 注册/守卫/平台探针
+└── reports/
+```
 
-1. **torch_npu 的 A1 注册点**: PrivateUse1 永不命中（C++
-   AutogradPrivateUse1 不 redispatch）；须注册 AutogradPrivateUse1 且
-   用 autograd.Function 包装。证据链: `probes/debug_reg*.py` + dispatch dump
-2. **FlagGems SDPA 未接入 aten 分发**: enable 后输出与原生 diff=0.0
-   （requirement "未发现后端接入"的实测确认与机制解释）
-3. **三条 Triton-Ascend 硬约束**: dot 强制同 dtype（P 须 cast）·
-   fp32 默认 tf32（须显式 ieee）· exp2 慢路径（FA2 惯例负优化）
-4. **causal 循环截断 1.93x**: 编译器无法从运行时 where 推断循环边界
-   收缩——写法粒度决定 cube 利用率的实例
-6. **AI 生成对照实测**（[intake_llm/](intake_llm/)）: KernelGen 官方版
-   性能达手写 94% 但 mask 4D 语义缺失 + CUDA 方言在 ascend 编译失败；
-   裸 LLM 3/5——四阶段验证每关都拦到真问题（验证层价值实证）
-5. **平台防误引三层机制**: 元数据（`PLATFORM`）+ 调用守卫 + 注册守卫
-   （`probes/guard_check.py` 全部实测）——函数名不改，防的是跨平台
-   静默误用（[PLATFORM.md](PLATFORM.md) §5）
+## P800 实现策略
 
-## 环境
+1. **优先复用厂商成熟 kernel**: fp16/bf16 直调
+   `aten::_scaled_dot_product_efficient_attention`，bool mask 转为
+   additive `-inf` bias，并恢复全遮蔽行为 NaN 语义。
+2. **fp32 不直接委托**: 厂商 kernel 对 fp32 的误差约 `2e-4`，超过
+   CPU 黄金 `1e-5`；fp32 走 ATen 组合。
+3. **绕开 XMLIR bmm 缺陷**: 实测 `S∈(320,640]` 可触发 `bmm_one_loop`
+   JIT 编译失败；该区间 pad 到 768（更长边保持原长）后用合法 mask
+   还原结果。
+4. **A1 key 用 `AutogradCUDA`**: dispatcher 可能省略 schema 默认值，
+   注册 wrapper 先补齐参数再进入统一数学 backward。
+5. **直接调用保留 autograd**: q/k/v 反传时前向补算 efficient kernel 的
+   log-sumexp；可微 float mask 走厂商 backward 会报
+   `bias_requires_grad not supported yet`，自动复用 A1 数学 backward。
 
-Ascend 910_9382 ×8 · CANN 9.0.0 · torch 2.10.0+cpu · torch_npu 2.10.0 ·
-triton 3.5.1 · flag_gems 5.3.5 · python 3.11.15（详见[开发报告](reports/development.md)§1）
+## 应用层
+
+`test/framework_level.py` 构建 Llama 风格 4 层 mini-decoder
+（GQA 8/2、causal），业务代码只调用
+`F.scaled_dot_product_attention`。P800 使用 bf16 规避该随机模型
+Linear/LayerNorm 的 fp16 溢出；注册后拦截 28 次，logits 与基线
+逐位一致，贪心续写一致率 1.00。
+
+## 关键平台发现
+
+1. XMLIR 将 Kunlun XPU 暴露为 CUDA tensor；仅凭 `device.type=="cuda"`
+   会误接 NVIDIA，P800 backend 额外要求 `torch_xmlir` 可导入。
+2. `AutogradCUDA` 注册可稳定拦截 Python `F.sdpa`，但必须补齐默认参数。
+3. Python `F.sdpa` 与底层 efficient kernel 的选择/开销不同；直调 private
+   aten efficient 入口在典型 fp16 shape 上更快。
+4. FlagGems `_kunlunxin` attention 无 mask/causal 路径可运行但慢；
+   float mask 场景实测 `xpuLaunchKernel ... Operation not permitted`。
+
+## Ascend 910 保留能力
+
+Ascend 版仍是完整 Triton 主实现（online-softmax two-pass、causal 截断、
+GQA/双 mask/尾块），历史精度、性能与根因分析见
+[REPORT.md](REPORT.md)、[reports/development.md](reports/development.md)、
+[reports/performance.md](reports/performance.md)。

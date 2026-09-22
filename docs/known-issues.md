@@ -141,6 +141,23 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 全程无 mask、无调优，确定性路径；整数倍 N 零开销。测试形状补充
 3072/5000/5120 非整倍数回归。
 
+### 17. P800 SDPA 的四类平台分化（sdpa-op 实测发现）
+
+1. **Ascend Triton 不能零改动平移**: causal 循环边界中的 runtime select
+   触发 XMLIR Triton rewrite 失败（`Could not find PtrState returned by
+   the loop` / `Unsupported select predicate`）。
+2. **ATen 组合 bmm JIT 缺陷**: `S∈(320,640]` 可触发
+   `bmm_one_loop` 模板实例化编译错误；SDPA fp32 精确路径将序列 pad 到
+   768（更长边保持原长）并用 mask 还原语义。
+3. **厂商 efficient attention 全遮蔽行为分化**: 全 False 行返回有限值，
+   CPU/参考语义为 NaN；SDPA backend 显式 `masked_fill` 恢复。
+4. **efficient backward 参数分化**: q/k/v 反向要求 forward 计算
+   log-sumexp；float bias 反向暂不支持 `bias_requires_grad`。SDPA
+   direct 路径按需开启 log-sumexp，可微 mask 自动复用 A1 数学 backward。
+
+平台结论与复现命令见
+[ops/sdpa/reports/p800-kunlunxin.md](../ops/sdpa/reports/p800-kunlunxin.md)。
+
 ## 通用检测方法
 
 | 问题类型 | 检测工具 |
@@ -154,6 +171,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 | FlagGems 某算子链接失败 | `common/xpu_compat` 补丁后看 elfconv 真实 stderr；对照 #13 |
 | 尾块归约静默错误 | 精度探针含非整倍数 N（`accuracy_report.py`）；对照 #15 |
 | call_op 长循环挂起 | 短循环（≤100 次）规避；排查见 #16 |
+| SDPA 平台语义/JIT 分化 | 265 组黄金 + S=333/D=80 尾块用例；对照 #17 |
 
 ---
 
