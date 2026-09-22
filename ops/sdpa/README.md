@@ -62,6 +62,7 @@ python3 test/op_level.py              # A1 拦截 + 梯度
 python3 script/gen_golden.py          # 黄金（CPU，265 组）
 python3 script/check_accuracy.py --impl triton --device npu:0
 python3 script/bench_perf.py --json-out /tmp/perf.json
+python3 script/bench_cross_platform.py     # 跨平台统一基准（A100 迁移即测, 见 script/BENCH_CROSS.md）
 ```
 
 ## <a id="应用层"></a>应用层说明
