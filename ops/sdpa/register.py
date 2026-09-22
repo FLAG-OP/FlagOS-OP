@@ -23,15 +23,23 @@ class _SDPA_A1_Function(torch.autograd.Function):
     @staticmethod
     def forward(ctx, query, key, value, attn_mask, dropout_p, is_causal,
                 scale, enable_gqa):
-        from kernel.triton_level import sdpa_triton
+        # wt 2026-09-22-fix impl="auto" 时走智能路由（大S无mask→原生，
+        # 详见 kernel/auto_dispatch.py）；默认 "triton" 保持原验证口径
+        # # wt <wangt635@ustc.edu.cn>
+        if getattr(_SDPA_A1_Function, "_impl", "triton") == "auto":
+            from kernel.auto_dispatch import sdpa_auto
+            fn = sdpa_auto
+        else:
+            from kernel.triton_level import sdpa_triton
+            fn = sdpa_triton
         ctx.save_for_backward(query, key, value)
         ctx.attn_mask = attn_mask
         ctx.dropout_p = dropout_p
         ctx.is_causal = is_causal
         ctx.scale = scale
         ctx.enable_gqa = enable_gqa
-        return sdpa_triton(query, key, value, attn_mask, dropout_p,
-                           is_causal, scale, enable_gqa)
+        return fn(query, key, value, attn_mask, dropout_p, is_causal,
+                  scale, enable_gqa)
 
     @staticmethod
     def backward(ctx, do):
@@ -96,7 +104,11 @@ def _causal_or_bool_bias(ctx, query):
 
 
 def register_a1(dispatch_key: str = "AutogradPrivateUse1",
-                counter: dict | None = None):
+                counter: dict | None = None,
+                impl: str = "triton"):
+    """impl: "triton"=纯自研（默认，验证口径不变） | "auto"=智能路由
+    （大S无mask→厂商原生，kernel/auto_dispatch.py，见
+    reports/fusion_vs_dispatch.md）"""
     """接管 aten::scaled_dot_product_attention（torch_npu 栈）。
 
     dispatch_key: torch_npu 栈必须用 AutogradPrivateUse1（见模块注释）；
@@ -115,6 +127,21 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
             f"register_a1 绑定 PLATFORM={PLATFORM!r}，dispatch_key="
             f"{dispatch_key!r} 需要 torch_npu 可用环境。跨平台集成请"
             f"按 PLATFORM.md §4 选择对应实现目录。")
+    _SDPA_A1_Function._impl = impl  # 类属性: forward 内读取
+
+    if impl == "auto":
+        # wt 2026-09-22-fix auto 模式不再走 aten 注册——Python 层无法
+        # 旁路 dispatcher（注册内转发原生会无限递归, RecursionError
+        # 实证）, 改用函数层 patch（kernel/auto_dispatch.py install_patch）。
+        # 业务代码经 F.sdpa 自动获得 shape-aware 路由。
+        # # wt <wangt635@ustc.edu.cn>
+        from kernel.auto_dispatch import install_patch, stats as _st
+        install_patch()
+        if counter is not None:
+            counter["patched"] = True
+        return _st  # 返回 stats 供调用方断言（无 lib 需保持引用）
+
+    # impl="triton": 原 aten 注册路径（验证口径不变）
     impl_fn = _SDPA_A1_Function.apply
 
     if counter is not None:

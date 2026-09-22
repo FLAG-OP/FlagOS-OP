@@ -28,3 +28,16 @@ def sdpa_native(query, key, value, attn_mask=None, dropout_p=0.0,
     return torch.nn.functional.scaled_dot_product_attention(
         query, key, value, attn_mask=attn_mask, dropout_p=dropout_p,
         is_causal=is_causal, scale=scale, enable_gqa=enable_gqa)
+
+
+def _fold_causal_into_mask(query, key, attn_mask, is_causal):
+    """causal 折叠辅助（auto_dispatch 直调 aten 用; auto 路径
+    attn_mask 恒为 None，仅需处理 causal）。"""
+    if not is_causal or attn_mask is not None:
+        return attn_mask
+    Sq, Skv = query.shape[-2], key.shape[-2]
+    if Sq != Skv:
+        return None  # 非方阵 causal 交由 aten 自身语义
+    causal = torch.tril(torch.ones(
+        Sq, Skv, dtype=torch.bool, device=query.device))
+    return causal

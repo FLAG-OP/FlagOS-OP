@@ -59,3 +59,21 @@ native（1.4x）。若路由阈值降到 S≥256 则全段 ≤1.05x。
 ```bash
 python3 script/exp_fusion_vs_dispatch.py
 ```
+
+
+## 交付形态（2026-09-22 已落地，非仅实验）
+
+`kernel/auto_dispatch.py` + `register_a1(impl="auto")`:
+
+- **实现形式**: 函数层 patch（保存原始 `F.scaled_dot_product_attention`
+  引用，大 S 直调原始引用→torch_npu 原生）。**不用 aten 注册**——实测
+  Python 层无法旁路 dispatcher（注册内转发原生 = 无限递归，
+  RecursionError 三次实证后放弃，调试记录见 git 历史）
+- **开关**: `SDPA_DISPATCH_MODE=auto|triton|native`（进程级）+
+  `SDPA_DISPATCH_S`（阈值，默认 1024）+ `remove_patch()` 幂等还原
+- **验证**（test/op_level_auto.py 全绿）: 路由正确（小S→triton 数值
+  1.2e-4 / 大S→原生逐位）、双强制模式、S=4096 加速 6.9x、双路径
+  autograd 完整、patch 还原幂等
+- **业务零改动**: vLLM/transformers 等经 F.sdpa 的代码自动受益
+
+默认 `impl="triton"`（保持原验证口径）；生产建议 `impl="auto"`。
