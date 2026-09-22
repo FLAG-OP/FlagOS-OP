@@ -25,7 +25,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 算子 | 开发级别 | 路线 | 状态 | 交付报告 | 备注 |
 |---|---|---|---|---|---|
-| *(暂无——第一个算子从上面的 cp 命令开始)* | | | | | |
+| [sdpa](sdpa/)（scaled_dot_product_attention） | Triton 级 | A1（aten 拦截） | ✅ 定稿 | [REPORT](sdpa/REPORT.md) | ascend910 · 黄金 265/265 · [平台绑定](sdpa/PLATFORM.md) / [多平台合并](sdpa/MERGE.md) |
 
 > 结构同构的教学样例 [softmax-fullstack](../examples/softmax-fullstack/)
 > 保留在 examples/（它的定位是"教"，ops/ 的定位是"用"）；

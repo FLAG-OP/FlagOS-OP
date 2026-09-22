@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.13.0] - 2026-09-17
+
+### Added
+- **首个正式算子: [ops/sdpa](ops/sdpa/)**（aten::scaled_dot_product_attention，
+  Triton 级，A1 路线，ascend910）
+  - online-softmax two-pass kernel + causal 循环截断（1.93x）+ GQA/双 mask/
+    尾块安全；黄金 265/265、kernel 层 37/37、A1 拦截+梯度验证全绿
+  - 首个算子级平台文档: [PLATFORM.md](ops/sdpa/PLATFORM.md)（8 项 Ascend
+    绑定 + 移植指引 + 引用防误用三层机制）与 [MERGE.md](ops/sdpa/MERGE.md)
+    （第二平台七步合并指南）
+- **设备 profile: [ascend910](configs/devices/ascend910.yaml)**（CANN 9.0.0 /
+  torch_npu 2.10.0；quirks.no_vllm_runtime 标注空壳 vllm 环境）
+
+### Discovered（随算子交付的实测结论，上游有价值）
+- torch_npu 栈 A1 注册点为 AutogradPrivateUse1（PrivateUse1 永不命中，
+  C++ 包装不 redispatch）——与 CUDA 系后端关键差异
+- flag_gems 5.3.5 SDPA 未被 aten 分发接入（enable 后 diff=0.0）
+- triton-ascend 三硬约束: dot 强制同 dtype / fp32 默认 tf32 / exp2 慢路径
+
 ## [0.12.3] - 2026-09-14
 
 ### Fixed
