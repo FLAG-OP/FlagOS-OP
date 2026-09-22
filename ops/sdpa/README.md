@@ -13,7 +13,7 @@
 | 平台 | **ascend910**: 自研 Triton online-softmax；**p800-kunlunxin**: 厂商 efficient-attention 委托 + fp32 精度补偿 |
 | 公共入口 | `kernel/triton_level.py` facade → `kernel/backends/{ascend910,p800_kunlunxin}.py` |
 | 验证 | P800: kernel 37/37 · 黄金 265/265 · A1 拦截/梯度 · mini-decoder ✅；Ascend 原验证保留 |
-| P800 性能 | fp16 100 次采样相对 Python `F.sdpa` 加速 **1.27-15.54x**；FlagGems 2k/4k 比 ours 慢 21-72x |
+| P800 性能 | 强制读回输出的 fp16 采样相对 Python `F.sdpa` 加速 **1.02-1.14x**；FlagGems 2k/4k 比 ours 慢 5.1-6.6x |
 
 平台绑定与坑位见 [PLATFORM.md](PLATFORM.md)，多平台扩展流程见
 [MERGE.md](MERGE.md)。

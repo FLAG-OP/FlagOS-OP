@@ -5,7 +5,7 @@
 #
 # 方法论（对齐 FlagOS-OP 约定 + 本机实测教训）:
 #   - 短采样 ≤100 次（分配器陷阱，known-issues #10）
-#   - wall 时间 + npu/cuda synchronize()（异步早退假象）
+#   - 每次读取一个输出元素到 CPU（XMLIR/CUDA 异步早退防护）
 #   - 每个 dtype×shape 一组，warmup 充分（设备码编译一次，缓存后公平）
 #   - flag_gems 直调不经 enable()（enable 后 SDPA 不被接管，见探测报告）
 from __future__ import annotations
@@ -31,17 +31,25 @@ SHAPES = [
 ]
 
 
+def _consume_scalar(output):
+    """Read one output element to force lazy/asynchronous XPU work to finish."""
+    import torch
+    if isinstance(output, (tuple, list)):
+        output = output[0]
+    return output[0, 0, 0, 0].item()
+
+
 def bench_fn(fn, dev, warmup=20, iters=100):
     import torch
     for _ in range(warmup):
-        fn()
+        _consume_scalar(fn())
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
     t0 = time.perf_counter()
     for _ in range(iters):
-        fn()
+        _consume_scalar(fn())
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):

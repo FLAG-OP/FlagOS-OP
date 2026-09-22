@@ -115,15 +115,16 @@ python3 script/perf_variants.py       # 写法变体单项 A/B（V1-V5 + 组合�
 P800 不复用 Ascend Triton 结论，采用厂商 efficient-attention 委托；
 fp16 采样（warmup=20，iters=100）见
 [perf_fp16_p800-kunlunxin.json](perf_fp16_p800-kunlunxin.json)：
+每次迭代读取一个输出元素强制异步执行完成，避免只测 launch 时间。
 
 | shape | ours | Python F.sdpa | FlagGems | 加速比 = F.sdpa/ours |
 |---|---:|---:|---:|---:|
-| prefill_1k_d64 | 0.0663ms | 0.0904ms | 0.1053ms | **1.364x** |
-| prefill_1k_d128 | 0.0640ms | 0.0891ms | 0.1076ms | **1.392x** |
-| prefill_2k_d128 | 0.0626ms | 0.2052ms | 1.3151ms | **3.277x** |
-| prefill_4k_d128 | 0.0600ms | 0.9320ms | 4.3403ms | **15.538x** |
-| gqa_1k_d128 | 0.0625ms | 0.0896ms | 0.5159ms | **1.434x** |
-| decode_d128 | 0.0608ms | 0.0773ms | 0.1063ms | **1.272x** |
+| prefill_1k_d64 | 0.1484ms | 0.1655ms | 0.3120ms | **1.115x** |
+| prefill_1k_d128 | 0.1442ms | 0.1574ms | 0.3606ms | **1.092x** |
+| prefill_2k_d128 | 0.2584ms | 0.2941ms | 1.3283ms | **1.138x** |
+| prefill_4k_d128 | 0.6632ms | 0.6796ms | 4.3990ms | **1.025x** |
+| gqa_1k_d128 | 0.1884ms | 0.2045ms | 0.5667ms | **1.085x** |
+| decode_d128 | 0.1132ms | 0.1270ms | 0.1611ms | **1.122x** |
 
 复现：
 

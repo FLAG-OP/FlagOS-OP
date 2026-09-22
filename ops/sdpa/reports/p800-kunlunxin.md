@@ -94,6 +94,11 @@ P800 栈上溢出；bf16 下基线与插件输出均稳定。
 JSON 同时保留历史 `ours_vs_native` 延时比值（Ascend 报告既有 schema）
 并新增 `speedup_vs_native` 常规加速比字段。
 
+计时必须读取一个输出元素（如 `output[0, 0, 0, 0].item()`）强制完成。
+实测仅调用 kernel 后丢弃返回值、再 `torch.cuda.synchronize()`，在
+XMLIR 栈上可能只计入 launch/异步提交时间，得到数十 TFLOPS 到
+9000+ TFLOPS 的虚假结果；该口径已在 benchmark 脚本中修复。
+
 ```bash
 python3 script/bench_perf.py --device cuda:1 --dtype float16 \
   --warmup 20 --iters 100 \
@@ -102,15 +107,28 @@ python3 script/bench_perf.py --device cuda:1 --dtype float16 \
 
 | shape | ours(ms) | F.sdpa(ms) | FlagGems(ms) | 加速比 = F.sdpa/ours |
 |---|---:|---:|---:|---:|
-| prefill_1k_d64 | 0.0663 | 0.0904 | 0.1053 | **1.364** |
-| prefill_1k_d128 | 0.0640 | 0.0891 | 0.1076 | **1.392** |
-| prefill_2k_d128 | 0.0626 | 0.2052 | 1.3151 | **3.277** |
-| prefill_4k_d128 | 0.0600 | 0.9320 | 4.3403 | **15.538** |
-| gqa_1k_d128 | 0.0625 | 0.0896 | 0.5159 | **1.434** |
-| decode_d128 | 0.0608 | 0.0773 | 0.1063 | **1.272** |
+| prefill_1k_d64 | 0.1484 | 0.1655 | 0.3120 | **1.115** |
+| prefill_1k_d128 | 0.1442 | 0.1574 | 0.3606 | **1.092** |
+| prefill_2k_d128 | 0.2584 | 0.2941 | 1.3283 | **1.138** |
+| prefill_4k_d128 | 0.6632 | 0.6796 | 4.3990 | **1.025** |
+| gqa_1k_d128 | 0.1884 | 0.2045 | 0.5667 | **1.085** |
+| decode_d128 | 0.1132 | 0.1270 | 0.1611 | **1.122** |
 
 Benchmark 结束时 FlagGems autotuner 可能打印 XPU cleanup 噪声，
 不影响已保存的 JSON 与后续进程。
+
+### A100 参照（FA2 论文协议）
+
+A100 为 FlashAttention-2 论文公开数据按同 FLOPs 换算，非同机复测。
+P800 使用 `cross_platform_p800-kunlunxin.json` 的强制完成口径：
+
+| 场景 | P800 ours | A100·FA2 | 延时比 |
+|---|---:|---:|---:|
+| D64 S=2k | 2.156ms | ~0.785ms | 2.75x 慢 |
+| D64 S=8k | 7.040ms | ~2.894ms | 2.43x 慢 |
+| D128 S=1k | 0.789ms | ~0.344ms | 2.30x 慢 |
+| D128 S=4k | 2.312ms | ~1.195ms | 1.94x 慢 |
+| D128 S=8k | 4.404ms | ~2.340ms | 1.88x 慢 |
 
 ## 6. 遗留与建议
 

@@ -110,15 +110,21 @@ def quick_perf(dev):
     from kernel.triton_level import sdpa_triton
     q, k, v, _ = _make_inputs(1, 16, 16, 1024, 1024, 128,
                               torch.float16, dev, 0)
+    def call():
+        # XMLIR async guard: consume one output element, otherwise this can
+        # measure only kernel submission rather than execution.
+        return sdpa_triton(q, k, v, None, 0.0, True, None,
+                           False)[0, 0, 0, 0].item()
+
     for _ in range(10):
-        sdpa_triton(q, k, v, None, 0.0, True, None, False)
+        call()
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
     t0 = time.perf_counter()
     for _ in range(50):
-        sdpa_triton(q, k, v, None, 0.0, True, None, False)
+        call()
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):

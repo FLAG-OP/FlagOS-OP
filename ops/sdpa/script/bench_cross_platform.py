@@ -53,14 +53,20 @@ def detect_device() -> str:
 def bench(fn, dev, warmup=10, iters=30):
     import torch
     for _ in range(warmup):
-        fn()
+        output = fn()
+        if isinstance(output, (tuple, list)):
+            output = output[0]
+        output[0, 0, 0, 0].item()
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
     t0 = time.perf_counter()
     for _ in range(iters):
-        fn()
+        output = fn()
+        if isinstance(output, (tuple, list)):
+            output = output[0]
+        output[0, 0, 0, 0].item()
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
@@ -105,7 +111,8 @@ def main() -> int:
         from kernel.triton_level import sdpa_triton
         from kernel.triton_level import PLATFORM, SUPPORTED_DEVICE_TYPES
         if dev.split(":")[0] in SUPPORTED_DEVICE_TYPES:
-            impls["ours_triton"] = sdpa_triton
+            impls["ours_triton"] = lambda q, k, v: sdpa_triton(
+                q, k, v, is_causal=True)
         else:
             print(f"[skip] ours_triton: PLATFORM={PLATFORM} 绑定, "
                   f"当前 {dev}（移植见 MERGE.md）")

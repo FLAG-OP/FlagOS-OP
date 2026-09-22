@@ -53,8 +53,9 @@
 - ascend910 性能与根因分解见 `reports/performance.md`、
   `reports/perf_analysis.md`。
 - p800-kunlunxin 性能采样见 `reports/perf_fp16_p800-kunlunxin.json`
-  （100 次采样；P800 委托路径相对 Python `F.sdpa` 加速 1.27-15.54x，
-  FlagGems Triton 在 2k/4k 序列比 ours 慢 21-72x）。
+  （每次读取一个输出元素强制完成；P800 委托路径相对 Python
+  `F.sdpa` 加速 1.02-1.14x，FlagGems Triton 在 2k/4k 序列比 ours
+  慢 5.1-6.6x）。
 - “FlagGems 未被 aten 分发接管”是 torch_npu 栈特定结论；P800 上
   FlagGems `_kunlunxin` attention 可直调，但 mask 场景存在 launch 失败。
 
