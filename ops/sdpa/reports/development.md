@@ -288,6 +288,16 @@ arXiv:2607.27231，210 算子 × 6 芯片）:
 给"AI 生成 + 人工验证"补的闭环件。结论: KernelGen 把"从零写"
 变成"从 70-90% 起步 + 验证收敛"，**验证层短期内不可替代**。
 
+### 8.4.1 子图融合救不了融合算子；截流下发是标准答案（2026-09-22 实测）
+
+[fusion_vs_dispatch.md](fusion_vs_dispatch.md) 两实验:
+① torch.compile 子图融合对本 case 无效（SDPA 本身已是融合算子，
+差距在 kernel 内部 GEMM codegen；且本栈 inductor 连不上
+triton-ascend 3.5，compile 路径不可用）
+② shape-aware 混合路由原型（S≥1k→原生，小 S/自定义→自研）大 S 段
+拿到 98-99% 最优——**"FlagGems 截流下发厂商算子"正是 B 路线 +
+PER_OP 钉选的设计意图**，生态分工见 §8.2。
+
 ### 8.4 本地实证（intake_llm/，2026-09-17）
 
 用本算子做了三方对照实验（同四阶段验证协议）:
