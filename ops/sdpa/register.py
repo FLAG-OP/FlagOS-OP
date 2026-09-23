@@ -1,6 +1,6 @@
 # A1 注册: torch.library.Library("aten","IMPL") 接管
 # aten::scaled_dot_product_attention。
-# 平台 dispatch key 由 _profile 提供: torch_npu=AutogradPrivateUse1，
+# 平台 dispatch key 由 _profile 提供: torch_npu/torch_mlu=AutogradPrivateUse1，
 # Kunlunxin XMLIR=AutogradCUDA（绑定结论见 ../PLATFORM.md）。
 # wt <wangt635@ustc.edu.cn>
 #
@@ -123,15 +123,16 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
     counter: 可选 dict，'n' 计数（op 层拦截验证）。
     返回 (lib, fn)，lib 必须保持引用。
     """
-    # wt 2026-09-16-fix 注册守卫: torch_npu 特有 key 上来注册非 npu 平台
-    # 的 kernel 是跨平台误用——在注册时就拦截，而不是运行时静默错。
+    # wt 2026-09-16-fix 注册守卫: torch_npu/torch_mlu 特有 key 上来注册
+    # 非对应平台的 kernel 是跨平台误用——在注册时就拦截，而不是运行时静默错。
     # # wt <wangt635@ustc.edu.cn>
     if dispatch_key in ("AutogradPrivateUse1", "PrivateUse1") and \
-            not (hasattr(torch, "npu") and torch.npu.is_available()):
+            not ((hasattr(torch, "npu") and torch.npu.is_available())
+                 or (hasattr(torch, "mlu") and torch.mlu.is_available())):
         raise RuntimeError(
             f"register_a1 绑定 PLATFORM={PLATFORM!r}，dispatch_key="
-            f"{dispatch_key!r} 需要 torch_npu 可用环境。跨平台集成请"
-            f"按 PLATFORM.md §4 选择对应实现目录。")
+            f"{dispatch_key!r} 需要 torch_npu 或 torch_mlu 可用环境。"
+            f"跨平台集成请按 PLATFORM.md §4 选择对应实现目录。")
     _SDPA_A1_Function._impl = impl  # 类属性: forward 内读取
 
     if impl == "auto":

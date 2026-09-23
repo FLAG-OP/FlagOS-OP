@@ -24,10 +24,14 @@ def load_profile(name: str | None = None) -> LocalProfile:
         name = os.environ.get("SDPA_PROFILE")
     if name is None:
         try:
-            import torch_xmlir  # noqa: F401
-            name = "p800-kunlunxin"
+            import torch_mlu  # noqa: F401
+            name = "mlu590"
         except ImportError:
-            name = "ascend910"
+            try:
+                import torch_xmlir  # noqa: F401
+                name = "p800-kunlunxin"
+            except ImportError:
+                name = "ascend910"
     if name in (None, "ascend910", "ascend910b"):
         return LocalProfile(
             name="ascend910",
@@ -44,11 +48,24 @@ def load_profile(name: str | None = None) -> LocalProfile:
             torch_device=os.environ.get("SDPA_TEST_DEVICE", "cuda:1"),
             dispatch_key="AutogradCUDA",
         )
+    if name in ("mlu590", "mlu", "cambricon", "cambricon-mlu590"):
+        return LocalProfile(
+            name="mlu590",
+            vendor="cambricon",
+            torch_device=os.environ.get("SDPA_TEST_DEVICE", "mlu:0"),
+            dispatch_key="AutogradPrivateUse1",  # torch_mlu 实测拦截点
+        )
     raise ValueError(
-        f"未知设备 profile: {name}（内置 ascend910 / p800-kunlunxin）")
+        "未知设备 profile: "
+        f"{name}（内置 ascend910 / p800-kunlunxin / mlu590）")
 
 
 def detect_profile() -> LocalProfile:
+    try:
+        import torch_mlu  # noqa: F401
+        return load_profile("mlu590")
+    except ImportError:
+        pass
     try:
         import torch_xmlir  # noqa: F401
         return load_profile("p800-kunlunxin")

@@ -118,18 +118,22 @@ def quick_perf(dev):
 
     for _ in range(10):
         call()
-    if dev.startswith("npu"):
-        torch.npu.synchronize()
-    elif dev.startswith("cuda"):
-        torch.cuda.synchronize()
+    _sync(dev)
     t0 = time.perf_counter()
     for _ in range(50):
         call()
+    _sync(dev)
+    return round((time.perf_counter() - t0) / 50 * 1000, 4)
+
+
+def _sync(dev):
+    import torch
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
-    return round((time.perf_counter() - t0) / 50 * 1000, 4)
+    elif dev.startswith("mlu"):
+        torch.mlu.synchronize()
 
 
 if __name__ == "__main__":

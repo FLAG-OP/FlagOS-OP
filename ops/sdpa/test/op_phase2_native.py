@@ -15,6 +15,8 @@ dev = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
     "SDPA_TEST_DEVICE", "npu:0")
 if dev.startswith("npu"):
     import torch_npu  # noqa: F401
+if dev.startswith("mlu"):
+    import torch_mlu  # noqa: F401
 
 g = torch.Generator(device="cpu").manual_seed(3)
 dt = torch.float16

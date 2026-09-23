@@ -47,6 +47,8 @@ def bench_fn(fn, dev, warmup=20, iters=100):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
+    elif dev.startswith("mlu"):
+        torch.mlu.synchronize()
     t0 = time.perf_counter()
     for _ in range(iters):
         _consume_scalar(fn())
@@ -54,6 +56,8 @@ def bench_fn(fn, dev, warmup=20, iters=100):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
+    elif dev.startswith("mlu"):
+        torch.mlu.synchronize()
     return (time.perf_counter() - t0) / iters * 1000  # ms
 
 
@@ -103,17 +107,26 @@ def main() -> int:
             dev, args.warmup, args.iters,
         )
         try:
-            from flag_gems.ops.attention import (
+            from flag_gems.runtime.backend._cambricon.ops.attention import (
                 scaled_dot_product_attention_forward)
             t_gems = bench_fn(
                 lambda: scaled_dot_product_attention_forward(
                     q, k, v, None, 0.0, causal, None, Hq != Hkv),
                 dev, args.warmup, args.iters,
             )
-        except Exception as e:
-            t_gems = float("nan")
-            print(f"    [gems fail @ {tag}] {type(e).__name__}: "
-                  f"{str(e)[:80]}")
+        except Exception:
+            try:
+                from flag_gems.ops.attention import (
+                    scaled_dot_product_attention_forward)
+                t_gems = bench_fn(
+                    lambda: scaled_dot_product_attention_forward(
+                        q, k, v, None, 0.0, causal, None, Hq != Hkv),
+                    dev, args.warmup, args.iters,
+                )
+            except Exception as e:
+                t_gems = float("nan")
+                print(f"    [gems fail @ {tag}] {type(e).__name__}: "
+                      f"{str(e)[:80]}")
 
         # Keep the historical ``ours/native`` latency ratio for Ascend data,
         # but report the conventional speedup (baseline/ours) in print/JSON.

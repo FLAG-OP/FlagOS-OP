@@ -1,0 +1,15 @@
+# MLU590 环境锁定（2026-09-23 实测采集）
+#
+# 用途: 本机 Cambricon 核对环境是否仍与实测基线一致
+#       python3 scripts/check_env.py --device mlu590
+name: mlu590
+description: Cambricon MLU590 实测版本
+python: "3.12.13"
+packages:
+  torch: "2.11.0+cpu"
+  torch_mlu: "1.33.1+torch2.11.0"
+  triton: "3.4.0+mlu2.1.1"
+  flag_gems: "5.3.5"
+notes: |-
+  torch 为 CPU 轮子 + torch_mlu 插件加速；MLU590-M9 / MLU_VISIBLE_DEVICES=7。
+  本环境未安装 vLLM（profile quirks.no_vllm_runtime=true 时跳过框架层入口）。

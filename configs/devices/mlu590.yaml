@@ -1,0 +1,35 @@
+# 设备 Profile: Cambricon MLU590 (本机实测 case)
+name: mlu590
+vendor: cambricon                 # 与 flag_gems DeviceDetector().vendor_name 一致
+
+auto_detect:
+  module: torch_mlu               # 可 import 即认定为该设备
+
+device:
+  torch_device: "mlu:0"           # 算子层测试设备
+  visible_devices: "0"
+  dispatch_key: AutogradPrivateUse1  # torch_mlu 实测拦截点（同 torch_npu）
+
+framework:
+  tensor_parallel_size: 1
+  distributed_executor_backend: mp
+  max_model_len: 4096
+  max_num_seqs: 50
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  enable_prefix_caching: false
+  load_format: safetensors
+  seed: 20260823
+  model_path: /path/to/model
+  quirks:
+    keep_default_prefer: false
+    require_two_visible_devices: false
+    no_vllm_runtime: true         # 本环境 vllm 为空壳时跳过框架/应用层入口
+
+vendor_delegate: null
+
+reference_fallback: reference.torch
+
+# 原生参照走 torch_mlu 的 F.scaled_dot_product_attention（复合 math 路径）
+vendor_kernels: []

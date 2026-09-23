@@ -16,8 +16,8 @@ except ImportError:  # Standalone import with OP_DIR on sys.path
     from kernel.backends import get_impl
 
 
-PLATFORM = "multi(ascend910,p800-kunlunxin)"
-SUPPORTED_DEVICE_TYPES = ("npu", "cuda")
+PLATFORM = "multi(ascend910,p800-kunlunxin,mlu590)"
+SUPPORTED_DEVICE_TYPES = ("npu", "cuda", "mlu")
 
 
 def sdpa_triton(

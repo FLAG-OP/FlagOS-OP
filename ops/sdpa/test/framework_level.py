@@ -95,6 +95,8 @@ def run(profile):
     import torch
     if profile.torch_device.startswith("npu"):
         import torch_npu  # noqa: F401
+    if profile.torch_device.startswith("mlu"):
+        import torch_mlu  # noqa: F401
 
     from register import register_a1
 
