@@ -172,20 +172,25 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 
 ### 18. MLU590 SDPA 的五类平台分化（sdpa-op 实测发现）
 
-1. **private efficient/flash/cudnn attention 不可用**: MLU 上均 CPU
-   fallback 失败（`NotImplementedError: ... from the 'CPU' backend`）；
-   `efficient_attention` 虽报 MLUFallback 但仍不可用。唯一可用非递归
-   private 入口是 `_scaled_dot_product_attention_math`。
-2. **math private 误处理 bool mask**: 直接收 bool 时 vs 参考 err≈0.19；
-   必须先转 additive `-inf` bias（`F.sdpa`/reference 对 bool 正确）。
+1. **`efficient/flash/cudnn` attention aten 私有 op 不可用**:
+   MLU 上均 CPU fallback 失败（`NotImplementedError: ... from the 'CPU'
+   backend`）。**原生 `F.sdpa` 实际走 `_scaled_dot_product_fused_attention_
+   overrideable`（CNNL FA v2）**——直调 math private 只能拿到未融合
+   分解，早期实现 0.11-0.55x 原生。
+2. **bool mask 与 math private 分化**: math 路径直收 bool vs 参考
+   err≈0.19；必须先转 additive `-inf` bias（`F.sdpa`/reference 对
+   bool 正确）。
 3. **FlagGems `_cambricon` attention 慢 10-40x 且无 autograd**: 精度
    265/265 全过，但 1k D64 达 8.4ms（原生 0.31ms）；不可作生产主路径，
    仅兜底/对照。direct 可微调用复用 A1 数学 backward。
-4. **全遮蔽行返回有限值**: math private/FlagGems 均不返回 NaN，SDPA
+4. **全遮蔽行返回有限值**: fused/TMO/math/FlagGems 均不返回 NaN，SDPA
    backend 显式 `masked_fill` 恢复 CPU/aten 语义（同 #17.3）。
 5. **A1 注册 key 与 torch_npu 同为 `AutogradPrivateUse1`**:
    `AutogradMLU`/`MLU` 亦命中，但 PrivateUse1 是 torch_mlu 后端 key；
    `register_a1` 守卫已放宽为 torch_npu **或** torch_mlu 可用。
+
+修订后主路径 = TMO FA（半精度）→ fused overrideable；实测 **1.00-1.33x**
+原生。`SDPA_MLU_TMO=0` 可强制只走 overrideable。
 
 平台结论与复现命令见
 [ops/sdpa/reports/mlu590.md](../ops/sdpa/reports/mlu590.md)。

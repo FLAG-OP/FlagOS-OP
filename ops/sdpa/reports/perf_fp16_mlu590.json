@@ -7,11 +7,11 @@
     "S": 1024,
     "D": 64,
     "dtype": "float16",
-    "ours_ms": 0.7114,
-    "native_ms": 0.3143,
-    "gems_ms": 8.4086,
-    "ours_vs_native": 2.264,
-    "speedup_vs_native": 0.442
+    "ours_ms": 0.2272,
+    "native_ms": 0.3012,
+    "gems_ms": 2.9155,
+    "ours_vs_native": 0.754,
+    "speedup_vs_native": 1.326
   },
   {
     "shape": "prefill_1k_d128",
@@ -21,11 +21,11 @@
     "S": 1024,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 0.7476,
-    "native_ms": 0.3195,
-    "gems_ms": 3.6735,
-    "ours_vs_native": 2.34,
-    "speedup_vs_native": 0.427
+    "ours_ms": 0.283,
+    "native_ms": 0.3629,
+    "gems_ms": 3.6656,
+    "ours_vs_native": 0.78,
+    "speedup_vs_native": 1.282
   },
   {
     "shape": "prefill_2k_d128",
@@ -35,11 +35,11 @@
     "S": 2048,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 2.0494,
-    "native_ms": 0.4499,
-    "gems_ms": 8.045,
-    "ours_vs_native": 4.555,
-    "speedup_vs_native": 0.22
+    "ours_ms": 0.3507,
+    "native_ms": 0.445,
+    "gems_ms": 8.0883,
+    "ours_vs_native": 0.788,
+    "speedup_vs_native": 1.269
   },
   {
     "shape": "prefill_4k_d128",
@@ -49,11 +49,11 @@
     "S": 4096,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 7.3023,
-    "native_ms": 0.9124,
-    "gems_ms": 27.0499,
-    "ours_vs_native": 8.004,
-    "speedup_vs_native": 0.125
+    "ours_ms": 0.7269,
+    "native_ms": 0.9022,
+    "gems_ms": 26.6282,
+    "ours_vs_native": 0.806,
+    "speedup_vs_native": 1.241
   },
   {
     "shape": "gqa_1k_d128",
@@ -63,11 +63,11 @@
     "S": 1024,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 1.2644,
-    "native_ms": 0.4623,
-    "gems_ms": 5.3034,
-    "ours_vs_native": 2.735,
-    "speedup_vs_native": 0.366
+    "ours_ms": 0.3658,
+    "native_ms": 0.442,
+    "gems_ms": 5.1761,
+    "ours_vs_native": 0.828,
+    "speedup_vs_native": 1.208
   },
   {
     "shape": "decode_d128",
@@ -77,10 +77,10 @@
     "S": 64,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 0.4507,
-    "native_ms": 0.2328,
-    "gems_ms": 2.067,
-    "ours_vs_native": 1.936,
-    "speedup_vs_native": 0.517
+    "ours_ms": 0.2246,
+    "native_ms": 0.2236,
+    "gems_ms": 1.9888,
+    "ours_vs_native": 1.004,
+    "speedup_vs_native": 0.996
   }
 ]

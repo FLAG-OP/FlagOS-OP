@@ -10,11 +10,11 @@
 | 算子 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
 | 语义 | `softmax(QKᵀ·scale + mask)·V` · GQA · causal · bool/float mask · fp32 内部 |
 | 路线 | **A1** aten 拦截，旧业务代码零改动 |
-| 平台 | **ascend910**: 自研 Triton online-softmax；**p800-kunlunxin**: 厂商 efficient-attention 委托 + fp32 精度补偿；**mlu590**: Cambricon math private 委托 + FlagGems 兜底 |
+| 平台 | **ascend910**: 自研 Triton online-softmax；**p800-kunlunxin**: 厂商 efficient-attention 委托 + fp32 精度补偿；**mlu590**: TMO FA + fused overrideable（CNNL）委托 |
 | 公共入口 | `kernel/triton_level.py` facade → `kernel/backends/{ascend910,p800_kunlunxin,mlu590}.py` |
 | 验证 | P800: kernel 37/37 · 黄金 265/265 · A1 拦截/梯度 · mini-decoder ✅；MLU590: kernel 37/37 · 黄金 265/265 · 三层/守卫 ✅；Ascend 原验证保留 |
 | P800 性能 | 强制读回输出的 fp16 采样相对 Python `F.sdpa` 加速 **1.02-1.14x**；FlagGems 2k/4k 比 ours 慢 5.1-6.6x |
-| MLU 性能 | math private 路径相对原生 `F.sdpa` **0.12-0.52x**；FlagGems 慢 10-40x（仅兜底/对照） |
+| MLU 性能 | TMO+fused 相对原生 **1.00-1.33x**；FlagGems 慢 10-40x（仅兜底/对照） |
 
 平台绑定与坑位见 [PLATFORM.md](PLATFORM.md)，多平台扩展流程见
 [MERGE.md](MERGE.md)。
@@ -93,18 +93,19 @@ Triton forward。它通过 no-mask causal、GQA、非 causal 和尾块精度检�
 
 ## mlu590 实现策略（Cambricon）
 
-1. **主路径 = math private 委托**: 直调
-   `aten::_scaled_dot_product_attention_math`（与原生 `F.sdpa` 同语义、
-   非递归）；**不可**在 backend 内再调 `F.sdpa`（A1 注册后递归）。
-2. **bool mask 转 additive `-inf` bias**: math kernel 直接收 bool 在本栈
-   err≈0.19；转换后与参考一致。
-3. **causal+mask 先折叠进 mask**: 与 `_native_shim`/`F.sdpa` 拒绝并存的
-   处理一致。
-4. **全遮蔽行恢复 NaN**: math private 返回有限值，输出端 `masked_fill`。
-5. **FlagGems `_cambricon` 仅兜底**: 精度 265/265 全过但比原生慢 10-40x
-   且无 autograd；direct 可微调用复用 A1 数学 backward。
+1. **P0 主路径 = fused overrideable**: 直调
+   `aten::_scaled_dot_product_fused_attention_overrideable`（CNNL FA v2，
+   与原生 `F.sdpa` 同路径）≈1.0x 原生；**不可**在 backend 内再调
+   `F.sdpa`（A1 注册后递归）。
+2. **P1 快路径 = TMO FA**: `torch_mlu_ops.flash_attention`
+   （`cnnlScaledDotProductAttn_v7`，BSHD 布局，bias BHSD）；半精度
+   prefill 实测 **1.21-1.33x** 原生；`SDPA_MLU_TMO=0` 强制回 P0。
+3. **bool mask 转 additive `-inf` bias**；**causal+mask 先折叠进 mask**；
+   **全遮蔽行恢复 NaN**。
+4. **GQA**: overrideable 无 `enable_gqa` → `repeat_interleave` 扩 KV。
+5. **兜底**: math private → FlagGems `_cambricon` → fp32 reference。
 6. **A1 key = `AutogradPrivateUse1`**: 与 torch_npu 同栈结论；注册守卫
-   放宽为 torch_npu **或** torch_mlu 可用。
+   放宽为 torch_npu **或** torch_mlu 可用；可微直调复用 A1 数学 backward。
 
 复现与性能数字见 [reports/mlu590.md](reports/mlu590.md)。
 
@@ -138,10 +139,13 @@ GQA/双 mask/尾块），历史精度、性能与根因分析见
 
 ## 关键平台发现（MLU）
 
-1. MLU 私有 efficient/flash/cudnn attention 均不可用（CPU fallback 失败）；
-   唯一可用非递归 private 入口是 `_scaled_dot_product_attention_math`。
-2. math private 对 **bool mask** 在本栈误处理（err≈0.19），必须先转
-   additive bias；`F.sdpa`/reference 对 bool 正确。
-3. FlagGems `_cambricon` attention 精度过黄金但比原生慢 10-40x，
-   且无 autograd——不可作生产主路径。
-4. 全遮蔽行 math private 返回有限值，需显式恢复 NaN（同 p800 教训）。
+1. **原生 `F.sdpa` 走 fused overrideable（CNNL FA v2），不是 math**；
+   直调 math private 会拿到未融合分解（0.11-0.55x 原生）。
+2. MLU 上 efficient/flash/cudnn 三个 aten private op 仍 CPU fallback
+   失败；可用融合入口是 **fused overrideable** 与 **TMO flash_attention**。
+3. TMO 为 BSHD 布局、bias 形状 `(B,H,Sq,Skv)`；半精度 prefill 再快
+   1.2-1.8x（见 reports/mlu590.md）。
+4. math private 直接收 bool 在本栈 err≈0.19，必须转 additive。
+5. FlagGems `_cambricon` attention 精度过黄金但慢 10-40x 且无 autograd。
+6. 全遮蔽行 fused/TMO 返回有限值，需显式恢复 NaN（同 p800 教训）。
+7. `SDPA_MLU_TMO=0` 关闭 TMO，只走 overrideable。

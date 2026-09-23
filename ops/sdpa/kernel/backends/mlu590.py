@@ -2,23 +2,24 @@
 
 Engineering choice
 ------------------
-The MLU stack exposes no private efficient-attention kernel that stays on
-device (``aten::_scaled_dot_product_efficient_attention`` falls back to CPU
-and fails for flash/cudnn variants).  Python ``F.sdpa`` is a fast composite
-math path, but it becomes recursive once A1 registers AutogradPrivateUse1.
+Native ``F.sdpa`` on MLU dispatches to
+``aten::_scaled_dot_product_fused_attention_overrideable`` (CNNL FlashAttention
+v2).  The earlier math-private primary path was an unfused bmm+softmax
+composite and ran 0.11-0.55x native.  efficient/flash/cudnn aten private ops
+still fall back to CPU and stay unavailable.
 
-Primary path: ``aten::_scaled_dot_product_attention_math`` — a non-recursive
-private entry that runs the same matmul+softmax composition as native F.sdpa
-on MLU (≈1.5-3.5x native, vs FlagGems Triton ≈10-40x slower).  bool masks
-are converted to additive ``-inf`` bias because the math kernel mishandles
-bool on this stack.  Fully masked rows restore the CPU/aten NaN corner.
-FlagGems Cambricon remains available as a fallback composition path when the
-private math op is missing.  float32 without the private op uses the fp32
-reference for golden compatibility.
+Primary path: fused overrideable — same kernel family as native, typically
+~1.0x (often bitwise-equal).  Optional fast path: ``torch_mlu_ops
+.flash_attention`` (CNNL ScaledDotProductAttn_v7) for eligible half-precision
+shapes measured 1.3-2.7x native.  bool masks become additive ``-inf`` bias;
+causal+mask folds into the mask; fully masked rows restore NaN.  Fallbacks:
+math private → FlagGems → fp32 reference.  Differentiable direct calls
+borrow the A1 math backward.
 """
 from __future__ import annotations
 
 import importlib.util
+import os
 from typing import Any
 
 import torch
@@ -43,12 +44,27 @@ def _has_mlu_stack() -> bool:
         return False
 
 
+def _has_fused_overrideable() -> bool:
+    try:
+        torch.ops.aten._scaled_dot_product_fused_attention_overrideable
+        return True
+    except Exception:
+        return False
+
+
 def _has_math_private() -> bool:
     try:
         torch.ops.aten._scaled_dot_product_attention_math
         return True
     except Exception:
         return False
+
+
+def _tmo_flash_attention():
+    if importlib.util.find_spec("torch_mlu_ops") is None:
+        raise RuntimeError("torch_mlu_ops not installed")
+    import torch_mlu_ops as tmo
+    return tmo.flash_attention
 
 
 def _gems_attention():
@@ -59,9 +75,19 @@ def _gems_attention():
 
 
 def _bool_to_additive(attn_mask: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
-    """math kernel mishandles bool on MLU; additive -inf bias is exact."""
+    """Fused/math kernels mishandle bool on this stack; -inf bias is exact."""
     bias = torch.zeros_like(attn_mask, dtype=dtype)
     return bias.masked_fill(~attn_mask, float("-inf"))
+
+
+def _to_bias(attn_mask: torch.Tensor | None, dtype: torch.dtype):
+    if attn_mask is None:
+        return None
+    if attn_mask.dtype == torch.bool:
+        return _bool_to_additive(attn_mask, dtype)
+    if attn_mask.dtype != dtype:
+        return attn_mask.to(dtype)
+    return attn_mask
 
 
 def _restore_full_mask_nan(query, key, out, attn_mask, is_causal):
@@ -84,14 +110,20 @@ def _restore_full_mask_nan(query, key, out, attn_mask, is_causal):
     return out.masked_fill(all_masked, float("nan"))
 
 
+def _expand_gqa(query, key, value):
+    """Fused overrideable has no enable_gqa; broadcast KV heads to Hq."""
+    hq, hkv = query.shape[1], key.shape[1]
+    if hq == hkv:
+        return query, key, value
+    rep = hq // hkv
+    key = key.repeat_interleave(rep, dim=1)
+    value = value.repeat_interleave(rep, dim=1)
+    return query, key, value
+
+
 def _grad_path(query, key, value, attn_mask, dropout_p, is_causal,
                scale, enable_gqa):
-    """Route differentiable direct calls through A1 math backward.
-
-    The private math path has no reliable autograd on this stack for all
-    mask forms; borrow the custom Function.  Inside its forward autograd
-    is disabled so there is no recursion into this path.
-    """
+    """Route differentiable direct calls through A1 math backward."""
     try:
         from ...register import _SDPA_A1_Function
     except ImportError:
@@ -108,15 +140,82 @@ def _grad_path(query, key, value, attn_mask, dropout_p, is_causal,
         _SDPA_A1_Function._impl = saved_impl
 
 
+def _sdpa_fused_overrideable(query, key, value, attn_mask, dropout_p,
+                             is_causal, scale, enable_gqa):
+    """P0 primary: CNNL FlashAttention via aten fused overrideable."""
+    q, k, v = _expand_gqa(query, key, value)
+    bias = _to_bias(attn_mask, query.dtype)
+    out = torch.ops.aten._scaled_dot_product_fused_attention_overrideable(
+        q, k, v,
+        attn_bias=bias,
+        dropout_p=dropout_p,
+        is_causal=is_causal,
+        return_debug_mask=False,
+        scale=scale,
+    )[0]
+    return _restore_full_mask_nan(query, key, out, attn_mask, is_causal)
+
+
+def _tmo_eligible(query, key, value, attn_mask, is_causal) -> bool:
+    """Fast path: half/bf16 only (fp32 stays on overrideable for golden).
+
+    Disable with SDPA_MLU_TMO=0 to force the fused-overrideable path.
+    """
+    if query.dtype not in (torch.float16, torch.bfloat16):
+        return False
+    return os.environ.get("SDPA_MLU_TMO", "1") != "0"
+
+
+def _sdpa_tmo(query, key, value, attn_mask, dropout_p, is_causal, scale,
+              enable_gqa):
+    """P1 fast path: torch_mlu_ops.flash_attention (BSHD + BHSD bias)."""
+    flash = _tmo_flash_attention()
+    hq, hkv = query.shape[1], key.shape[1]
+    sq, skv = query.shape[-2], key.shape[-2]
+    d = query.shape[-1]
+    sm_scale = scale if scale is not None else d ** -0.5
+
+    qs = query.transpose(1, 2).contiguous()          # B,S,Hq,D
+    ks = key.transpose(1, 2).contiguous()            # B,S,Hkv,D
+    vs = value.transpose(1, 2).contiguous()
+    if hq != hkv:
+        rep = hq // hkv
+        # TMO wants equal head counts on BSHD layout: expand on head axis (dim=2).
+        ks = ks.repeat_interleave(rep, dim=2).contiguous()
+        vs = vs.repeat_interleave(rep, dim=2).contiguous()
+
+    bias_bhsd = None
+    if attn_mask is not None:
+        b = _to_bias(attn_mask, query.dtype)
+        # TMO attn_bias: (B, Hq, Sq, Skv) — already BHSD for our masks.
+        bias_bhsd = b
+
+    out = flash(
+        qs, ks, vs,
+        out=None,
+        cu_seq_lens_q=None,
+        cu_seq_lens_kv=None,
+        alibi_slope=None,
+        attn_bias=bias_bhsd,
+        max_seq_len_q=sq,
+        max_seq_len_kv=skv,
+        softmax_scale=sm_scale,
+        is_causal=is_causal,
+        compute_dtype=torch.float32,
+        return_lse=False,
+        out_dtype=query.dtype,
+    )
+    if isinstance(out, (tuple, list)):
+        out = out[0]
+    # B,S,H,D → B,H,S,D
+    if out.dim() == 4 and out.shape[1] == sq and out.shape[2] == hq:
+        out = out.transpose(1, 2).contiguous()
+    return _restore_full_mask_nan(query, key, out, attn_mask, is_causal)
+
+
 def _sdpa_math_private(query, key, value, attn_mask, dropout_p, is_causal,
                        scale, enable_gqa):
-    """Non-recursive fast path via aten::_scaled_dot_product_attention_math."""
-    bias = attn_mask
-    if bias is not None and bias.dtype == torch.bool:
-        bias = _bool_to_additive(bias, query.dtype)
-    elif bias is not None and bias.dtype != query.dtype:
-        bias = bias.to(query.dtype)
-
+    bias = _to_bias(attn_mask, query.dtype)
     out = torch.ops.aten._scaled_dot_product_attention_math(
         query, key, value, bias, dropout_p, is_causal, None,
         scale=scale, enable_gqa=enable_gqa,
@@ -150,8 +249,8 @@ def sdpa_triton(
 ) -> torch.Tensor:
     """aten-compatible SDPA entry for Cambricon MLU590.
 
-    Legacy tuning keyword arguments are accepted and ignored because
-    scheduling is delegated to the platform math/Triton path.
+    Routes: TMO FA (optional) → fused overrideable → math → FlagGems →
+    reference.  Legacy tuning kwargs are accepted and ignored.
     """
     if query.device.type not in SUPPORTED_DEVICE_TYPES or not _has_mlu_stack():
         raise RuntimeError(
@@ -205,8 +304,8 @@ def sdpa_triton(
             enable_gqa,
         )
 
-    # causal + explicit mask: fold causal into bias (math kernel, like F.sdpa,
-    # rejects the combination on some stacks; fold keeps one mask channel).
+    # causal + explicit mask: fold into one mask channel (same as F.sdpa /
+    # _native_shim; both reject the combination on some stacks).
     if is_causal and attn_mask is not None:
         sq, skv = query.shape[-2], key.shape[-2]
         if sq == skv:
@@ -221,6 +320,26 @@ def sdpa_triton(
                 ).to(attn_mask.dtype)
             is_causal = False
 
+    # P1: TMO fast path (half precision).
+    if _tmo_eligible(query, key, value, attn_mask, is_causal):
+        try:
+            return _sdpa_tmo(
+                query, key, value, attn_mask, dropout_p, is_causal, scale,
+                enable_gqa,
+            )
+        except Exception:
+            pass  # fall through to fused overrideable
+
+    # P0: fused overrideable (native CNNL FA v2 path).
+    if _has_fused_overrideable():
+        try:
+            return _sdpa_fused_overrideable(
+                query, key, value, attn_mask, dropout_p, is_causal, scale,
+                enable_gqa,
+            )
+        except Exception:
+            pass
+
     if _has_math_private():
         try:
             return _sdpa_math_private(
@@ -228,7 +347,7 @@ def sdpa_triton(
                 enable_gqa,
             )
         except Exception:
-            pass  # fall through to FlagGems / reference
+            pass
 
     try:
         _gems_attention()

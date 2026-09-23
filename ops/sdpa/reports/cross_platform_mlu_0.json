@@ -7,10 +7,10 @@
       "H": 32,
       "B": 32,
       "flops_g": 34.4,
-      "native_ms": 1.235,
-      "native_tflops": 27.8,
-      "ours_triton_ms": 7.0416,
-      "ours_triton_tflops": 4.9
+      "native_ms": 1.2279,
+      "native_tflops": 28.0,
+      "ours_triton_ms": 1.3656,
+      "ours_triton_tflops": 25.2
     },
     {
       "S": 1024,
@@ -18,10 +18,10 @@
       "H": 32,
       "B": 16,
       "flops_g": 68.7,
-      "native_ms": 2.1852,
-      "native_tflops": 31.4,
-      "ours_triton_ms": 13.2151,
-      "ours_triton_tflops": 5.2
+      "native_ms": 2.16,
+      "native_tflops": 31.8,
+      "ours_triton_ms": 1.733,
+      "ours_triton_tflops": 39.7
     },
     {
       "S": 2048,
@@ -29,10 +29,10 @@
       "H": 32,
       "B": 8,
       "flops_g": 137.4,
-      "native_ms": 2.8328,
-      "native_tflops": 48.5,
-      "ours_triton_ms": 25.3137,
-      "ours_triton_tflops": 5.4
+      "native_ms": 2.8068,
+      "native_tflops": 49.0,
+      "ours_triton_ms": 2.4243,
+      "ours_triton_tflops": 56.7
     },
     {
       "S": 4096,
@@ -40,10 +40,10 @@
       "H": 32,
       "B": 4,
       "flops_g": 274.9,
-      "native_ms": 5.6386,
-      "native_tflops": 48.7,
-      "ours_triton_ms": 49.3403,
-      "ours_triton_tflops": 5.6
+      "native_ms": 5.673,
+      "native_tflops": 48.5,
+      "ours_triton_ms": 3.8004,
+      "ours_triton_tflops": 72.3
     },
     {
       "S": 8192,
@@ -51,10 +51,10 @@
       "H": 32,
       "B": 2,
       "flops_g": 549.8,
-      "native_ms": 8.9357,
+      "native_ms": 8.9341,
       "native_tflops": 61.5,
-      "ours_triton_ms": 97.6789,
-      "ours_triton_tflops": 5.6
+      "ours_triton_ms": 6.5458,
+      "ours_triton_tflops": 84.0
     },
     {
       "S": 512,
@@ -62,10 +62,10 @@
       "H": 16,
       "B": 32,
       "flops_g": 34.4,
-      "native_ms": 0.8719,
-      "native_tflops": 39.4,
-      "ours_triton_ms": 4.3405,
-      "ours_triton_tflops": 7.9
+      "native_ms": 0.8667,
+      "native_tflops": 39.6,
+      "ours_triton_ms": 0.8628,
+      "ours_triton_tflops": 39.8
     },
     {
       "S": 1024,
@@ -73,10 +73,10 @@
       "H": 16,
       "B": 16,
       "flops_g": 68.7,
-      "native_ms": 1.6073,
-      "native_tflops": 42.8,
-      "ours_triton_ms": 7.7506,
-      "ours_triton_tflops": 8.9
+      "native_ms": 1.6086,
+      "native_tflops": 42.7,
+      "ours_triton_ms": 1.1303,
+      "ours_triton_tflops": 60.8
     },
     {
       "S": 2048,
@@ -84,10 +84,10 @@
       "H": 16,
       "B": 8,
       "flops_g": 137.4,
-      "native_ms": 1.9387,
-      "native_tflops": 70.9,
-      "ours_triton_ms": 14.6087,
-      "ours_triton_tflops": 9.4
+      "native_ms": 1.9315,
+      "native_tflops": 71.2,
+      "ours_triton_ms": 1.5408,
+      "ours_triton_tflops": 89.2
     },
     {
       "S": 4096,
@@ -95,10 +95,10 @@
       "H": 16,
       "B": 4,
       "flops_g": 274.9,
-      "native_ms": 2.8811,
-      "native_tflops": 95.4,
-      "ours_triton_ms": 28.3111,
-      "ours_triton_tflops": 9.7
+      "native_ms": 2.8738,
+      "native_tflops": 95.6,
+      "ours_triton_ms": 2.3753,
+      "ours_triton_tflops": 115.7
     },
     {
       "S": 8192,
@@ -106,10 +106,10 @@
       "H": 16,
       "B": 2,
       "flops_g": 549.8,
-      "native_ms": 4.9135,
-      "native_tflops": 111.9,
-      "ours_triton_ms": 56.2234,
-      "ours_triton_tflops": 9.8
+      "native_ms": 4.9185,
+      "native_tflops": 111.8,
+      "ours_triton_ms": 4.1089,
+      "ours_triton_tflops": 133.8
     }
   ]
 }

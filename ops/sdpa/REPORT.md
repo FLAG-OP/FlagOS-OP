@@ -5,8 +5,8 @@
 | 算子 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
 | 语义 | [reference.py](reference.py)（fp32 内部、GQA、causal、bool/float mask） |
 | 路线 | A1 aten 拦截；平台实现由 [kernel/triton_level.py](kernel/triton_level.py) facade 分发 |
-| 平台 | ascend910（Triton 主实现）· p800-kunlunxin（厂商委托 + fp32 补偿）· mlu590（Cambricon math private 委托） |
-| 状态 | 2026-09-23: MLU590 三层 + 黄金全绿；2026-09-22: P800 三层 + 黄金全绿 |
+| 平台 | ascend910（Triton 主实现）· p800-kunlunxin（厂商委托 + fp32 补偿）· mlu590（TMO FA + fused overrideable 委托） |
+| 状态 | 2026-09-23: MLU590 三层 + 黄金全绿（fused/TMO 修订后 1.00-1.33x 原生）；2026-09-22: P800 三层 + 黄金全绿 |
 
 ## 实现矩阵
 
@@ -14,17 +14,17 @@
 |---|---|---|---|---|
 | ascend910 | Triton | [kernel/backends/ascend910.py](kernel/backends/ascend910.py) | ✅ | online-softmax two-pass、causal 截断、GQA/双 mask/尾块 |
 | p800-kunlunxin | 厂商 kernel 委托 | [kernel/backends/p800_kunlunxin.py](kernel/backends/p800_kunlunxin.py) | ✅ | fp16/bf16 直调 efficient attention；fp32 走 ATen 组合 + bmm workaround |
-| mlu590 | math private 委托 | [kernel/backends/mlu590.py](kernel/backends/mlu590.py) | ✅ | 直调 `_scaled_dot_product_attention_math`；bool→additive；FlagGems 兜底 |
+| mlu590 | 厂商 kernel 委托 | [kernel/backends/mlu590.py](kernel/backends/mlu590.py) | ✅ | TMO FA（半精度）→ fused overrideable；math/FlagGems 兜底 |
 | 通用 | torch | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | 第二判卷人 / 对照 |
 
 ## mlu590 验证矩阵
 
 | 层级 | 命令 / 入口 | 结果 |
 |---|---|---|
-| kernel | `python3 test/kernel_level.py mlu590` | ✅ 37/37，最大误差 9.77e-4（bf16），哨兵通过，1k D128 0.76ms |
-| 黄金 | `python3 script/check_accuracy.py --impl triton --device mlu:0` | ✅ 265/265，extreme 相对误差 2.37e-3 |
-| op | `python3 test/op_level.py mlu590` | ✅ AutogradPrivateUse1 拦截、注册=直调(逐位)、梯度通过 |
-| 应用 | `python3 test/framework_level.py mlu590` | ✅ mini-decoder 拦截 28 次，logits diff=0，续写一致率 1.00 |
+| kernel | `python3 test/kernel_level.py mlu590` | ✅ 37/37，最大误差 3.91e-3（bf16），哨兵通过，1k D128 0.25ms |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device mlu:0` | ✅ 265/265，worst 7.81e-3（bf16 bool，容差内） |
+| op | `python3 test/op_level.py mlu590` | ✅ AutogradPrivateUse1 拦截、注册=直调(逐位)、vs 原生 4.88e-4、梯度通过 |
+| 应用 | `python3 test/framework_level.py mlu590` | ✅ mini-decoder 拦截 28 次，logits diff=1.95e-3，续写一致率 1.00 |
 | 守卫 | `python3 probes/guard_check.py mlu590` | ✅ 元数据 / mlu 路径 / CPU 拒绝 / 注册 |
 
 复现报告与坑位：[reports/mlu590.md](reports/mlu590.md)。
@@ -32,20 +32,19 @@
 ## mlu590 fp16 性能采样
 
 数据：[perf_fp16_mlu590.json](reports/perf_fp16_mlu590.json)
-（warmup=20，iters=100；speedup = native/ours，>1 更快）。
+（warmup=20，iters=100；speedup = native/ours，**>1 表示 ours 更快**）。
 
 | shape | ours | Python F.sdpa | FlagGems | speedup=F/ours |
 |---|---:|---:|---:|---:|
-| prefill 1k D64 | 0.711ms | 0.314ms | 8.409ms | **0.44x** |
-| prefill 1k D128 | 0.748ms | 0.319ms | 3.673ms | **0.43x** |
-| prefill 2k D128 | 2.049ms | 0.450ms | 8.045ms | **0.22x** |
-| prefill 4k D128 | 7.302ms | 0.912ms | 27.050ms | **0.12x** |
-| GQA 1k D128 | 1.264ms | 0.462ms | 5.303ms | **0.37x** |
-| decode D128 | 0.451ms | 0.233ms | 2.067ms | **0.52x** |
+| prefill 1k D64 | 0.227ms | 0.301ms | 2.915ms | **1.33x** |
+| prefill 1k D128 | 0.283ms | 0.363ms | 3.666ms | **1.28x** |
+| prefill 2k D128 | 0.351ms | 0.445ms | 8.088ms | **1.27x** |
+| prefill 4k D128 | 0.727ms | 0.902ms | 26.628ms | **1.24x** |
+| GQA 1k D128 | 0.366ms | 0.442ms | 5.176ms | **1.21x** |
+| decode D128 | 0.225ms | 0.224ms | 1.989ms | **1.00x** |
 
-原生 `F.sdpa` 在 MLU 上是高度优化的复合 math；ours 走同一语义的
-private math entry，op 层与原生**逐位一致**，差距来自 kernel 级调度/融合。
-FlagGems Triton 慢 10-40x，仅作对照与兜底。
+路径：半精度走 TMO FA（失败则 fused overrideable）；fp32 走
+overrideable。与原生常逐位/亚 ulp 一致；FlagGems Triton 慢 10-40x。
 
 ## p800-kunlunxin 验证矩阵
 
