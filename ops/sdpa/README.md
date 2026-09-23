@@ -78,6 +78,14 @@ sdpa/
    log-sumexp；可微 float mask 走厂商 backward 会报
    `bias_requires_grad not supported yet`，自动复用 A1 数学 backward。
 
+### 自研调度实验
+
+`kernel/p800_custom_triton.py` 保留了一个未接入生产 backend 的固定调度
+Triton forward。它通过 no-mask causal、GQA、非 causal 和尾块精度检查，
+但 bool/float mask 仍 launch 失败，且比厂商 efficient attention 慢
+**2.1-6.5x**。实验结论见
+[reports/p800-custom-schedule.md](reports/p800-custom-schedule.md)。
+
 ## 应用层
 
 `test/framework_level.py` 构建 Llama 风格 4 层 mini-decoder

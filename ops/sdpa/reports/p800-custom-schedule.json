@@ -1,0 +1,99 @@
+{
+  "device": "cuda:1",
+  "schedule": {
+    "BLOCK_M": 64,
+    "BLOCK_N": "min(64, HEAD_DIM)",
+    "num_warps": 4,
+    "num_stages": 1,
+    "autotune": false
+  },
+  "accuracy": [
+    {
+      "case": "B1_H4-4_S128-128_D128_c1",
+      "max_err_vs_vendor": 1.90735e-06,
+      "pass": true
+    },
+    {
+      "case": "B1_H32-8_S1024-1024_D128_c1",
+      "max_err_vs_vendor": 3.8147e-06,
+      "pass": true
+    },
+    {
+      "case": "B1_H4-4_S333-333_D64_c1",
+      "max_err_vs_vendor": 0.0,
+      "pass": true
+    },
+    {
+      "case": "B1_H8-2_S257-257_D64_c0",
+      "max_err_vs_vendor": 0.0,
+      "pass": true
+    },
+    {
+      "case": "B1_H4-4_S1-7_D64_c0",
+      "max_err_vs_vendor": 0.0,
+      "pass": true
+    }
+  ],
+  "performance": [
+    {
+      "B": 1,
+      "H": 16,
+      "S": 1024,
+      "D": 64,
+      "vendor_ms": 0.1503,
+      "custom_ms": 0.3206,
+      "vendor_tflops": 14.3,
+      "custom_tflops": 6.7,
+      "vendor_over_custom": 0.469,
+      "max_err_vs_vendor": 1.90735e-06
+    },
+    {
+      "B": 1,
+      "H": 16,
+      "S": 1024,
+      "D": 128,
+      "vendor_ms": 0.1566,
+      "custom_ms": 0.3354,
+      "vendor_tflops": 27.4,
+      "custom_tflops": 12.8,
+      "vendor_over_custom": 0.467,
+      "max_err_vs_vendor": 7.62939e-06
+    },
+    {
+      "B": 1,
+      "H": 16,
+      "S": 4096,
+      "D": 128,
+      "vendor_ms": 0.6706,
+      "custom_ms": 4.3509,
+      "vendor_tflops": 102.5,
+      "custom_tflops": 15.8,
+      "vendor_over_custom": 0.154,
+      "max_err_vs_vendor": 1.90735e-06
+    },
+    {
+      "B": 16,
+      "H": 16,
+      "S": 1024,
+      "D": 128,
+      "vendor_ms": 0.8007,
+      "custom_ms": 4.4334,
+      "vendor_tflops": 85.8,
+      "custom_tflops": 15.5,
+      "vendor_over_custom": 0.181,
+      "max_err_vs_vendor": 3.8147e-06
+    }
+  ],
+  "masks": [
+    {
+      "mask": "bool",
+      "pass": false,
+      "error": "RuntimeError: /tmp/tmp5zo8pv1p/main.c:72: xpuLaunchKernel(\"_attn_fwd\", function, gridX, gridY, gridZ, nclusters, ncores, stream, (void **)&kernel_params[0][0], (void **)&kernel_consts[0][0], &extra_data[0]) -> Operation not permitted("
+    },
+    {
+      "mask": "float",
+      "pass": false,
+      "error": "RuntimeError: /tmp/tmp5zo8pv1p/main.c:72: xpuLaunchKernel(\"_attn_fwd\", function, gridX, gridY, gridZ, nclusters, ncores, stream, (void **)&kernel_params[0][0], (void **)&kernel_consts[0][0], &extra_data[0]) -> Operation not permitted("
+    }
+  ]
+}

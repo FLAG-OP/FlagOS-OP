@@ -74,6 +74,7 @@ Ascend 三层验证、黄金 265/265、性能对标与根因分析保持有效�
 | 多平台合并指南 | [MERGE.md](MERGE.md) |
 | P800 复现报告 | [reports/p800-kunlunxin.md](reports/p800-kunlunxin.md) |
 | P800 direct Triton 探针 | [reports/p800-triton-probe.md](reports/p800-triton-probe.md) |
+| P800 自研固定调度实验 | [reports/p800-custom-schedule.md](reports/p800-custom-schedule.md) |
 | Ascend 开发报告 | [reports/development.md](reports/development.md) |
 | Ascend 测试报告 | [reports/test-report.md](reports/test-report.md) |
 | Ascend 精度 / 性能分册 | [reports/accuracy.md](reports/accuracy.md) / [reports/performance.md](reports/performance.md) |
