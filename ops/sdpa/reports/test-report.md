@@ -5,7 +5,7 @@
 | 算子名称 | `aten::scaled_dot_product_attention` |
 | 实现路线 / 开发级别 | A1 torch 算子替换 / Triton（Ascend）+ 厂商委托（P800） |
 | 目标设备 | `ascend910` · `p800-kunlunxin` |
-| 测试日期 | 2026-09-16（Ascend）· 2026-09-22（P800） |
+| 测试日期 | 2026-09-16（Ascend）· 2026-09-22/24（P800） |
 | 结论 | **双平台通过**（P800 补验见 §6） |
 
 ## 1. 测试范围
@@ -15,7 +15,7 @@
 | kernel 层（精度/哨兵/性能） | ✅ | `test/kernel_level.py` | PASS（36 组 + 哨兵 + 快速性能） |
 | 框架层（注册/拦截/梯度） | ✅ | `test/op_level.py` | PASS（拦截命中 · 逐位一致 · 梯度 vs 原生 ≤3.9e-3） |
 | 应用层（消费方双跑） | ✅ | `test/framework_level.py` | PASS（mini-decoder: 拦截 28 · logits 1.95e-3 · 续写一致率 1.00） |
-| 黄金回归 | ✅ | `script/gen_golden.py` + `check_accuracy.py` | PASS（265/265，双向互验生成） |
+| 黄金回归 | ✅ | `script/gen_golden.py` + `check_accuracy.py` | Ascend 历史 265/265；P800 397/397（§6） |
 | 性能三方对照 | ✅ | `script/bench_perf.py` | OK（fp16/bf16 各 6 形状） |
 | 平台守卫（三层） | ✅ | `probes/guard_check.py` | PASS（元数据/调用拦截/注册正向） |
 | 写法变体回归 | ✅ | `script/perf_variants.py` | PASS（8 变体数值全过；V4 已合入） |
@@ -80,7 +80,7 @@ dq 4.9e-4 · dk 4.9e-4 · dv 3.9e-3。
 | 层级 | 结果 |
 |---|---|
 | kernel | 37/37；普通 fp32 ≤5e-7，bf16 最大 3.906e-3；哨兵通过 |
-| 黄金 | 265/265；extreme 相对误差 4.25e-3 |
+| 黄金 | 397/397；extreme 相对误差 4.25e-3 |
 | A1 op | `AutogradCUDA` 拦截命中；注册=直调；direct q/k/v 与可微 mask 反向通过；dq/dk/dv 梯度对照通过 |
 | 应用 | mini-decoder 拦截 28；logits diff=0；贪心续写一致率 1.00 |
 | 守卫 | 元数据、`cuda:1` 正向路径、CPU 拒绝、注册全通过 |

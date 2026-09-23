@@ -39,7 +39,7 @@ def main() -> None:
         print(f"  => PASS  {r}")
 
     print("\n[sdpa] 三层全绿。黄金精度与性能:")
-    print("  python3 script/gen_golden.py            # CPU 生成（265 组）")
+    print("  python3 script/gen_golden.py            # CPU 生成（397 组）")
     print(f"  python3 script/check_accuracy.py --impl triton "
           f"--device {profile.torch_device}")
     print(f"  python3 script/bench_perf.py --device {profile.torch_device} "

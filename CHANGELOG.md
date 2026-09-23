@@ -11,7 +11,7 @@
   - direct autograd 按需计算 log-sumexp；可微 float mask 复用 A1 数学
     backward，规避厂商 `bias_requires_grad` 限制
   - A1 `AutogradCUDA` 拦截 + 数学 backward；P800 kernel 37/37、黄金
-    265/265、mini-decoder 与平台守卫全绿
+    397/397、mini-decoder 与平台守卫全绿
 - [ops/sdpa/reports/p800-kunlunxin.md](ops/sdpa/reports/p800-kunlunxin.md)
   与平台化性能 JSON，沉淀 FlagGems/Triton 平移失败原因与复现命令
 - SDPA perf gate 用例注册与 P800 基线更新；硬件级目录显式置空说明

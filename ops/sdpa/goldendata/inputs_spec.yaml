@@ -14,7 +14,7 @@ cases:
     mask: [null, bool, float]
     distribution: normal
     scale: 0.5
-    seeds_per_case: 2
+    seeds_per_case: 3
   - name: tail
     desc: 尾块（S 非 BLOCK 整倍数）+ ViT D=80 + GQA
     B: [1]
@@ -27,7 +27,7 @@ cases:
     mask: [null, bool]
     distribution: normal
     scale: 0.5
-    seeds_per_case: 2
+    seeds_per_case: 3
   - name: extreme
     desc: 大值/全零行（softmax 稳定性）
     B: [1]

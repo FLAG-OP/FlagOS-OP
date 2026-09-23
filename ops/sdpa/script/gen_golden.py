@@ -46,6 +46,10 @@ def main() -> int:
     spec = yaml.safe_load((HERE / "goldendata/inputs_spec.yaml").read_text())
     data_dir = Path(args.out) / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
+    # Goldens are reproducible generated artifacts; remove stale cases so the
+    # directory and index always describe the current specification.
+    for old in data_dir.glob("*.pt"):
+        old.unlink()
 
     index = {"op": spec["op"], "device": "cpu", "files": []}
     n = 0
@@ -60,7 +64,12 @@ def main() -> int:
                                             case["causal"], case["mask"]))
             for (B, Hq, Hkv, S, D, causal, mask_kind) in combos:
                 for k in range(case["seeds_per_case"]):
-                    seed = spec["seed_base"] + n
+                    # Keep the deterministic extreme-case seed independent of
+                    # the normal-grid seed count.  Its saturation behavior is
+                    # accumulation-order sensitive, so changing the random
+                    # input would silently change the precision criterion.
+                    seed = (spec["seed_base"] + 264
+                            if case.get("special") else spec["seed_base"] + n)
                     g = torch.Generator().manual_seed(seed)
                     q = (torch.randn(B, Hq, S, D, generator=g)
                          * case["scale"])

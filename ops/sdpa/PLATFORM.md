@@ -10,7 +10,7 @@
 | 内容 | 位置 |
 |---|---|
 | fp32 语义参考 | `reference.py` |
-| 黄金规格与 265 组数据 | `goldendata/`（CPU 生成，天然跨平台） |
+| 黄金规格与 397 组数据 | `goldendata/`（CPU 生成，天然跨平台） |
 | 公共入口与平台选择器 | `kernel/triton_level.py` → `kernel/backends/` |
 | 三层测试、哨兵与性能脚本 | `test/`、`script/`（传 profile/device 即可） |
 | A1 autograd.Function 包装与数学 backward | `register.py` |

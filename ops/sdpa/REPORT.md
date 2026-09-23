@@ -22,7 +22,7 @@
 | 层级 | 命令 / 入口 | 结果 |
 |---|---|---|
 | kernel | `python3 test/kernel_level.py p800-kunlunxin` | ✅ 37/37，最大误差 3.906e-3（bf16），哨兵通过 |
-| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | ✅ 265/265，extreme 相对误差 4.25e-3 |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | ✅ 397/397，extreme 相对误差 4.25e-3 |
 | op | `python3 test/op_level.py p800-kunlunxin` | ✅ AutogradCUDA 拦截、注册=直调、direct 与 A1 梯度通过 |
 | 应用 | `python3 test/framework_level.py p800-kunlunxin` | ✅ mini-decoder 拦截 28 次，logits diff=0，续写一致率 1.00 |
 | 守卫 | `python3 probes/guard_check.py p800-kunlunxin` | ✅ 元数据 / CUDA 路径 / CPU 拒绝 / 注册 |

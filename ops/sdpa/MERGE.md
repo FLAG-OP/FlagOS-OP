@@ -21,7 +21,7 @@
 ```
 sdpa/
 ├── reference.py              # 不动（fp32 语义，平台无关判卷标准）
-├── goldendata/               # 不动（265 组黄金直接复用，见 §2 Step3）
+├── goldendata/               # 不动（397 组黄金直接复用，见 §2 Step3）
 ├── register.py               # 不动（dispatch_key 已参数化）
 ├── _profile.py               # 加新平台 profile 条目
 ├── PLATFORM.md               # §2 改为"每平台一节"继续维护
@@ -82,7 +82,7 @@ Ascend Triton 项按现成实验脚本重跑；若新平台选择 Route B / 厂�
 python3 script/check_accuracy.py --impl triton --device <新平台dev>
 ```
 
-265 组黄金在 CPU 生成、双向互验，**不需要任何重建**。新平台实现
+397 组黄金在 CPU 生成、双向互验，**不需要任何重建**。新平台实现
 直接对同一判卷标准验证——这正是黄金先行设计的回报。若新平台全过，
 精度结论直接可比；若个别 case 失败，失败模式本身就是平台缺陷线索。
 
@@ -167,7 +167,7 @@ _kunlunxin/...` 各厂商目录并列，已实际存在），所以:
 
 ## 5. 合并完成判据（checklist）
 
-- [x] p800-kunlunxin: 黄金 265/265 + kernel 层 37/37 + op 层拦截/梯度绿
+- [x] p800-kunlunxin: 黄金 397/397 + kernel 层 37/37 + op 层拦截/梯度绿
 - [x] PLATFORM.md 有 p800-kunlunxin 小节，相反结论已显式标注
 - [x] 旧引用零改动（`kernel.triton_level.sdpa_triton` 保留）
 - [x] 误配平台触发调用守卫（`probes/guard_check.py p800-kunlunxin`）
