@@ -106,6 +106,8 @@ Ascend 三层验证、黄金 265/265、性能对标与根因分析保持有效�
 | P800 direct Triton 探针 | [reports/p800-triton-probe.md](reports/p800-triton-probe.md) |
 | P800 自研固定调度实验 | [reports/p800-custom-schedule.md](reports/p800-custom-schedule.md) |
 | MLU590 复现报告 | [reports/mlu590.md](reports/mlu590.md) |
+| MLU590 测试报告（已填样例） | [reports/examples/sdpa_mlu590_test_report.md](../../reports/examples/sdpa_mlu590_test_report.md) |
+| MLU590 开发报告 | [reports/examples/sdpa_mlu590_report.md](../../reports/examples/sdpa_mlu590_report.md) |
 | Ascend 开发报告 | [reports/development.md](reports/development.md) |
 | Ascend 测试报告 | [reports/test-report.md](reports/test-report.md) |
 | Ascend 精度 / 性能分册 | [reports/accuracy.md](reports/accuracy.md) / [reports/performance.md](reports/performance.md) |

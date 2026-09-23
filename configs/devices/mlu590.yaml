@@ -31,5 +31,6 @@ vendor_delegate: null
 
 reference_fallback: reference.torch
 
-# 原生参照走 torch_mlu 的 F.scaled_dot_product_attention（复合 math 路径）
+# 原生参照走 torch_mlu 的 F.scaled_dot_product_attention
+# → aten::_scaled_dot_product_fused_attention_overrideable（CNNL FA v2）
 vendor_kernels: []
