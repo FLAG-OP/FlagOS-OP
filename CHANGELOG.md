@@ -9,8 +9,9 @@
     FP32/FP16/BF16、int64/int32、padding 与 empty 全覆盖
   - dense backward 复用 native `embedding_backward`；为 XPU 未实现的
     `scale_grad_by_freq=True` 增加 inverse-frequency fallback
-  - `AutogradCUDA` A1 拦截 + 数学 backward；117 组黄金、19 组 forward、
-    6 组反向、`nn.Embedding` 应用层前向/反向全部通过
+  - `AutogradCUDA` A1 拦截 + 数学 backward；117 组黄金、20 组 forward
+    （含 `sparse=True` 前向）、6 组反向、`nn.Embedding` 应用层前向/反向
+    全部通过
 
 ## [0.13.0] - 2026-09-17
 

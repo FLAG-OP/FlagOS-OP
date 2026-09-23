@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::embedding` |
-| 范围 | 普通稠密查表 + dense backward |
+| 范围 | 普通查表 forward + dense backward；`sparse=True` forward 可用，稀疏 backward 不覆盖 |
 | 平台 | p800-kunlunxin / torch_xmlir |
 | 路线 | A1，`AutogradCUDA` |
 | 日期 / 状态 | 2026-09-23 / 三层与黄金全绿 |
@@ -12,7 +12,7 @@
 
 | 层级 | 入口 | 结果 |
 |---|---|---|
-| kernel forward | `test/kernel_level.py` | 19/19，FP32/FP16/BF16 全部 0 error |
+| kernel forward | `test/kernel_level.py` | 20/20，FP32/FP16/BF16 全部 0 error |
 | kernel backward | 同上 | 6/6；重复 index、padding、`scale_grad_by_freq` 全部 0 error |
 | 黄金 | `script/check_accuracy.py --impl p800` | 117/117，worst=0 |
 | A1 op | `test/op_level.py` | 拦截 4 次；hooked=direct 逐位；dense/scale backward 0 error |

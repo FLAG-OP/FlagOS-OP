@@ -19,7 +19,7 @@ CPU reference 使用独立 `index_select` 组合，不调用 `F.embedding`。
 结果：
 
 ```text
-kernel 19/19 max_err=0
+kernel 20/20 max_err=0
 golden 117/117 max_err=0
 ```
 

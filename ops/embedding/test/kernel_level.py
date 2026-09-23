@@ -95,7 +95,7 @@ def run(profile):
                 f"scale_freq={int(scale)} err={err:.3e}"
             )
 
-    # Sentinel and guard checks.
+    # Sentinel and boundary checks.
     weight = torch.randn(32, 8, device=dev, dtype=torch.float16)
     indices = torch.tensor([[1, 4, 4], [8, 8, 31]], device=dev)
     out1 = embedding(weight, indices)
@@ -104,12 +104,21 @@ def run(profile):
     assert not torch.equal(out1, embedding(weight + 0.125, indices))
     results.append("[OK] sentinel: deterministic + input-sensitive")
 
+    # ``sparse=True`` requests a sparse gradient representation but does not
+    # change the forward lookup.  The forward is therefore accepted; backward
+    # is the explicit unsupported boundary.
+    sparse_forward = embedding(weight, indices, sparse=True)
+    assert torch.equal(sparse_forward, embedding(weight, indices))
+    results.append("[OK] sparse=true forward accepted as dense lookup")
+
+    grad = torch.randn_like(weight)
     try:
-        embedding(weight, indices, sparse=True)
+        from kernel.p800_kunlunxin import embedding_backward
+        embedding_backward(grad, indices, weight.shape[0], -1, False, True)
     except NotImplementedError:
-        results.append("[OK] guard: sparse rejected")
+        results.append("[OK] guard: sparse backward rejected")
     else:
-        raise AssertionError("sparse path should be rejected")
+        raise AssertionError("sparse backward should be rejected")
 
     try:
         embedding(weight, indices, padding_idx=32)
@@ -123,7 +132,7 @@ def run(profile):
         print(line)
     return {
         "ok": True,
-        "forward_cases": 19,
+        "forward_cases": 20,
         "backward_cases": 6,
         "max_forward_err": max_forward_err,
         "max_backward_err": round(max_backward_err, 8),

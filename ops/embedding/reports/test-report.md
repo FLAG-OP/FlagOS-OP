@@ -16,7 +16,7 @@
 | 黄金 | 117 组 | ✅ |
 | A1 | 拦截、direct bitwise、autograd | ✅ |
 | 应用层 | `nn.Embedding` + MLP forward/backward/greedy | ✅ |
-| 边界 | sparse / invalid padding 显式拒绝 | ✅ |
+| 边界 | sparse forward 接受、sparse backward / invalid padding 拒绝 | ✅ |
 
 ## 命令
 
@@ -31,7 +31,7 @@ pytest -q tests/unit
 
 ## 结果摘要
 
-- kernel forward: 19/19，max error 0；
+- kernel forward: 20/20，max error 0；
 - kernel backward: 6/6，max error 0；
 - golden: 117/117，max error 0；
 - A1: interception count 4，registered path equals direct path bitwise；
@@ -39,3 +39,5 @@ pytest -q tests/unit
 - scale-grad error 0；
 - application logits/gradient diff 0；
 - greedy continuation match 1.00。
+- sparse=True forward 与 dense forward bitwise equal；
+- sparse backward显式拒绝。

@@ -79,17 +79,24 @@ def run(profile):
     ).abs().max().item()
     assert scale_err < 2e-3, scale_err
 
+    # Forward accepts sparse=True because the lookup itself is unchanged.
+    # The unsupported boundary is sparse backward / sparse gradient format.
+    sparse_forward = F.embedding(indices, weight, sparse=True)
+    assert torch.equal(sparse_forward, direct)
+    weight_sparse, indices_sparse = _make(dev, dtype, requires_grad=True)
+    sparse_out = F.embedding(indices_sparse, weight_sparse, sparse=True)
     try:
-        F.embedding(indices, weight, sparse=True)
+        sparse_out.float().sum().backward()
     except NotImplementedError:
-        sparse_guard = True
+        sparse_backward_guard = True
     else:
-        sparse_guard = False
-    assert sparse_guard
+        sparse_backward_guard = False
+    assert sparse_backward_guard
 
     print(
         f"  interception count={_CALLS['n']}; hooked=direct bitwise; "
-        f"dense grad err={err:.3e}; scale_freq grad err={scale_err:.3e}"
+        f"dense grad err={err:.3e}; scale_freq grad err={scale_err:.3e}; "
+        f"sparse fwd OK; sparse bwd rejected"
     )
     return {
         "ok": True,
@@ -97,7 +104,8 @@ def run(profile):
         "bitwise_vs_direct": True,
         "dense_grad_err": round(err, 8),
         "scale_grad_err": round(scale_err, 8),
-        "sparse_guard": True,
+        "sparse_forward": True,
+        "sparse_backward_guard": True,
     }
 
 

@@ -34,8 +34,7 @@ def _has_kunlunxin_stack() -> bool:
     return _HAS_KUNLUNXIN_STACK
 
 
-def _validate_device_dtype(primary, indices, padding_idx, sparse,
-                           num_weights):
+def _validate_device_dtype(primary, indices, padding_idx, num_weights):
     if primary.device.type not in SUPPORTED_DEVICE_TYPES or not _has_kunlunxin_stack():
         raise RuntimeError(
             f"embedding 是 PLATFORM={PLATFORM!r} 绑定实现，"
@@ -47,8 +46,6 @@ def _validate_device_dtype(primary, indices, padding_idx, sparse,
         raise ValueError(f"unsupported indices dtype: {indices.dtype}")
     if primary.device != indices.device:
         raise ValueError("weight and indices must be on the same device")
-    if sparse:
-        raise NotImplementedError("sparse embedding is outside this delivery")
     if padding_idx is not None and padding_idx != -1:
         if padding_idx < 0 or padding_idx >= num_weights:
             raise IndexError(
@@ -57,9 +54,10 @@ def _validate_device_dtype(primary, indices, padding_idx, sparse,
 
 
 def _validate_forward(weight, indices, padding_idx, sparse):
-    _validate_device_dtype(
-        weight, indices, padding_idx, sparse, weight.shape[0]
-    )
+    # ``sparse`` only requests a sparse weight gradient.  It does not change
+    # the forward lookup, so sparse=True is accepted here and rejected only by
+    # embedding_backward.
+    _validate_device_dtype(weight, indices, padding_idx, weight.shape[0])
     if weight.dim() != 2:
         raise ValueError("weight must be 2D (num_weights, dim)")
 
@@ -79,7 +77,6 @@ def embedding(
         and weight.dim() == 2
         and indices.dim() == 1
         and padding_idx in (-1, None)
-        and not sparse
     ):
         return torch.ops.aten.index_select(weight, 0, indices)
     _validate_forward(weight, indices, padding_idx, sparse)
@@ -104,10 +101,14 @@ def embedding_backward(
 ) -> torch.Tensor:
     """Dense backward with a P800 fallback for inverse-frequency scaling."""
     _validate_device_dtype(
-        grad_output, indices, padding_idx, sparse, num_weights
+        grad_output, indices, padding_idx, num_weights
     )
     if num_weights < 0:
         raise ValueError("num_weights must be non-negative")
+    if sparse:
+        raise NotImplementedError(
+            "sparse embedding backward is outside this delivery"
+        )
     if (grad_output.dim() != indices.dim() + 1
             or grad_output.shape[:-1] != indices.shape):
         raise ValueError("grad_output shape must be (*indices, dim)")

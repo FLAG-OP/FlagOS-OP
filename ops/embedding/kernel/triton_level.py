@@ -32,8 +32,7 @@ def _embedding_gather_kernel(
 
 def embedding_triton(weight, indices, padding_idx=-1,
                      scale_grad_by_freq=False, sparse=False):
-    if sparse:
-        raise NotImplementedError("sparse embedding is not supported")
+    # sparse only selects a sparse backward representation; forward is unchanged.
     dim = weight.shape[-1]
     flat_indices = indices.reshape(-1).contiguous()
     weight = weight.contiguous()

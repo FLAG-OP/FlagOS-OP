@@ -7,7 +7,8 @@
 - FP32 / FP16 / BF16；
 - `padding_idx`；
 - `scale_grad_by_freq`；
-- 显式排除 `sparse=True`、EmbeddingBag、稀疏优化器扩展。
+- `sparse=True` forward 按普通查表接受；不扩展稀疏反向。
+- 显式排除 EmbeddingBag、稀疏反向、稀疏优化器扩展。
 
 ## 一页看全
 
@@ -19,7 +20,7 @@
 | forward 生产实现 | XMLIR native `aten::index_select` row gather |
 | dense backward | native `aten::embedding_backward` |
 | `scale_grad_by_freq` | per-occurrence inverse-frequency scaling + dense backward |
-| 验证 | kernel 19 forward + 6 backward；黄金 117/117；A1；应用层全绿 |
+| 验证 | kernel 20 forward + 6 backward；黄金 117/117；A1；应用层全绿 |
 | 性能 | 大 shape 与 native embedding 基本持平（0.89-1.00x）；Triton gather 慢 11-102x |
 
 ## 快速开始
@@ -92,7 +93,8 @@ Check scale_grad_by_freq == false failed
 
 ## 边界
 
-- `sparse=True` 显式 `NotImplementedError`；
+- `sparse=True` forward 不改变输出，按 dense lookup 返回；
+- `sparse=True` backward / sparse weight grad 显式 `NotImplementedError`；
 - 不覆盖 EmbeddingBag；
 - 不覆盖稀疏 / fused optimizer；
 - weight 仅支持 FP32 / FP16 / BF16；

@@ -10,7 +10,8 @@
 - FP32/FP16/BF16；
 - padding_idx；
 - scale_grad_by_freq；
-- explicit sparse rejection。
+- `sparse=True` forward acceptance（lookup 不变）；
+- explicit sparse backward rejection。
 
 ## 2. 平台探索
 
@@ -77,6 +78,7 @@ scale -> inverse-frequency scaling + dense backward
 - reference 与官方 CPU embedding 交叉互验；
 - 117 组黄金；
 - forward rank/dtype/dim/padding/empty/int32；
+- sparse=True forward；
 - backward duplicate/padding/frequency；
 - A1 direct bitwise；
 - 应用层 `nn.Embedding` + MLP 前向、反向、贪心解码。
