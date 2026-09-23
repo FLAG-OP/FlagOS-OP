@@ -53,5 +53,61 @@ def main() -> None:
     )
 
 
+def perf_cases(profile):
+    """Register the production forward path in the repository perf gate."""
+    from common.perf import PerfCase
+
+    num_weights, num_indices, dim = 4096, 16384, 128
+    # Approximate traffic: read one FP16 embedding row per token, write the
+    # matching FP16 output row, and read one int64 token id.
+    bytes_moved = num_indices * dim * 2 * 2 + num_indices * 8
+
+    def make(fn):
+        def _make(p):
+            import torch
+
+            torch.manual_seed(20260923)
+            weight = (
+                torch.randn(num_weights, dim, device=p.torch_device,
+                            dtype=torch.float16) * 0.1
+            )
+            indices = torch.randint(
+                0, num_weights, (num_indices,), device=p.torch_device
+            )
+
+            def call():
+                # XMLIR completion guard: consume output, not only launch it.
+                return fn(weight, indices).reshape(-1)[0].item()
+
+            return call
+
+        return _make
+
+    def bandwidth(ms):
+        return {"GBps": bytes_moved / (ms / 1000) / 1e9}
+
+    import torch
+
+    from kernel.p800_kunlunxin import embedding
+
+    def native(weight, indices):
+        return torch.ops.aten.embedding(
+            weight, indices, -1, False, False
+        )
+
+    return [
+        PerfCase(
+            "ops.embedding.p800.forward",
+            group="ops", level="kernel",
+            make_fn=make(embedding), derived=bandwidth,
+        ),
+        PerfCase(
+            "ops.embedding.native.forward",
+            group="ops", level="kernel",
+            make_fn=make(native), derived=bandwidth,
+        ),
+    ]
+
+
 if __name__ == "__main__":
     main()

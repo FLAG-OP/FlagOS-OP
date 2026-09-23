@@ -42,6 +42,10 @@ def main() -> int:
     )
     out_dir = Path(args.out) / "data"
     out_dir.mkdir(parents=True, exist_ok=True)
+    # Generated data is reproducible and ignored. Remove stale files so the
+    # directory contains exactly the cases represented by the current spec.
+    for old in out_dir.glob("*.pt"):
+        old.unlink()
     index = {"op": spec["op"], "device": "cpu", "files": []}
     count = 0
 

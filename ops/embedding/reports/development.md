@@ -1,95 +1,165 @@
-# embedding 开发报告
+# 算子开发报告: embedding
 
-## 1. 需求收窄
+## 1. 环境配置
 
-原始需求只要求普通 `aten.embedding` 查表，并明确不扩大到 EmbeddingBag、
-稀疏反向或稀疏优化器。因此交付范围定义为：
+### 1.1 硬件
 
-- dense forward；
-- dense backward；
-- FP32/FP16/BF16；
-- padding_idx；
-- scale_grad_by_freq；
-- `sparse=True` forward acceptance（lookup 不变）；
-- explicit sparse backward rejection。
+| 项 | 值 |
+|---|---|
+| 设备 | Kunlunxin P800 |
+| 测试卡 | `cuda:1`（`CUDA_VISIBLE_DEVICES=1,2`） |
 
-## 2. 平台探索
+### 1.2 软件栈
 
-### Native
+| 项 | 值 |
+|---|---|
+| Python | 3.10.18 |
+| Torch | 2.9.0+cu129 |
+| torch_xmlir | XMLIR--bc1b1dc6f-dev+2026032411 |
+| Triton | 3.0.0+03c4c9be |
+| FlagGems | 4.2.1rc0 |
 
-`aten::embedding` forward 在 P800 上非常快，native dense backward 也正确。
-但：
+### 1.3 设备 profile 与关键环境变量
 
-```text
-scale_grad_by_freq=true
-```
+使用仓库 `configs/devices/p800-kunlunxin.yaml`。算子本地 profile 位于
+`../_profile.py`，稳定设备为 `cuda:1`。
 
-触发 XPU native 未实现错误。
+### 1.4 环境特殊性说明
 
-### FlagGems Triton
+`cuda:0` 曾出现厂商 SDPA 挂起；embedding 回归固定使用 `cuda:1`。XMLIR
+异步计时必须读取输出元素，否则会只测 launch/submission。
 
-FlagGems `_kunlunxin` embedding kernel 每行启动一个 program。强制读回输出
-后，16k×D128 约 3.7ms，而 native 约 0.05ms。
+## 2. 算子定义
 
-### 自写 Triton gather
-
-实现过：
-
-- row-per-program gather；
-- 2D tile gather；
-- flattened element gather。
-
-正确性均可，但 16k×D128 约 2.2-3.5ms，不能与 native row-gather 竞争。
-
-## 3. 生产方案
-
-Forward：
+### 2.1 语义
 
 ```text
-aten::index_select(weight, 0, flat_indices)
+out[*indices.shape, D] = weight[indices[i...], :]
 ```
 
-选择 index_select 的原因：
+`padding_idx` 不改变 forward；backward 时该行梯度为 0。
+`scale_grad_by_freq=True` 时，每个 occurrence 的梯度先除以该非 padding
+index 的出现次数，再按行求和。`sparse=True` forward 不改变查表结果；
+sparse backward / sparse weight grad 不在本期范围。
 
-1. 复用 XMLIR native 高性能 gather；
-2. 不经过 `aten::embedding` dispatcher，避免 A1 递归；
-3. 与 native embedding 输出 bitwise 一致。
+### 2.2 PyTorch 参考实现
 
-Backward：
+参考实现位于 `../reference.py`。forward 使用独立
+`weight.index_select(...)`；backward 用 fp32 稠密累加实现语义参考。
+
+### 2.3 接口签名
+
+```python
+embedding(
+    weight,
+    indices,
+    padding_idx=-1,
+    scale_grad_by_freq=False,
+    sparse=False,
+) -> Tensor
+```
+
+### 2.4 数值规格
+
+- FP32 / FP16 / BF16；
+- int64 / int32 indices；
+- forward 与 CPU 官方实现 bitwise equal；
+- dense / inverse-frequency backward 与 CPU 语义参考误差为 0。
+
+## 3. 实现说明
+
+### 3.1 路线选择理由
+
+P800 native row-gather 显著快于当前 Triton gather。为避免 A1 递归，
+forward 内部使用等价的 `aten::index_select`；dense backward 使用
+`aten::embedding_backward`。
+
+### 3.2 kernel 实现要点
 
 ```text
-dense -> aten::embedding_backward
-scale -> inverse-frequency scaling + dense backward
+forward:
+  flatten indices
+  aten::index_select(weight, 0, flat_indices)
+  view(*indices.shape, D)
+
+backward dense:
+  aten::embedding_backward
+
+backward scale_grad_by_freq:
+  count non-padding indices
+  grad *= 1/count[index]
+  aten::embedding_backward(scale_grad_by_freq=False)
 ```
 
-## 4. A1
+Triton gather 保留在 `kernel/triton_level.py` 作为探针；硬件级在
+`kernel/hardware_level/README.md` 显式置空。
 
-`AutogradCUDA` 注册可以拦截：
+### 3.3 注册与分发
 
-- `torch.nn.functional.embedding`；
-- `torch.embedding`；
-- `nn.Embedding.forward`。
+A1 注册点为 `AutogradCUDA`。wrapper 补齐 dispatcher 省略的默认参数，
+并用 `autograd.Function` 保持 forward/backward。
 
-注册 wrapper 补齐 dispatcher 省略的默认参数，并用 `autograd.Function`
-保持反向。
+## 4. 验证结果
 
-## 5. 测试设计
+### 4.1 kernel 层明细
 
-- reference 与官方 CPU embedding 交叉互验；
-- 117 组黄金；
-- forward rank/dtype/dim/padding/empty/int32；
-- sparse=True forward；
-- backward duplicate/padding/frequency；
-- A1 direct bitwise；
-- 应用层 `nn.Embedding` + MLP 前向、反向、贪心解码。
+- forward 20/20，max error 0；
+- backward 6/6，max error 0；
+- deterministic + input-sensitive 哨兵通过；
+- sparse forward bitwise equal；
+- sparse backward / invalid padding 显式拒绝。
 
-## 6. 结论
+### 4.2 framework 层明细
 
-普通 embedding 是典型 gather-bound operator。P800 XMLIR native row-gather
-已经足够强，当前自研 Triton 层无法带来收益。交付重点是：
+- A1 interception count 5；
+- registered path 与 direct path bitwise equal；
+- dense / inverse-frequency backward误差 0；
+- `nn.Embedding` + MLP 应用层 logits 与梯度 diff 0，贪心续写一致率 1.00。
 
-1. 同名 A1 接口；
-2. 任意 index rank；
-3. 完整 dtype/backward 语义；
-4. native 缺失的 inverse-frequency fallback；
-5. 可复现测试与性能证据。
+## 5. 性能
+
+详见 [performance.md](performance.md)。生产 forward 在 16k 以上与 native
+embedding 持平；Triton gather 慢约 3.5-102x。仓库 perf gate 已注册并入库
+基线：`FAIL 0 · WARN 0 · NEW 0`。
+
+## 6. 已知问题与风险
+
+| 风险 | 处理 |
+|---|---|
+| `scale_grad_by_freq=True` fallback 产生中间 scaled gradient | 已量化，dense 1.33ms → scale 1.96ms |
+| sparse backward 不覆盖 | forward 接受，backward 显式拒绝 |
+| Triton gather 慢 | 仅保留平台探针，不接生产 |
+| `cuda:0` 稳定性风险 | 回归固定 `cuda:1` |
+
+## 7. 结论与后续
+
+### 结论
+
+普通 embedding 是 gather-bound operator。P800 XMLIR native row-gather
+已经是当前最优路径；本交付补齐同名 A1 接口、任意 rank、dtype/backward
+语义、native 缺失的 inverse-frequency fallback，以及完整测试与性能证据。
+
+### 后续工作
+
+如需 EmbeddingBag、sparse gradient 或 sparse/fused optimizer，应重新开
+需求并设计稀疏存储、去重和更新链路，不应在当前 dense backend 上直接扩展。
+
+## 附录 A: 复现命令
+
+```bash
+python3 example.py p800-kunlunxin
+python3 script/gen_golden.py
+python3 script/check_accuracy.py --impl p800 --device cuda:1
+python3 script/bench_perf.py --device cuda:1 --dtype float16 \
+  --json-out reports/perf_fp16_p800-kunlunxin.json
+python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.embedding
+python3 scripts/perf_compare.py --device p800-kunlunxin
+```
+
+## 附录 B: 相关产物
+
+| 产物 | 位置 |
+|---|---|
+| operator perf JSON | `perf_fp16_p800-kunlunxin.json` |
+| perf gate 基线 | `../../../perf/baselines/p800-kunlunxin.json` |
+| 黄金规格 | `../goldendata/inputs_spec.yaml` |

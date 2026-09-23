@@ -20,7 +20,7 @@
 | forward 生产实现 | XMLIR native `aten::index_select` row gather |
 | dense backward | native `aten::embedding_backward` |
 | `scale_grad_by_freq` | per-occurrence inverse-frequency scaling + dense backward |
-| 验证 | kernel 20 forward + 6 backward；黄金 117/117；A1；应用层全绿 |
+| 验证 | kernel 20 forward + 6 backward；黄金 174/174；A1；应用层全绿 |
 | 性能 | 大 shape 与 native embedding 基本持平（0.89-1.00x）；Triton gather 慢 11-102x |
 
 ## 快速开始
@@ -32,6 +32,7 @@ python3 script/gen_golden.py
 python3 script/check_accuracy.py --impl p800 --device cuda:1
 python3 script/bench_perf.py --device cuda:1 \
   --json-out reports/perf_fp16_p800-kunlunxin.json
+python3 scripts/perf_compare.py --device p800-kunlunxin
 ```
 
 ## 实现策略

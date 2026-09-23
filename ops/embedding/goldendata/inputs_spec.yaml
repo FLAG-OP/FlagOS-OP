@@ -7,12 +7,12 @@ cases:
     dims: [8, 80, 512]
     index_shapes: [[17], [3, 17], [2, 3, 5]]
     padding_idx: [-1, 31]
-    seeds_per_case: 2
+    seeds_per_case: 3
   duplicates:
     dtypes: [float32, float16, bfloat16]
     indices: [[0, 1, 1, 31, 31, 31, 7]]
     padding_idx: [31]
-    seeds_per_case: 2
+    seeds_per_case: 3
   empty:
     dtypes: [float32, float16, bfloat16]
     indices: [[]]
