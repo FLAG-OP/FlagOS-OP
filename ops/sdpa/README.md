@@ -36,6 +36,8 @@ python3 script/check_accuracy.py --impl triton --device cuda:1
 python3 script/bench_perf.py --device cuda:1 \
   --json-out reports/perf_fp16_p800-kunlunxin.json
 python3 script/bench_cross_platform.py --device cuda:1
+python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.sdpa
+python3 scripts/perf_compare.py --device p800-kunlunxin
 ```
 
 设备映射遵循 `configs/devices/p800-kunlunxin.yaml` 与当前共享镜像的
