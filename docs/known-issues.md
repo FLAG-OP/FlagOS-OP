@@ -141,7 +141,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 全程无 mask、无调优，确定性路径；整数倍 N 零开销。测试形状补充
 3072/5000/5120 非整倍数回归。
 
-### 17. P800 SDPA 的五类平台分化（sdpa-op 实测发现）
+### 17. P800 SDPA 的六类平台分化（sdpa-op 实测发现）
 
 1. **Ascend Triton 不能零改动平移**: causal 循环边界中的 runtime select
    触发 XMLIR Triton rewrite 失败（`Could not find PtrState returned by
@@ -158,6 +158,10 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
    `torch.cuda.synchronize()`，可能只测到 launch/异步提交时间，出现
    9000+ TFLOPS 的物理不可能结果。基准必须读取
    `output[0,0,0,0].item()` 强制完成。
+6. **FlagGems `_kunlunxin` SDPA Triton 前向性能低**: 固定 tile 后，
+   FA2 协议仍比厂商 efficient attention 慢约 5.4-7.0x；raw-pointer 改写
+   触发 XMLIR `PtrState returned by the loop`。复现见
+   [ops/sdpa/reports/p800-triton-probe.md](../ops/sdpa/reports/p800-triton-probe.md)。
 
 平台结论与复现命令见
 [ops/sdpa/reports/p800-kunlunxin.md](../ops/sdpa/reports/p800-kunlunxin.md)。

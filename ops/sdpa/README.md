@@ -95,6 +95,9 @@ Linear/LayerNorm 的 fp16 溢出；注册后拦截 28 次，logits 与基线
    aten efficient 入口在典型 fp16 shape 上更快。
 4. FlagGems `_kunlunxin` attention 无 mask/causal 路径可运行但慢；
    float mask 场景实测 `xpuLaunchKernel ... Operation not permitted`。
+   固定 tile 直测在 FA2 协议下比厂商 efficient attention 慢
+   5.4-7.0x；raw-pointer 改写实验见
+   [reports/p800-triton-probe.md](reports/p800-triton-probe.md)。
 
 ## Ascend 910 保留能力
 
