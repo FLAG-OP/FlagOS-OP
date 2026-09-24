@@ -54,7 +54,10 @@ def reset_stats() -> None:
 def _triton_with_grad(query, key, value, attn_mask, dropout_p, is_causal,
                       scale, enable_gqa):
     """自研 Triton 前向 + 统一数学梯度（复用 register 的 autograd 包装）。"""
-    import register
+    try:  # Package-style import: ops.sdpa.kernel.auto_dispatch
+        from .. import register
+    except ImportError:
+        import register
     saved = register._SDPA_A1_Function._impl
     register._SDPA_A1_Function._impl = "triton"   # 防 auto 循环
     try:

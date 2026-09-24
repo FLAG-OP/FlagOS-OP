@@ -1,7 +1,7 @@
 # 黄金数据（goldendata）
 
 - 规格: [inputs_spec.yaml](inputs_spec.yaml)（声明式，KernelBench 风格）
-- 生成: `python3 script/gen_golden.py`（CPU fp32 权威，265 组）
+- 生成: `python3 script/gen_golden.py`（CPU fp32 权威，397 组）
 - 判定: `python3 script/check_accuracy.py --impl <triton|native|reference> --device <dev>`
 - `data/` 与 `index.json` 为生成物（sha256 索引），可随时重建
 

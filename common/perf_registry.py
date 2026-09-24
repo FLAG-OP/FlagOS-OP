@@ -19,6 +19,7 @@ PROVIDERS = [
     ("example.softmax-fullstack", ROOT / "examples/softmax-fullstack/example.py"),
     ("example.backward-example", ROOT / "examples/backward-example/example.py"),
     ("example.hw-kernel-example", ROOT / "examples/hw-kernel-example/example.py"),
+    ("ops.sdpa", ROOT / "ops/sdpa/example.py"),
 ]
 
 _cache: dict[str, object] = {}

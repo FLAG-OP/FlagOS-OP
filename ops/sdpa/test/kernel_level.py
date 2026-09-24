@@ -1,5 +1,5 @@
 # kernel 层直测: 精度 / 哨兵 / 性能（返回 metrics）。
-# 运行: python3 test/kernel_level.py [ascend910]
+# 运行: python3 test/kernel_level.py [ascend910|p800-kunlunxin]
 from __future__ import annotations
 
 import sys
@@ -58,8 +58,13 @@ def run(profile):
             q, k, v, m = _make_inputs(B_, Hq_, Hkv_, Sq_, Skv_, D_,
                                       dt, dev, 42, mask)
             out = sdpa_triton(q, k, v, m, 0.0, causal, None, Hq_ != Hkv_)
-            ref = sdpa_reference(q, k, v, m, 0.0, causal, None,
-                                 Hq_ != Hkv_).float()
+            # 黄金口径是 CPU fp32；P800 XMLIR 的组合 matmul 存在已知 JIT
+            # 缺陷，不能把“判卷标准”混入被测设备栈。
+            ref = sdpa_reference(
+                q.cpu(), k.cpu(), v.cpu(),
+                m.cpu() if m is not None else None,
+                0.0, causal, None, Hq_ != Hkv_,
+            ).to(dev).float()
             diff = (out.float() - ref).abs()
             # 全遮蔽行语义: 参考 NaN 行跳过（bool mask 可能产生）
             nan_rows = torch.isnan(ref[..., 0])           # (B,H,Sq)
@@ -105,17 +110,29 @@ def quick_perf(dev):
     from kernel.triton_level import sdpa_triton
     q, k, v, _ = _make_inputs(1, 16, 16, 1024, 1024, 128,
                               torch.float16, dev, 0)
+    def call():
+        # XMLIR async guard: consume one output element, otherwise this can
+        # measure only kernel submission rather than execution.
+        return sdpa_triton(q, k, v, None, 0.0, True, None,
+                           False)[0, 0, 0, 0].item()
+
     for _ in range(10):
-        sdpa_triton(q, k, v, None, 0.0, True, None, False)
-    torch.npu.synchronize()
+        call()
+    if dev.startswith("npu"):
+        torch.npu.synchronize()
+    elif dev.startswith("cuda"):
+        torch.cuda.synchronize()
     t0 = time.perf_counter()
     for _ in range(50):
-        sdpa_triton(q, k, v, None, 0.0, True, None, False)
-    torch.npu.synchronize()
+        call()
+    if dev.startswith("npu"):
+        torch.npu.synchronize()
+    elif dev.startswith("cuda"):
+        torch.cuda.synchronize()
     return round((time.perf_counter() - t0) / 50 * 1000, 4)
 
 
 if __name__ == "__main__":
     from _profile import load_profile
     print(run(load_profile(sys.argv[1] if len(sys.argv) > 1
-                           else "ascend910")))
+                           else None)))

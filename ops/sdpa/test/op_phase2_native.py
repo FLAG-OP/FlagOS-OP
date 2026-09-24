@@ -2,15 +2,22 @@
 # 输出: NATIVE_GRAD {"dq": [...], "dk": [...], "dv": [...]}（fp32 值）
 import sys
 
-sys.path.insert(0, "/root/sdpatten-op")
+from pathlib import Path
+
+OP_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(OP_DIR))
 import json  # noqa: E402
+import os  # noqa: E402
 
 import torch  # noqa: E402
-import torch_npu  # noqa: E402,F401
+
+dev = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
+    "SDPA_TEST_DEVICE", "npu:0")
+if dev.startswith("npu"):
+    import torch_npu  # noqa: F401
 
 g = torch.Generator(device="cpu").manual_seed(3)
 dt = torch.float16
-dev = "npu:0"
 mk = lambda n: (torch.randn(*n, generator=g) * 0.5)  # noqa: E731
 q = mk((1, 4, 128, 64)).to(dt).to(dev).requires_grad_(True)
 k = mk((1, 4, 128, 64)).to(dt).to(dev).requires_grad_(True)
