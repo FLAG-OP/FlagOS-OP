@@ -16,6 +16,7 @@
 | p800-kunlunxin | 厂商 kernel 委托 | [kernel/backends/p800_kunlunxin.py](kernel/backends/p800_kunlunxin.py) | ✅ | fp16/bf16 直调 efficient attention；fp32 走 ATen 组合 + bmm workaround |
 | mlu590 | 厂商 kernel 委托 | [kernel/backends/mlu590.py](kernel/backends/mlu590.py) | ✅ | TMO FA（半精度）→ fused overrideable；math/FlagGems 兜底 |
 | 通用 | torch | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | 第二判卷人 / 对照 |
+| 硬件级 | — | [kernel/hardware_level/README.md](kernel/hardware_level/README.md) | ⬜ 置空 | P800 硬件 SDK 不在当前容器；XMLIR/Triton 试验仍显著慢于厂商 kernel |
 
 ## mlu590 验证矩阵
 
@@ -51,14 +52,15 @@ overrideable。与原生常逐位/亚 ulp 一致；FlagGems Triton 慢 10-40x。
 | 层级 | 命令 / 入口 | 结果 |
 |---|---|---|
 | kernel | `python3 test/kernel_level.py p800-kunlunxin` | ✅ 37/37，最大误差 3.906e-3（bf16），哨兵通过 |
-| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | ✅ 265/265，extreme 相对误差 4.25e-3 |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | ✅ 397/397，extreme 相对误差 4.25e-3 |
 | op | `python3 test/op_level.py p800-kunlunxin` | ✅ AutogradCUDA 拦截、注册=直调、direct 与 A1 梯度通过 |
 | 应用 | `python3 test/framework_level.py p800-kunlunxin` | ✅ mini-decoder 拦截 28 次，logits diff=0，续写一致率 1.00 |
 | 守卫 | `python3 probes/guard_check.py p800-kunlunxin` | ✅ 元数据 / CUDA 路径 / CPU 拒绝 / 注册 |
+| perf gate | `scripts/perf_run.py --device p800-kunlunxin --pattern ops.sdpa` | ✅ P800/native 两条用例入库，FAIL 0 · WARN 0 |
 
 复现报告与坑位：[reports/p800-kunlunxin.md](reports/p800-kunlunxin.md)。
 
-## p800 fp16 性能采样
+## 关键数字
 
 数据：[perf_fp16_p800-kunlunxin.json](reports/perf_fp16_p800-kunlunxin.json)
 （warmup=20，iters=100；加速比 = baseline 延时 / ours 延时，>1 更快）。
@@ -89,7 +91,7 @@ overrideable。与原生常逐位/亚 ulp 一致；FlagGems Triton 慢 10-40x。
 自写 Triton 需先解决 XMLIR Triton 编译/launch 稳定性，不应为了
 “实现语言必须是 Triton”放弃厂商成熟 kernel。
 
-## ascend910 原有结论
+## 结论与遗留
 
 Ascend 三层验证、黄金 265/265、性能对标与根因分析保持有效，详见
 [reports/accuracy.md](reports/accuracy.md)、

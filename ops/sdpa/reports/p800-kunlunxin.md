@@ -80,13 +80,15 @@ python3 probes/guard_check.py p800-kunlunxin
 | 项 | 结果 |
 |---|---|
 | kernel 层 | 37/37；普通 fp32 ≤5e-7，bf16 最大 3.906e-3；确定性与输入敏感通过 |
-| 黄金 | 265/265；extreme 相对误差 4.25e-3 |
+| 黄金 | 397/397；extreme 相对误差 4.25e-3 |
 | op 层 | 拦截 count=2；注册=直调逐位；direct q/k/v 与可微 mask 反向通过；dq 4.883e-4 / dk 2.441e-4 / dv 3.906e-3 |
 | 应用层 | 拦截 count=28；logits diff=0；top-1 与贪心续写一致率 1.00 |
 | 平台守卫 | CPU 拒绝、XMLIR 元数据、AutogradCUDA 注册均通过 |
 
 应用层使用 bf16：该随机 mini-decoder 的 Linear/LayerNorm fp16 链路在
 P800 栈上溢出；bf16 下基线与插件输出均稳定。
+框架/应用测试先启动 FlagOS/FlagGems 的稳定 GELU 路径
+（`flag_gems.only_enable(include=["gelu"])`），SDPA 仍由 A1 backend 接管。
 
 ## 5. 性能采样
 

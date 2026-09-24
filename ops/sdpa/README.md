@@ -12,7 +12,7 @@
 | 路线 | **A1** aten 拦截，旧业务代码零改动 |
 | 平台 | **ascend910**: 自研 Triton online-softmax；**p800-kunlunxin**: 厂商 efficient-attention 委托 + fp32 精度补偿；**mlu590**: TMO FA + fused overrideable（CNNL）委托 |
 | 公共入口 | `kernel/triton_level.py` facade → `kernel/backends/{ascend910,p800_kunlunxin,mlu590}.py` |
-| 验证 | P800: kernel 37/37 · 黄金 265/265 · A1 拦截/梯度 · mini-decoder ✅；MLU590: kernel 37/37 · 黄金 265/265 · 三层/守卫 ✅；Ascend 原验证保留 |
+| 验证 | P800: kernel 37/37 · 黄金 397/397 · A1 拦截/梯度 · mini-decoder ✅；MLU590: kernel 37/37 · 黄金 397/397 · 三层/守卫 ✅；Ascend 历史 265/265 保留 |
 | P800 性能 | 强制读回输出的 fp16 采样相对 Python `F.sdpa` 加速 **1.02-1.14x**；FlagGems 2k/4k 比 ours 慢 5.1-6.6x |
 | MLU 性能 | TMO+fused 相对原生 **1.00-1.33x**；FlagGems 慢 10-40x（仅兜底/对照） |
 
@@ -31,7 +31,7 @@ python3 test/op_level.py mlu590
 python3 test/framework_level.py mlu590
 python3 probes/guard_check.py mlu590
 
-# CPU 黄金生成后，同一 265 组可直接测任意平台
+# CPU 黄金生成后，同一 397 组可直接测任意平台
 python3 script/gen_golden.py
 python3 script/check_accuracy.py --impl triton --device mlu:0
 python3 script/check_accuracy.py --impl triton --device cuda:1
@@ -41,6 +41,9 @@ python3 script/bench_perf.py --device mlu:0 \
 python3 script/bench_perf.py --device cuda:1 \
   --json-out reports/perf_fp16_p800-kunlunxin.json
 python3 script/bench_cross_platform.py --device mlu:0
+python3 script/bench_cross_platform.py --device cuda:1
+python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.sdpa
+python3 scripts/perf_compare.py --device p800-kunlunxin
 ```
 
 设备映射遵循 `configs/devices/mlu590.yaml`（`mlu:0`）与
@@ -61,7 +64,7 @@ sdpa/
 │   ├── torch_level.py        # ATen 组合对照
 │   └── _native_shim.py
 ├── test/                     # kernel / op / framework 三层
-├── goldendata/               # 声明式 265 组黄金
+├── goldendata/               # 声明式 397 组黄金
 ├── script/                   # 精度、性能、跨平台基准
 ├── probes/                   # 注册/守卫/平台探针
 └── reports/
@@ -110,6 +113,17 @@ Triton forward。它通过 no-mask causal、GQA、非 causal 和尾块精度检�
 复现与性能数字见 [reports/mlu590.md](reports/mlu590.md)。
 
 ## 应用层
+
+P800 框架/应用验证运行在 FlagOS 算子栈内：
+
+```python
+import flag_gems
+flag_gems.only_enable(include=["gelu"])  # mini-decoder 的 surrounding op
+```
+
+锁定镜像上全量 `flag_gems.enable()` 在该 consumer 上存在非确定性，因此
+选择稳定且真实被模型调用的 GELU 作为 FlagOS/FlagGems 代表路径；
+SDPA 由本目录 A1 注册接管。
 
 `test/framework_level.py` 构建 Llama 风格 4 层 mini-decoder
 （GQA 8/2、causal），业务代码只调用

@@ -133,3 +133,26 @@ python3 script/bench_perf.py --device cuda:1 --dtype float16 \
   --warmup 20 --iters 100 \
   --json-out reports/perf_fp16_p800-kunlunxin.json
 ```
+
+### 6.1 仓库 perf gate（2026-09-24）
+
+注册用例：
+
+```text
+ops.sdpa.p800.forward
+ops.sdpa.native.forward
+```
+
+入库基线（B1 H16 S1024 D128 causal fp16）：
+
+| case | latency | TFLOPS |
+|---|---:|---:|
+| ops.sdpa.p800.forward | 0.149ms | 28.7 |
+| ops.sdpa.native.forward | 0.168ms | 25.6 |
+
+门禁判定：`FAIL 0 · WARN 0`。复现：
+
+```bash
+python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.sdpa
+python3 scripts/perf_compare.py --device p800-kunlunxin
+```
