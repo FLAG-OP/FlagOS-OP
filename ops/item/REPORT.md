@@ -4,6 +4,7 @@
 |---|---|
 | 算子名称 | `item`（host 标量类） |
 | 语义 | [reference.py](reference.py)：单元素张量取为 Python 标量 (device→host 同步) |
+| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu / PrivateUse1） |
 | 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **A1** |
 | 日期 / 状态 | 2026-09-18 / 定稿 |
 

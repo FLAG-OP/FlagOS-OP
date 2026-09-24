@@ -4,6 +4,7 @@
 |---|---|
 | 算子名称 | `result_type`（dtype 元数据类） |
 | 语义 | [reference.py](reference.py)：两输入在 PyTorch 类型提升下的公共 dtype |
+| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu / PrivateUse1） |
 | 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **自用/实验** |
 | 日期 / 状态 | 2026-09-18 / 定稿 |
 

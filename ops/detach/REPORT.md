@@ -4,6 +4,7 @@
 |---|---|
 | 算子名称 | `detach`（别名/元数据（autograd）类） |
 | 语义 | [reference.py](reference.py)：返回与 self 共享底层存储、脱离 autograd 的新张量 (requires_grad=False) |
+| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu / PrivateUse1） |
 | 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **A1** |
 | 日期 / 状态 | 2026-09-18 / 定稿 |
 

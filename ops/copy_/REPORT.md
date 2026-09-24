@@ -4,6 +4,7 @@
 |---|---|
 | 算子名称 | `copy_` |
 | 语义 | [reference.py](reference.py)（原生 `dst.copy_(src)`，原地，位级标准） |
+| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu / PrivateUse1） |
 | 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **A1** |
 | 日期 / 状态 | 2026-09-18 / 定稿 |
 
