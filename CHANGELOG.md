@@ -1,5 +1,69 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **新算子: [ops/embedding](ops/embedding/)**（`aten::embedding`，
+  A1 路线，p800-kunlunxin）
+  - forward 复用 XMLIR native `index_select` row-gather；任意 rank indices、
+    FP32/FP16/BF16、int64/int32、padding 与 empty 全覆盖
+  - dense backward 复用 native `embedding_backward`；为 XPU 未实现的
+    `scale_grad_by_freq=True` 增加 inverse-frequency fallback
+  - `AutogradCUDA` A1 拦截 + 数学 backward；174 组黄金、20 组 forward
+    （含 `sparse=True` 前向）、6 组反向、`nn.Embedding` 应用层前向/反向
+    全部通过；perf gate 注册与 P800 基线更新，硬件级显式置空
+  - 新增 A1 dispatch 独立子进程基准，native→A1 附加开销约 0.024ms
+- **SDPA 第三平台: mlu590**（Cambricon MLU590 / torch_mlu）
+  - 新增 `kernel/backends/mlu590.py`：分层委托——
+    **TMO** `torch_mlu_ops.flash_attention`（半精度快路径）→
+    **fused overrideable**（CNNL FA v2，与原生 `F.sdpa` 同路径）→
+    math/FlagGems/reference 兜底；bool→additive；causal 折叠；NaN 恢复；
+    GQA `repeat_interleave`；`SDPA_MLU_TMO=0` 可关 TMO
+  - 更正早期结论：原生 F.sdpa 走 fused overrideable **不是** math；
+    math-only 主路径实测仅 0.11-0.55x 原生
+  - facade 增加 `"mlu"` 分发；`register_a1` 守卫放宽为 torch_npu **或**
+    torch_mlu 可用；`_profile`/`configs/devices/mlu590.yaml`/`mlu590.lock.yaml` 接入
+  - A1 `AutogradPrivateUse1` 拦截；kernel 37/37、黄金 397/397、
+    op/framework/guard 三层全绿
+  - 实测修订后 **1.00-1.33x** 原生（prefill 1k D64 1.33x；FA2 协议
+    多点 TFLOPS 高于 native）；FlagGems 仍慢 10-40x 仅兜底
+  - 新增 [ops/sdpa/reports/mlu590.md](ops/sdpa/reports/mlu590.md) 与
+    `perf_fp16_mlu590.json`
+- **SDPA 第二平台: p800-kunlunxin**（Kunlun XPU / torch_xmlir）
+  - 新增多平台 backend facade：旧 `kernel.triton_level.sdpa_triton` 引用零改动
+  - fp16/bf16 委托厂商 `aten::_scaled_dot_product_efficient_attention`；
+    bool mask / 全遮蔽行语义补偿；fp32 走精确 ATen 组合并绕开 XMLIR
+    `S∈(320,640]` bmm JIT 缺陷
+  - direct autograd 按需计算 log-sumexp；可微 float mask 复用 A1 数学
+    backward，规避厂商 `bias_requires_grad` 限制
+  - A1 `AutogradCUDA` 拦截 + 数学 backward；P800 kernel 37/37、黄金
+    397/397、mini-decoder 与平台守卫全绿
+- [ops/sdpa/reports/p800-kunlunxin.md](ops/sdpa/reports/p800-kunlunxin.md)
+  与平台化性能 JSON，沉淀 FlagGems/Triton 平移失败原因与复现命令
+- SDPA perf gate 用例注册与 P800 基线更新；硬件级目录显式置空说明
+- P800 自研固定调度 Triton forward 实验与复现脚本：no-mask causal、
+  GQA、非 causal 与尾块正确，但 mask launch 失败且慢于厂商路径
+  2.1-6.5x，因此暂不接入生产 backend
+
+## [0.13.0] - 2026-09-17
+
+### Added
+- **首个正式算子: [ops/sdpa](ops/sdpa/)**（aten::scaled_dot_product_attention，
+  Triton 级，A1 路线，ascend910）
+  - online-softmax two-pass kernel + causal 循环截断（1.93x）+ GQA/双 mask/
+    尾块安全；黄金 265/265、kernel 层 37/37、A1 拦截+梯度验证全绿
+  - 首个算子级平台文档: [PLATFORM.md](ops/sdpa/PLATFORM.md)（8 项 Ascend
+    绑定 + 移植指引 + 引用防误用三层机制）与 [MERGE.md](ops/sdpa/MERGE.md)
+    （第二平台七步合并指南）
+- **设备 profile: [ascend910](configs/devices/ascend910.yaml)**（CANN 9.0.0 /
+  torch_npu 2.10.0；quirks.no_vllm_runtime 标注空壳 vllm 环境）
+
+### Discovered（随算子交付的实测结论，上游有价值）
+- torch_npu 栈 A1 注册点为 AutogradPrivateUse1（PrivateUse1 永不命中，
+  C++ 包装不 redispatch）——与 CUDA 系后端关键差异
+- flag_gems 5.3.5 SDPA 未被 aten 分发接入（enable 后 diff=0.0）
+- triton-ascend 三硬约束: dot 强制同 dtype / fp32 默认 tf32 / exp2 慢路径
+
 ## [0.12.3] - 2026-09-14
 
 ### Fixed

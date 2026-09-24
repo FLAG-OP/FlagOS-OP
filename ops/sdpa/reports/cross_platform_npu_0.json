@@ -1,0 +1,115 @@
+{
+  "device": "npu:0",
+  "rows": [
+    {
+      "S": 512,
+      "D": 64,
+      "H": 32,
+      "B": 32,
+      "flops_g": 34.4,
+      "native_ms": 0.8284,
+      "native_tflops": 41.5,
+      "ours_triton_ms": 11.4527,
+      "ours_triton_tflops": 3.0
+    },
+    {
+      "S": 1024,
+      "D": 64,
+      "H": 32,
+      "B": 16,
+      "flops_g": 68.7,
+      "native_ms": 1.1799,
+      "native_tflops": 58.2,
+      "ours_triton_ms": 22.9031,
+      "ours_triton_tflops": 3.0
+    },
+    {
+      "S": 2048,
+      "D": 64,
+      "H": 32,
+      "B": 8,
+      "flops_g": 137.4,
+      "native_ms": 1.9784,
+      "native_tflops": 69.5,
+      "ours_triton_ms": 45.7821,
+      "ours_triton_tflops": 3.0
+    },
+    {
+      "S": 4096,
+      "D": 64,
+      "H": 32,
+      "B": 4,
+      "flops_g": 274.9,
+      "native_ms": 3.3393,
+      "native_tflops": 82.3,
+      "ours_triton_ms": 91.588,
+      "ours_triton_tflops": 3.0
+    },
+    {
+      "S": 8192,
+      "D": 64,
+      "H": 32,
+      "B": 2,
+      "flops_g": 549.8,
+      "native_ms": 6.161,
+      "native_tflops": 89.2,
+      "ours_triton_ms": 183.1261,
+      "ours_triton_tflops": 3.0
+    },
+    {
+      "S": 512,
+      "D": 128,
+      "H": 16,
+      "B": 32,
+      "flops_g": 34.4,
+      "native_ms": 0.4792,
+      "native_tflops": 71.7,
+      "ours_triton_ms": 5.4448,
+      "ours_triton_tflops": 6.3
+    },
+    {
+      "S": 1024,
+      "D": 128,
+      "H": 16,
+      "B": 16,
+      "flops_g": 68.7,
+      "native_ms": 0.6851,
+      "native_tflops": 100.3,
+      "ours_triton_ms": 10.8094,
+      "ours_triton_tflops": 6.4
+    },
+    {
+      "S": 2048,
+      "D": 128,
+      "H": 16,
+      "B": 8,
+      "flops_g": 137.4,
+      "native_ms": 1.1229,
+      "native_tflops": 122.4,
+      "ours_triton_ms": 21.5822,
+      "ours_triton_tflops": 6.4
+    },
+    {
+      "S": 4096,
+      "D": 128,
+      "H": 16,
+      "B": 4,
+      "flops_g": 274.9,
+      "native_ms": 1.8424,
+      "native_tflops": 149.2,
+      "ours_triton_ms": 43.1232,
+      "ours_triton_tflops": 6.4
+    },
+    {
+      "S": 8192,
+      "D": 128,
+      "H": 16,
+      "B": 2,
+      "flops_g": 549.8,
+      "native_ms": 3.4737,
+      "native_tflops": 158.3,
+      "ours_triton_ms": 86.2238,
+      "ours_triton_tflops": 6.4
+    }
+  ]
+}

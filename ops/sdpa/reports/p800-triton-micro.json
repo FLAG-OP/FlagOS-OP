@@ -1,0 +1,115 @@
+{
+  "device": "cuda:1",
+  "mode": "micro",
+  "completion_guard": "output[0,0,0,0].item()",
+  "rows": [
+    {
+      "B": 1,
+      "H": 16,
+      "S": 1024,
+      "D": 64,
+      "vendor_ms": 0.1426,
+      "configs": [
+        {
+          "BLOCK_M": 32,
+          "BLOCK_N": 32,
+          "num_warps": 4,
+          "num_stages": 1,
+          "ms": 0.2768,
+          "max_err_vs_vendor": 1.90735e-06,
+          "vendor_over_triton": 0.515
+        },
+        {
+          "BLOCK_M": 64,
+          "BLOCK_N": 32,
+          "num_warps": 4,
+          "num_stages": 1,
+          "ms": 0.285,
+          "max_err_vs_vendor": 1.90735e-06,
+          "vendor_over_triton": 0.5
+        },
+        {
+          "BLOCK_M": 64,
+          "BLOCK_N": 64,
+          "num_warps": 4,
+          "num_stages": 1,
+          "ms": 0.2822,
+          "max_err_vs_vendor": 1.90735e-06,
+          "vendor_over_triton": 0.505
+        }
+      ]
+    },
+    {
+      "B": 1,
+      "H": 16,
+      "S": 1024,
+      "D": 128,
+      "vendor_ms": 0.1569,
+      "configs": [
+        {
+          "BLOCK_M": 64,
+          "BLOCK_N": 64,
+          "num_warps": 4,
+          "num_stages": 1,
+          "ms": 0.3111,
+          "max_err_vs_vendor": 7.62939e-06,
+          "vendor_over_triton": 0.504
+        },
+        {
+          "BLOCK_M": 128,
+          "BLOCK_N": 64,
+          "num_warps": 8,
+          "num_stages": 1,
+          "ms": 0.3116,
+          "max_err_vs_vendor": 7.62939e-06,
+          "vendor_over_triton": 0.504
+        },
+        {
+          "BLOCK_M": 64,
+          "BLOCK_N": 32,
+          "num_warps": 4,
+          "num_stages": 1,
+          "ms": 0.3132,
+          "max_err_vs_vendor": 7.62939e-06,
+          "vendor_over_triton": 0.501
+        }
+      ]
+    },
+    {
+      "B": 1,
+      "H": 16,
+      "S": 4096,
+      "D": 128,
+      "vendor_ms": 0.6706,
+      "configs": [
+        {
+          "BLOCK_M": 64,
+          "BLOCK_N": 64,
+          "num_warps": 4,
+          "num_stages": 1,
+          "ms": 4.2961,
+          "max_err_vs_vendor": 1.90735e-06,
+          "vendor_over_triton": 0.156
+        },
+        {
+          "BLOCK_M": 128,
+          "BLOCK_N": 64,
+          "num_warps": 8,
+          "num_stages": 1,
+          "ms": 4.3373,
+          "max_err_vs_vendor": 1.90735e-06,
+          "vendor_over_triton": 0.155
+        },
+        {
+          "BLOCK_M": 64,
+          "BLOCK_N": 32,
+          "num_warps": 4,
+          "num_stages": 1,
+          "ms": 4.3027,
+          "max_err_vs_vendor": 1.90735e-06,
+          "vendor_over_triton": 0.156
+        }
+      ]
+    }
+  ]
+}

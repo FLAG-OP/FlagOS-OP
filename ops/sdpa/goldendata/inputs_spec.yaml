@@ -1,0 +1,50 @@
+# 输入与黄金数据规格（声明式，gen_golden.py 消费）
+op: sdpa
+seed_base: 20260916
+cases:
+  - name: basic
+    desc: 标准多头注意力
+    B: [1, 2]
+    Hq: [4]
+    Hkv: [4]
+    S: [128]
+    D: [64]
+    dtypes: [float32, float16, bfloat16]
+    causal: [false, true]
+    mask: [null, bool, float]
+    distribution: normal
+    scale: 0.5
+    seeds_per_case: 3
+  - name: tail
+    desc: 尾块（S 非 BLOCK 整倍数）+ ViT D=80 + GQA
+    B: [1]
+    Hq: [4, 8]
+    Hkv: [4, 2]
+    S: [100, 197, 333]
+    D: [64, 80]
+    dtypes: [float16, float32]
+    causal: [true]
+    mask: [null, bool]
+    distribution: normal
+    scale: 0.5
+    seeds_per_case: 3
+  - name: extreme
+    desc: 大值/全零行（softmax 稳定性）
+    B: [1]
+    Hq: [4]
+    Hkv: [4]
+    S: [128]
+    D: [64]
+    dtypes: [float32]          # extreme 不配 fp16/bf16: 输入量化在饱和
+                               # softmax 下翻转 argmax 属 dtype 固有性质
+                               # （实测 native 与 ours 同误差 1.39e-1），
+                               # 非实现缺陷
+    causal: [true]
+    mask: [null]
+    distribution: normal
+    scale: 8.0
+    special: [zeros_row, large_row]
+    seeds_per_case: 1
+tolerance:
+  pointwise_abs: {float32: 1.0e-5, float16: 2.0e-2, bfloat16: 2.0e-2}
+  relative: 5.0e-3               # extreme（softmax 饱和）case 用
