@@ -25,7 +25,7 @@
 | kernel backward | 同上 | 6/6；重复 index、padding、`scale_grad_by_freq` 全部 0 error |
 | 黄金 | `script/check_accuracy.py --impl p800` | 174/174，worst=0 |
 | A1 op | `test/op_level.py` | 拦截 5 次；hooked=direct 逐位；dense/scale/sparse 边界全绿 |
-| 应用层 | `test/framework_level.py` | `nn.Embedding` + MLP；logits/梯度 0 diff；贪心一致率 1.00 |
+| 应用层 | `test/framework_level.py`（FlagGems enabled） | `nn.Embedding` + MLP；logits/梯度 0 diff；贪心一致率 1.00 |
 | 性能 | `script/bench_perf.py` | 大 shape native parity；Triton 显著慢 |
 | dispatch | `script/bench_dispatch.py` | A1 vs native 附加约 0.024ms |
 

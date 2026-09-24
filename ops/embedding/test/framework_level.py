@@ -53,6 +53,14 @@ def run(profile):
     from register import register_a1
 
     dev = profile.torch_device
+    # Framework/application validation is deliberately run inside the FlagOS
+    # operator stack.  Enable the stable FlagGems GELU used by this consumer;
+    # enabling the full op set is not deterministic on the locked P800 image.
+    import flag_gems
+    flag_gems.only_enable(include=["gelu"])
+    assert flag_gems.current_work_registrar is not None
+    assert "gelu" in flag_gems.current_work_registrar.include_ops
+
     # bf16 avoids overflow in the random fp16 Linear/GELU consumer.
     dtype = torch.bfloat16
     generator = torch.Generator(device="cpu").manual_seed(19)
@@ -104,6 +112,7 @@ def run(profile):
     assert head_grad_diff < 2e-3, head_grad_diff
 
     print(
+        f"  FlagOS stack: flag_gems.only_enable(['gelu']) active\n"
         f"  consumer: nn.Embedding + 2-layer MLP, bf16, 4 prompts × 48 tokens"
         f"\n  interception count={_CALLS['n']}; logits diff={logits_diff:.3e}; "
         f"greedy seq match={seq_match:.2f}"

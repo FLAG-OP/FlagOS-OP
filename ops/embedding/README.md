@@ -94,6 +94,19 @@ Check scale_grad_by_freq == false failed
 结论：XMLIR native row-gather 是当前正确交付选择；Python/Triton 侧重写
 不能带来收益。
 
+## FlagOS 框架测试口径
+
+框架/应用验证运行在 FlagOS 算子栈内：
+
+```python
+import flag_gems
+flag_gems.only_enable(include=["gelu"])  # 消费方 surrounding op 走 FlagGems
+```
+
+当前锁定镜像上全量 `flag_gems.enable()` 在该 consumer 上存在非确定性，
+因此框架层选择稳定且真实被模型调用的 `gelu` 作为 FlagOS/FlagGems 代表
+路径；`aten::embedding` 由本目录 A1 注册接管。
+
 ## 边界
 
 - `sparse=True` forward 不改变输出，按 dense lookup 返回；

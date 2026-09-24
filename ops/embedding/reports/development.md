@@ -111,6 +111,8 @@ A1 注册点为 `AutogradCUDA`。wrapper 补齐 dispatcher 省略的默认参数
 
 ### 4.2 framework 层明细
 
+- 先启动 FlagOS/FlagGems：`flag_gems.only_enable(include=["gelu"])`；
+- surrounding GELU 走 FlagGems，embedding 由 A1 backend 接管；
 - A1 interception count 5；
 - registered path 与 direct path bitwise equal；
 - dense / inverse-frequency backward误差 0；

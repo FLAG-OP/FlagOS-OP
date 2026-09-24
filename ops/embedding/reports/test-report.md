@@ -16,6 +16,7 @@
 | 黄金 | 174 组 | ✅ |
 | A1 | 拦截、direct bitwise、autograd | ✅ |
 | 应用层 | `nn.Embedding` + MLP forward/backward/greedy | ✅ |
+| FlagOS 栈 | `flag_gems.only_enable(['gelu'])` 后运行应用层 | ✅ |
 | 边界 | sparse forward 接受、sparse backward / invalid padding 拒绝 | ✅ |
 
 ## 2. 环境
