@@ -12,6 +12,7 @@
   - `AutogradCUDA` A1 拦截 + 数学 backward；174 组黄金、20 组 forward
     （含 `sparse=True` 前向）、6 组反向、`nn.Embedding` 应用层前向/反向
     全部通过；perf gate 注册与 P800 基线更新，硬件级显式置空
+  - 新增 A1 dispatch 独立子进程基准，native→A1 附加开销约 0.024ms
 
 ## [0.13.0] - 2026-09-17
 

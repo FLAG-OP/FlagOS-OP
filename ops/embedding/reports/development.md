@@ -154,6 +154,8 @@ python3 script/bench_perf.py --device cuda:1 --dtype float16 \
   --json-out reports/perf_fp16_p800-kunlunxin.json
 python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.embedding
 python3 scripts/perf_compare.py --device p800-kunlunxin
+python3 script/bench_dispatch.py --device cuda:1 \
+  --json-out reports/dispatch_p800-kunlunxin.json
 ```
 
 ## 附录 B: 相关产物
@@ -161,5 +163,6 @@ python3 scripts/perf_compare.py --device p800-kunlunxin
 | 产物 | 位置 |
 |---|---|
 | operator perf JSON | `perf_fp16_p800-kunlunxin.json` |
+| dispatch overhead JSON | `dispatch_p800-kunlunxin.json` |
 | perf gate 基线 | `../../../perf/baselines/p800-kunlunxin.json` |
 | 黄金规格 | `../goldendata/inputs_spec.yaml` |

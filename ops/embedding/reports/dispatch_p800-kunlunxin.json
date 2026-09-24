@@ -1,0 +1,32 @@
+{
+  "device": "cuda:1",
+  "shape": {
+    "num_weights": 4096,
+    "num_indices": 16384,
+    "dim": 128,
+    "dtype": "float16"
+  },
+  "completion_guard": "reshape(-1)[0].item()",
+  "rows": [
+    {
+      "mode": "native",
+      "median_ms": 0.048919,
+      "p20_ms": 0.048489,
+      "p80_ms": 0.049449
+    },
+    {
+      "mode": "direct",
+      "median_ms": 0.074883,
+      "p20_ms": 0.074299,
+      "p80_ms": 0.075939
+    },
+    {
+      "mode": "a1",
+      "median_ms": 0.073008,
+      "p20_ms": 0.067419,
+      "p80_ms": 0.089808
+    }
+  ],
+  "a1_minus_native_ms": 0.024089,
+  "a1_minus_direct_ms": -0.001875
+}

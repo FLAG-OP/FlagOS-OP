@@ -27,6 +27,7 @@
 | A1 op | `test/op_level.py` | 拦截 5 次；hooked=direct 逐位；dense/scale/sparse 边界全绿 |
 | 应用层 | `test/framework_level.py` | `nn.Embedding` + MLP；logits/梯度 0 diff；贪心一致率 1.00 |
 | 性能 | `script/bench_perf.py` | 大 shape native parity；Triton 显著慢 |
+| dispatch | `script/bench_dispatch.py` | A1 vs native 附加约 0.024ms |
 
 ## 关键数字
 

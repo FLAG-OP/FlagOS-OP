@@ -65,6 +65,8 @@ python3 scripts/perf_compare.py --device p800-kunlunxin
 
 perf gate 结果：`FAIL 0 · WARN 0 · NEW 0`。入库基线中
 `ops.embedding.p800.forward` 为 0.051ms，native 对照为 0.052ms。
+A1 dispatch 独立子进程测量：native 0.0489ms，A1 0.0730ms，
+附加约 0.0241ms。
 
 ## 5. 问题与风险
 

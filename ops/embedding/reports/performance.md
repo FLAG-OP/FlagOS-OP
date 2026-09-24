@@ -10,6 +10,7 @@
 | 计时口径 | 每次读取一个输出元素，强制 XMLIR kernel 完成 |
 | operator benchmark | `script/bench_perf.py` |
 | perf gate | `scripts/perf_run.py` / `scripts/perf_compare.py` |
+| dispatch benchmark | `script/bench_dispatch.py` |
 
 ## 2. 结果
 
@@ -54,6 +55,21 @@ ops.embedding.native.forward
 FAIL 0 · WARN 0 · NEW 0
 ```
 
+### A1 dispatch overhead
+
+`aten::embedding` native、direct backend、A1 注册路径分别在独立子进程测量，
+每次调用均读取一个输出元素强制完成。原始数据见
+[dispatch_p800-kunlunxin.json](dispatch_p800-kunlunxin.json)。
+
+| mode | median | p20 | p80 |
+|---|---:|---:|---:|
+| native `aten::embedding` | 0.0489ms | 0.0485ms | 0.0494ms |
+| direct backend | 0.0749ms | 0.0743ms | 0.0759ms |
+| A1 `F.embedding` | 0.0730ms | 0.0674ms | 0.0898ms |
+
+A1 − native ≈ **0.0241ms**；A1 与 direct backend 基本同档
+（本轮 A1 median 略低，差异在同步读回噪声内）。
+
 ## 3. 分析
 
 1. 生产路径与 native embedding 在 16k 以上基本持平；
@@ -68,4 +84,6 @@ python3 script/bench_perf.py --device cuda:1 --dtype float16 \
   --json-out reports/perf_fp16_p800-kunlunxin.json
 python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.embedding
 python3 scripts/perf_compare.py --device p800-kunlunxin
+python3 script/bench_dispatch.py --device cuda:1 \
+  --json-out reports/dispatch_p800-kunlunxin.json
 ```

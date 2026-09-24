@@ -33,6 +33,8 @@ python3 script/check_accuracy.py --impl p800 --device cuda:1
 python3 script/bench_perf.py --device cuda:1 \
   --json-out reports/perf_fp16_p800-kunlunxin.json
 python3 scripts/perf_compare.py --device p800-kunlunxin
+python3 script/bench_dispatch.py --device cuda:1 \
+  --json-out reports/dispatch_p800-kunlunxin.json
 ```
 
 ## 实现策略
