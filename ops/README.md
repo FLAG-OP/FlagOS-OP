@@ -23,23 +23,25 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 ## 算子索引
 
-| 算子 | 开发级别 | 路线 | 状态 | 交付报告 | 备注 |
-|---|---|---|---|---|---|
-| [sdpa](sdpa/)（scaled_dot_product_attention） | Triton / 厂商委托 | A1（aten 拦截） | ✅ 定稿 | [REPORT](sdpa/REPORT.md) | ascend910 + p800-kunlunxin + mlu590 · 三平台黄金 397/397（Ascend 历史 265/265） · [平台绑定](sdpa/PLATFORM.md) / [多平台合并](sdpa/MERGE.md) |
-| [embedding](embedding/)（aten::embedding） | 厂商委托 / Triton 探针 | A1（aten 拦截） | ✅ 定稿 | [REPORT](embedding/REPORT.md) | p800-kunlunxin · 稠密查表/反向 · 黄金 117/117 |
-| [type_as](type_as/) | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](type_as/REPORT.md) | 黄金 111/111；位级一致 |
-| [clone](clone/) | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](clone/REPORT.md) | 黄金 48/48；存储独立 |
-| [contiguous](contiguous/) | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](contiguous/REPORT.md) | 黄金 114/114；转置 swiz 提速 ~80x |
-| [copy_](copy_/) | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](copy_/REPORT.md) | 黄金 78/78；原地+广播 |
-| [dropout](dropout/) | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](dropout/REPORT.md) | 黄金 189/189；随机分支统计判定 |
-| [empty_like](empty_like/) | torch 级 | A1 aten | 三层全绿 | [REPORT.md](empty_like/REPORT.md) | 分配/元数据；黄金 168/168（元数据） |
-| [empty](empty/) | torch 级 | 自用/实验 | 三层全绿 | [REPORT.md](empty/REPORT.md) | 分配原语，不注册（递归风险）；元数据 48/48 |
-| [empty_strided](empty_strided/) | torch 级 | A1 aten | 三层全绿 | [REPORT.md](empty_strided/REPORT.md) | 分配/元数据；元数据 30/30 |
-| [detach](detach/) | torch 级 | A1 aten | 三层全绿 | [REPORT.md](detach/REPORT.md) | 别名词义；黄金 36/36 |
-| [detach_](detach_/) | torch 级 | 自用/实验 | 三层全绿 | [REPORT.md](detach_/REPORT.md) | 不可 A1 注册（autograd key）；36/36 |
-| [item](item/) | torch 级 | A1 aten | 三层全绿 | [REPORT.md](item/REPORT.md) | host 标量；黄金 36/36 |
-| [_local_scalar_dense](_local_scalar_dense/) | torch 级 | A1 aten | 三层全绿 | [REPORT.md](_local_scalar_dense/REPORT.md) | host 标量原语；36/36 |
-| [result_type](result_type/) | torch 级 | 自用/实验 | 三层全绿 | [REPORT.md](result_type/REPORT.md) | dtype 元数据；黄金 8/8，矩阵 64 项 |
+> 硬件平台合计 **3 个**：`ascend910`（仅 sdpa）· `p800-kunlunxin`（sdpa / embedding）· `cambricon` / `mlu590`（MLU590，sdpa + 13 个算子）。 算子级明细见下表「硬件平台」列与各算子的 `REPORT.md` 表头。
+
+| 算子 | 硬件平台 | 开发级别 | 路线 | 状态 | 交付报告 | 备注 |
+|---|---|---|---|---|---|---|
+| [sdpa](sdpa/)（scaled_dot_product_attention） | **3** · ascend910 / p800-kunlunxin / mlu590 | Triton / 厂商委托 | A1（aten 拦截） | ✅ 定稿 | [REPORT](sdpa/REPORT.md) | ascend910 + p800-kunlunxin + mlu590 · 三平台黄金 397/397（Ascend 历史 265/265） · [平台绑定](sdpa/PLATFORM.md) / [多平台合并](sdpa/MERGE.md) |
+| [embedding](embedding/)（aten::embedding） | 1 · p800-kunlunxin | 厂商委托 / Triton 探针 | A1（aten 拦截） | ✅ 定稿 | [REPORT](embedding/REPORT.md) | p800-kunlunxin · 稠密查表/反向 · 黄金 117/117 |
+| [type_as](type_as/) | 1 · cambricon | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](type_as/REPORT.md) | 黄金 111/111；位级一致 |
+| [clone](clone/) | 1 · cambricon | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](clone/REPORT.md) | 黄金 48/48；存储独立 |
+| [contiguous](contiguous/) | 1 · cambricon | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](contiguous/REPORT.md) | 黄金 114/114；转置 swiz 提速 ~80x |
+| [copy_](copy_/) | 1 · cambricon | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](copy_/REPORT.md) | 黄金 78/78；原地+广播 |
+| [dropout](dropout/) | 1 · cambricon | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](dropout/REPORT.md) | 黄金 189/189；随机分支统计判定 |
+| [empty_like](empty_like/) | 1 · cambricon | torch 级 | A1 aten | 三层全绿 | [REPORT.md](empty_like/REPORT.md) | 分配/元数据；黄金 168/168（元数据） |
+| [empty](empty/) | 1 · cambricon | torch 级 | 自用/实验 | 三层全绿 | [REPORT.md](empty/REPORT.md) | 分配原语，不注册（递归风险）；元数据 48/48 |
+| [empty_strided](empty_strided/) | 1 · cambricon | torch 级 | A1 aten | 三层全绿 | [REPORT.md](empty_strided/REPORT.md) | 分配/元数据；元数据 30/30 |
+| [detach](detach/) | 1 · cambricon | torch 级 | A1 aten | 三层全绿 | [REPORT.md](detach/REPORT.md) | 别名词义；黄金 36/36 |
+| [detach_](detach_/) | 1 · cambricon | torch 级 | 自用/实验 | 三层全绿 | [REPORT.md](detach_/REPORT.md) | 不可 A1 注册（autograd key）；36/36 |
+| [item](item/) | 1 · cambricon | torch 级 | A1 aten | 三层全绿 | [REPORT.md](item/REPORT.md) | host 标量；黄金 36/36 |
+| [_local_scalar_dense](_local_scalar_dense/) | 1 · cambricon | torch 级 | A1 aten | 三层全绿 | [REPORT.md](_local_scalar_dense/REPORT.md) | host 标量原语；36/36 |
+| [result_type](result_type/) | 1 · cambricon | torch 级 | 自用/实验 | 三层全绿 | [REPORT.md](result_type/REPORT.md) | dtype 元数据；黄金 8/8，矩阵 64 项 |
 
 > 均为 MLU（cambricon）实现。合计 13 个算子。
 > 应用层：各 `test/framework_level.py` 为快速等价验证；另有**真实 vLLM** 的

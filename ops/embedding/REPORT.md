@@ -4,7 +4,7 @@
 |---|---|
 | 算子 | `aten::embedding` |
 | 范围 | 普通查表 forward + dense backward；`sparse=True` forward 可用，稀疏 backward 不覆盖 |
-| 平台 | p800-kunlunxin / torch_xmlir |
+| 硬件平台 | **1 个**：Kunlunxin P800（profile `p800-kunlunxin`，`torch_xmlir`） |
 | 路线 | A1，`AutogradCUDA` |
 | 日期 / 状态 | 2026-09-23 / 三层与黄金全绿 |
 

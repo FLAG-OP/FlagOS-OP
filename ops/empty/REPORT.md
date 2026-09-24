@@ -4,6 +4,7 @@
 |---|---|
 | 算子名称 | `empty`（分配/元数据类） |
 | 语义 | [reference.py](reference.py)：分配 size 形状的未初始化张量，只保证元数据 |
+| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu / PrivateUse1） |
 | 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **A1** |
 | 日期 / 状态 | 2026-09-18 / 定稿 |
 

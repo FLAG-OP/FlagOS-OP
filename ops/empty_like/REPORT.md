@@ -4,6 +4,7 @@
 |---|---|
 | 算子名称 | `empty_like`（分配/元数据类） |
 | 语义 | [reference.py](reference.py)：未初始化，只约束 shape/dtype/stride/device |
+| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu / PrivateUse1） |
 | 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **A1** |
 | 日期 / 状态 | 2026-09-18 / 定稿 |
 

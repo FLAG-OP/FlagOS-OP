@@ -4,6 +4,7 @@
 |---|---|
 | 算子名称 | `type_as`（`self` cast 到 `other.dtype`，留在 `self.device`） |
 | 语义 | [reference.py](reference.py)（CPU 原生 `.to`，位级判卷标准） |
+| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu / PrivateUse1） |
 | 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **A1**（aten `type_as` 拦截） |
 | 日期 / 状态 | 2026-09-18 / 定稿 |
 

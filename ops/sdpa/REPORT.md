@@ -5,7 +5,7 @@
 | 算子 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
 | 语义 | [reference.py](reference.py)（fp32 内部、GQA、causal、bool/float mask） |
 | 路线 | A1 aten 拦截；平台实现由 [kernel/triton_level.py](kernel/triton_level.py) facade 分发 |
-| 平台 | ascend910（Triton 主实现）· p800-kunlunxin（厂商委托 + fp32 补偿）· mlu590（TMO FA + fused overrideable 委托） |
+| 硬件平台 | **3 个**：ascend910（Triton 主实现）· p800-kunlunxin（厂商委托 + fp32 补偿）· mlu590（TMO FA + fused overrideable 委托） |
 | 状态 | 2026-09-23: MLU590 三层 + 黄金全绿（fused/TMO 修订后 1.00-1.33x 原生）；2026-09-22: P800 三层 + 黄金全绿 |
 
 ## 实现矩阵
