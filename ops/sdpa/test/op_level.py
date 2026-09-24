@@ -29,6 +29,8 @@ def run(profile):
     import torch
     if profile.torch_device.startswith("npu"):
         import torch_npu  # noqa: F401
+    if profile.torch_device.startswith("mlu"):
+        import torch_mlu  # noqa: F401
 
     from kernel.triton_level import sdpa_triton
     from register import register_a1
@@ -36,14 +38,14 @@ def run(profile):
     dev = profile.torch_device
     F = torch.nn.functional
 
-    # 1) 基线: 注册前（NPU 原生实现，缓存输出）
+    # 1) 基线: 注册前（平台原生实现，缓存输出）
     q, k, v = _make(torch.float16, dev)
     out_native = F.scaled_dot_product_attention(q, k, v, is_causal=True)
 
     direct_grad_check = "not-applicable"
-    if profile.vendor == "kunlunxin":
-        # P800 direct 路径平台分化回归：q/k/v 需按需计算 log-sumexp；
-        # 可微 float bias 厂商 backward 不支持，应回退 A1 数学 backward。
+    if profile.vendor in ("kunlunxin", "cambricon"):
+        # 厂商/Triton 直调路径平台分化回归: q/k/v 需按需走 A1 数学 backward；
+        # 可微 float mask 厂商路径不支持，应回退 A1 数学 backward。
         qd, kd, vd = _make(torch.float16, dev, requires_grad=True)
         out_d = sdpa_triton(qd, kd, vd, None, 0.0, True, None, False)
         out_d.float().sum().backward()

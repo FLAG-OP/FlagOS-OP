@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """sdpa 一键编排: 三层测试一跑完 + 黄金精度入口提示。
 
-运行: python3 example.py [ascend910|p800-kunlunxin]
+运行: python3 example.py [ascend910|p800-kunlunxin|mlu590]
 应用层为轻量消费方（mini-decoder，对齐 FlagOS-OP softmax-fullstack
 先例——Python 层真实计算任务，不依赖 vLLM）
 """
@@ -43,7 +43,7 @@ def main() -> None:
     print(f"  python3 script/check_accuracy.py --impl triton "
           f"--device {profile.torch_device}")
     print(f"  python3 script/bench_perf.py --device {profile.torch_device} "
-          f"--json-out reports/perf_fp16_p800-kunlunxin.json")
+          f"--json-out reports/perf_fp16_{profile.name}.json")
 
 
 def perf_cases(profile):

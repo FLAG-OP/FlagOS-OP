@@ -45,6 +45,8 @@ def detect_device() -> str:
     import torch
     if torch.npu.is_available() if hasattr(torch, "npu") else False:
         return "npu:0"
+    if torch.mlu.is_available() if hasattr(torch, "mlu") else False:
+        return "mlu:0"
     if torch.cuda.is_available():
         return "cuda:0"
     return "cpu"
@@ -61,6 +63,8 @@ def bench(fn, dev, warmup=10, iters=30):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
+    elif dev.startswith("mlu"):
+        torch.mlu.synchronize()
     t0 = time.perf_counter()
     for _ in range(iters):
         output = fn()
@@ -71,6 +75,8 @@ def bench(fn, dev, warmup=10, iters=30):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
+    elif dev.startswith("mlu"):
+        torch.mlu.synchronize()
     return (time.perf_counter() - t0) / iters * 1000
 
 

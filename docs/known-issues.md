@@ -4,7 +4,7 @@
 
 ## 关于本文件
 
-本文件记录**参考实例（P800 / Kunlunxin 栈）**的实测问题，用作:
+本文件记录**参考实例（P800 / Kunlunxin 栈）与 MLU590 栈**的实测问题，用作:
 
 1. 该设备栈使用者的排障参考
 2. 其他芯片接入时的检查清单模板——每接入一种新芯片，建议用同样的
@@ -170,6 +170,31 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 平台结论与复现命令见
 [ops/sdpa/reports/p800-kunlunxin.md](../ops/sdpa/reports/p800-kunlunxin.md)。
 
+### 18. MLU590 SDPA 的五类平台分化（sdpa-op 实测发现）
+
+1. **`efficient/flash/cudnn` attention aten 私有 op 不可用**:
+   MLU 上均 CPU fallback 失败（`NotImplementedError: ... from the 'CPU'
+   backend`）。**原生 `F.sdpa` 实际走 `_scaled_dot_product_fused_attention_
+   overrideable`（CNNL FA v2）**——直调 math private 只能拿到未融合
+   分解，早期实现 0.11-0.55x 原生。
+2. **bool mask 与 math private 分化**: math 路径直收 bool vs 参考
+   err≈0.19；必须先转 additive `-inf` bias（`F.sdpa`/reference 对
+   bool 正确）。
+3. **FlagGems `_cambricon` attention 慢 10-40x 且无 autograd**: 精度
+   397/397 全过，但 1k D64 达 8.4ms（原生 0.31ms）；不可作生产主路径，
+   仅兜底/对照。direct 可微调用复用 A1 数学 backward。
+4. **全遮蔽行返回有限值**: fused/TMO/math/FlagGems 均不返回 NaN，SDPA
+   backend 显式 `masked_fill` 恢复 CPU/aten 语义（同 #17.3）。
+5. **A1 注册 key 与 torch_npu 同为 `AutogradPrivateUse1`**:
+   `AutogradMLU`/`MLU` 亦命中，但 PrivateUse1 是 torch_mlu 后端 key；
+   `register_a1` 守卫已放宽为 torch_npu **或** torch_mlu 可用。
+
+修订后主路径 = TMO FA（半精度）→ fused overrideable；实测 **1.00-1.33x**
+原生。`SDPA_MLU_TMO=0` 可强制只走 overrideable。
+
+平台结论与复现命令见
+[ops/sdpa/reports/mlu590.md](../ops/sdpa/reports/mlu590.md)。
+
 ## 通用检测方法
 
 | 问题类型 | 检测工具 |
@@ -183,7 +208,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 | FlagGems 某算子链接失败 | `common/xpu_compat` 补丁后看 elfconv 真实 stderr；对照 #13 |
 | 尾块归约静默错误 | 精度探针含非整倍数 N（`accuracy_report.py`）；对照 #15 |
 | call_op 长循环挂起 | 短循环（≤100 次）规避；排查见 #16 |
-| SDPA 平台语义/JIT 分化 | 265 组黄金 + S=333/D=80 尾块用例；对照 #17 |
+| SDPA 平台语义/JIT 分化 | 397 组黄金 + S=333/D=80 尾块用例；对照 #17 / #18 |
 
 ---
 

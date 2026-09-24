@@ -62,7 +62,7 @@ python3 scripts/intake_validate.py --validate-only        # AI 生成算子契�
 | 6 | [验收标准](docs/acceptance.md) | 精度/性能口径 · Must/Should 分级 · 重验 runbook |
 | 7 | [算子集成指南](docs/integration.md) | 交付路径选择 · FlagGems 贡献 · 分发开销实测 |
 | 8 | [AI 生成算子接入](docs/ai-intake.md) | KernelGen/KernelBench 产物 → 三级验证 |
-| 9 | [已知问题](docs/known-issues.md) | 17 条实测记录 + 检测方法 |
+| 9 | [已知问题](docs/known-issues.md) | 18 条实测记录 + 检测方法 |
 
 深入主题: [A1](docs/route-a1-aten.md) / [A2](docs/route-a2-dispatch.md) / [B](docs/route-b-vendor.md) 路线详解 ·
 [设备接入](docs/device-profiles.md) · [报告](docs/reporting.md) ·

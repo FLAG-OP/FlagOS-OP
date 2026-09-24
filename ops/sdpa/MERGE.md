@@ -1,7 +1,8 @@
 # 多平台合并指南（MERGE.md）
 
 > 何时用: 新平台的 SDPA 实现开发完成后，合入本目录。
-> 当前已合并: ascend910（Triton）与 p800-kunlunxin（厂商委托）。
+> 当前已合并: ascend910（Triton）、p800-kunlunxin（厂商委托）与
+> mlu590（Cambricon TMO FA + fused overrideable 委托）。
 > 前置阅读: [PLATFORM.md](PLATFORM.md)（当前平台的绑定清单）。
 > 原则: **黄金/测试/注册链是平台无关资产，直接复用；只有 kernel 本体按平台分文件**。
 
@@ -30,7 +31,8 @@ sdpa/
 │   └── backends/             # ★ 新建
 │       ├── __init__.py       #   平台选择器（按 device.type 分发）
 │       ├── ascend910.py      #   Triton 主体（函数名不变）
-│       └── p800_kunlunxin.py #   厂商 efficient-attention 委托
+│       ├── p800_kunlunxin.py #   厂商 efficient-attention 委托
+│       └── mlu590.py         #   Cambricon TMO FA + fused overrideable
 ├── test/                     # kernel_level.py 不动（36 case 换 profile 即跑）
 └── reports/
     ├── perf_fp16.json        #   保留为 ascend910 数据（或改名加平台后缀）
@@ -131,6 +133,7 @@ import importlib
 _IMPL_BY_DEVICE = {
     "npu": "ascend910",
     "cuda": "p800_kunlunxin",  # backend 内部再校验 torch_xmlir
+    "mlu": "mlu590",           # backend 内部再校验 torch_mlu
 }
 
 def get_impl(device_type: str):
@@ -147,8 +150,8 @@ def get_impl(device_type: str):
 ```python
 """兼容 facade: sdpa_triton 按输入设备自动路由到平台实现。"""
 from kernel.backends import get_impl
-PLATFORM = "multi(ascend910,p800-kunlunxin)"
-SUPPORTED_DEVICE_TYPES = ("npu", "cuda")
+PLATFORM = "multi(ascend910,p800-kunlunxin,mlu590)"
+SUPPORTED_DEVICE_TYPES = ("npu", "cuda", "mlu")
 
 def sdpa_triton(q, k, v, *a, **kw):
     return get_impl(q.device.type).sdpa_triton(q, k, v, *a, **kw)
@@ -172,3 +175,8 @@ _kunlunxin/...` 各厂商目录并列，已实际存在），所以:
 - [x] 旧引用零改动（`kernel.triton_level.sdpa_triton` 保留）
 - [x] 误配平台触发调用守卫（`probes/guard_check.py p800-kunlunxin`）
 - [x] 性能 JSON 按平台命名，报告不跨平台引用数字
+- [x] mlu590: 黄金 397/397 + kernel 层 37/37 + op/framework/guard 绿
+- [x] PLATFORM.md 有 mlu590 小节（§3b），FlagGems 慢路径与 fused/TMO
+      委托、math bool-mask 分化已显式标注
+- [x] `probes/guard_check.py mlu590` 全绿；`reports/perf_fp16_mlu590.json`
+      与 `reports/mlu590.md` 就位（修订后 1.00-1.33x 原生）

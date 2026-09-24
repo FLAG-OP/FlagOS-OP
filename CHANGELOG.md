@@ -3,6 +3,22 @@
 ## [Unreleased]
 
 ### Added
+- **SDPA 第三平台: mlu590**（Cambricon MLU590 / torch_mlu）
+  - 新增 `kernel/backends/mlu590.py`：分层委托——
+    **TMO** `torch_mlu_ops.flash_attention`（半精度快路径）→
+    **fused overrideable**（CNNL FA v2，与原生 `F.sdpa` 同路径）→
+    math/FlagGems/reference 兜底；bool→additive；causal 折叠；NaN 恢复；
+    GQA `repeat_interleave`；`SDPA_MLU_TMO=0` 可关 TMO
+  - 更正早期结论：原生 F.sdpa 走 fused overrideable **不是** math；
+    math-only 主路径实测仅 0.11-0.55x 原生
+  - facade 增加 `"mlu"` 分发；`register_a1` 守卫放宽为 torch_npu **或**
+    torch_mlu 可用；`_profile`/`configs/devices/mlu590.yaml`/`mlu590.lock.yaml` 接入
+  - A1 `AutogradPrivateUse1` 拦截；kernel 37/37、黄金 397/397、
+    op/framework/guard 三层全绿
+  - 实测修订后 **1.00-1.33x** 原生（prefill 1k D64 1.33x；FA2 协议
+    多点 TFLOPS 高于 native）；FlagGems 仍慢 10-40x 仅兜底
+  - 新增 [ops/sdpa/reports/mlu590.md](ops/sdpa/reports/mlu590.md) 与
+    `perf_fp16_mlu590.json`
 - **SDPA 第二平台: p800-kunlunxin**（Kunlun XPU / torch_xmlir）
   - 新增多平台 backend facade：旧 `kernel.triton_level.sdpa_triton` 引用零改动
   - fp16/bf16 委托厂商 `aten::_scaled_dot_product_efficient_attention`；

@@ -1,7 +1,8 @@
 # 平台绑定清单（Platform Binding）
 
-> 当前交付包含两个平台：**ascend910**（Triton 主实现）与
-> **p800-kunlunxin**（厂商 efficient-attention 委托 + fp32 精度补偿）。
+> 当前交付包含三个平台：**ascend910**（Triton 主实现）、
+> **p800-kunlunxin**（厂商 efficient-attention 委托 + fp32 精度补偿）与
+> **mlu590**（Cambricon TMO FA + fused overrideable 委托）。
 > 本文件记录不可凭直觉搬运的绑定结论；跨平台移植时逐项重验，不要把
 > 单平台实验结果当成普适行为。
 
@@ -48,6 +49,25 @@
 | XMLIR bmm bug | `S∈(320,640]` 的组合 bmm 可触发 `bmm_one_loop` JIT 编译错误；fp32 路径将序列 pad 到 768 并用合法 mask 还原语义 |
 | 应用层 dtype | 本随机 mini-decoder 的 Linear/LayerNorm fp16 链路溢出；P800 使用 bf16，输出与原生逐位一致 |
 
+## 3b. mlu590 绑定（Cambricon fused/TMO 委托）
+
+环境锁定：Torch `2.11.0+cpu` + torch_mlu `1.33.1`、Triton `3.4.0`、
+FlagGems `5.3.5`、设备 **MLU590-M9 / `mlu:0`**。
+
+| 绑定项 | 结论 |
+|---|---|
+| 设备表现 | `device.type="mlu"`；守卫额外要求 `torch_mlu` 可导入 |
+| 注册 key | **`AutogradPrivateUse1`**（与 torch_npu 同栈结论；`AutogradMLU`/`MLU` 亦命中，但 PrivateUse1 是 torch_mlu 后端 key） |
+| 原生 F.sdpa 实际路径 | **`_scaled_dot_product_fused_attention_overrideable` → CNNL FA v2**（不是 math） |
+| 主实现 P0 | 直调同一 fused overrideable——≈1.0x 原生，常与原生逐位一致；**不可**在 backend 内再调 `F.sdpa`（A1 注册后递归） |
+| 快路径 P1 | `torch_mlu_ops.flash_attention`（CNNL SDPA v7，**BSHD** q/k/v，bias **BHSD** `(B,H,Sq,Skv)`）；半精度 prefill 实测 **1.21-1.33x** 原生；`SDPA_MLU_TMO=0` 关闭 |
+| 不可用 private 入口 | efficient/flash/cudnn attention 三个 aten op 在 MLU 上 CPU fallback 失败 |
+| bool / GQA | bool→additive bias；overrideable 无 `enable_gqa` → `repeat_interleave` 扩 KV |
+| causal+mask | 与 `_native_shim`/`F.sdpa` 相同：先折叠进 mask |
+| 全遮蔽行 | fused/TMO 返回有限值，输出端 `masked_fill` 恢复 NaN |
+| FlagGems `_cambricon` | 精度 397/397 全过，但比原生慢 10-40x 且无 autograd——仅作兜底/对照 |
+| 性能水位 | **1.00-1.33x** 原生（早期 math-only 为 0.12-0.52x，已废） |
+
 ## 4. 平台专属数字（不可跨平台引用）
 
 - ascend910 性能与根因分解见 `reports/performance.md`、
@@ -58,6 +78,9 @@
   慢 5.1-6.6x）。
 - “FlagGems 未被 aten 分发接管”是 torch_npu 栈特定结论；P800 上
   FlagGems `_kunlunxin` attention 可直调，但 mask 场景存在 launch 失败。
+- mlu590 性能与路径选择见 `reports/mlu590.md`、
+  `reports/perf_fp16_mlu590.json`（TMO+fused 后 **1.00-1.33x** 原生；
+  FlagGems 慢 10-40x，仅兜底）。
 
 ## 5. 多平台结构（已落地）
 
@@ -66,6 +89,7 @@ kernel/triton_level.py          # 兼容 facade：按 query.device.type 分发
 kernel/backends/
   ascend910.py                  # 原 Triton 主体，旧功能零改动
   p800_kunlunxin.py             # Kunlunxin 厂商委托 + fp32 补偿
+  mlu590.py                     # Cambricon TMO FA + fused overrideable
 ```
 
 合并流程与后续平台扩展仍按 [MERGE.md](MERGE.md) 执行。
@@ -76,12 +100,13 @@ kernel/backends/
 
 | 层 | 机制 |
 |---|---|
-| facade 元数据 | `kernel.triton_level.PLATFORM = "multi(...)"`、`SUPPORTED_DEVICE_TYPES=("npu","cuda")` |
-| backend 元数据 | `kernel.backends.ascend910.PLATFORM` / `kernel.backends.p800_kunlunxin.PLATFORM` |
-| 调用守卫 | backend 只接受本设备且 P800 要求 XMLIR 栈；误配立即 `RuntimeError` 并指向本文件 |
+| facade 元数据 | `kernel.triton_level.PLATFORM = "multi(...)"`、`SUPPORTED_DEVICE_TYPES=("npu","cuda","mlu")` |
+| backend 元数据 | `kernel.backends.ascend910.PLATFORM` / `...p800_kunlunxin.PLATFORM` / `...mlu590.PLATFORM` |
+| 调用守卫 | backend 只接受本设备且 P800 要求 XMLIR、MLU 要求 torch_mlu；误配立即 `RuntimeError` 并指向本文件 |
 
 ```bash
 # 每个平台各跑一次
 python3 probes/guard_check.py ascend910
 python3 probes/guard_check.py p800-kunlunxin
+python3 probes/guard_check.py mlu590
 ```

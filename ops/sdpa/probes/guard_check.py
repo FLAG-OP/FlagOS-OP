@@ -20,6 +20,8 @@ def main() -> int:
     device_type = profile.torch_device.split(":", 1)[0]
     if device_type == "npu":
         import torch_npu  # noqa: F401
+    if device_type == "mlu":
+        import torch_mlu  # noqa: F401
 
     backend = get_impl(device_type)
     assert backend.PLATFORM == profile.name

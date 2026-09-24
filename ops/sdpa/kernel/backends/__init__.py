@@ -14,6 +14,8 @@ _IMPL_BY_DEVICE = {
     # Kunlunxin XMLIR presents its XPU devices as CUDA tensors.  The backend
     # itself performs a torch_xmlir guard, so an ordinary CUDA build is rejected.
     "cuda": "p800_kunlunxin",
+    # Cambricon torch_mlu tensors use device.type == "mlu".
+    "mlu": "mlu590",
 }
 
 
