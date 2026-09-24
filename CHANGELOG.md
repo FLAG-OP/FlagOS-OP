@@ -3,6 +3,16 @@
 ## [Unreleased]
 
 ### Added
+- **新算子: [ops/embedding](ops/embedding/)**（`aten::embedding`，
+  A1 路线，p800-kunlunxin）
+  - forward 复用 XMLIR native `index_select` row-gather；任意 rank indices、
+    FP32/FP16/BF16、int64/int32、padding 与 empty 全覆盖
+  - dense backward 复用 native `embedding_backward`；为 XPU 未实现的
+    `scale_grad_by_freq=True` 增加 inverse-frequency fallback
+  - `AutogradCUDA` A1 拦截 + 数学 backward；174 组黄金、20 组 forward
+    （含 `sparse=True` 前向）、6 组反向、`nn.Embedding` 应用层前向/反向
+    全部通过；perf gate 注册与 P800 基线更新，硬件级显式置空
+  - 新增 A1 dispatch 独立子进程基准，native→A1 附加开销约 0.024ms
 - **SDPA 第三平台: mlu590**（Cambricon MLU590 / torch_mlu）
   - 新增 `kernel/backends/mlu590.py`：分层委托——
     **TMO** `torch_mlu_ops.flash_attention`（半精度快路径）→

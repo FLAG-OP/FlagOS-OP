@@ -20,6 +20,7 @@ PROVIDERS = [
     ("example.backward-example", ROOT / "examples/backward-example/example.py"),
     ("example.hw-kernel-example", ROOT / "examples/hw-kernel-example/example.py"),
     ("ops.sdpa", ROOT / "ops/sdpa/example.py"),
+    ("ops.embedding", ROOT / "ops/embedding/example.py"),
 ]
 
 _cache: dict[str, object] = {}
