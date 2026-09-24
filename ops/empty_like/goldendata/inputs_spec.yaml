@@ -1,0 +1,18 @@
+# empty_like 输入与黄金数据规格（声明式，gen_golden.py 消费）
+#
+# empty_like 无数值语义（未初始化），黄金只约束**元数据**:
+# shape / dtype / stride。self 用不同 view 构造以覆盖 preserve_format 分支。
+op: empty_like
+seed_base: 20260923
+cases:
+  - name: base
+    shapes: [[64, 1024], [1, 14336], [8, 5000], [128, 5120]]
+    dtypes: [bfloat16, float16, float32]
+    memory_formats: [preserve_format, contiguous_format]
+    views: [contig, transpose]
+  - name: channels_last
+    shapes: [[2, 3, 16, 16], [4, 8, 8, 8]]
+    dtypes: [float32, bfloat16]
+    memory_formats: [preserve_format, channels_last]
+    views: [channels_last]
+seeds_per_case: 3

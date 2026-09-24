@@ -1,0 +1,31 @@
+# dropout 输入与黄金数据规格（声明式，gen_golden.py 消费）
+#
+# 分两类:
+#   - deterministic: train=False / p=0（别名）、p=1（全零）→ 位级黄金
+#   - stochastic: 0<p<1 → 无逐元素黄金，存输入/参数，按结构+统计判定
+op: dropout
+seed_base: 20260922
+cases:
+  - name: deterministic
+    shapes: [[64, 1024], [1, 14336], [8, 5000], [128, 5120]]
+    dtypes: [bfloat16, float16, float32]
+    settings:
+      - {p: 0.0, train: true}        # 返回 input 本身
+      - {p: 0.5, train: false}       # 返回 input 本身
+      - {p: 1.0, train: true}        # 全零
+    distribution: normal
+    scale: 2.0
+  - name: stochastic
+    shapes: [[64, 1024], [8, 5000], [128, 5120]]
+    dtypes: [float16, float32, bfloat16]
+    settings:
+      - {p: 0.1, train: true}
+      - {p: 0.5, train: true}
+      - {p: 0.9, train: true}
+    distribution: normal
+    scale: 2.0
+seeds_per_case: 3
+tolerance:
+  pointwise_abs: {float32: 1.0e-5, float16: 1.0e-2, bfloat16: 1.0e-2}
+  relative: 5.0e-2
+drop_ratio_tol: 0.02            # |实测 drop 比例 − p| 上界（统计容差）

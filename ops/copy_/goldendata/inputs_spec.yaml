@@ -1,0 +1,38 @@
+# copy_ 输入与黄金数据规格（声明式，gen_golden.py 消费）
+#
+# copy_ 是原地双输入算子: dst 提供输出形状/dtype，src 可广播并按 dst.dtype cast。
+op: copy_
+seed_base: 20260921
+cases:
+  - name: same
+    shape_pairs:
+      - [[64, 1024], [64, 1024]]
+      - [[1, 14336], [1, 14336]]
+      - [[8, 5000], [8, 5000]]
+      - [[2, 3, 4, 8], [2, 3, 4, 8]]
+    dtype_pairs: [[bfloat16, bfloat16], [float16, float16], [float32, float32]]
+    distribution: normal
+    scale: 2.0
+    special: []
+  - name: cast
+    shape_pairs:
+      - [[128, 256], [128, 256]]
+      - [[7, 4097], [7, 4097]]
+    dtype_pairs: [[float32, float16], [float16, float32],
+                  [bfloat16, float32], [float32, bfloat16]]
+    distribution: normal
+    scale: 2.0
+    special: [boundary]
+  - name: broadcast
+    shape_pairs:
+      - [[64, 128, 256], [128, 1]]
+      - [[8, 1, 5000], [8, 1, 1]]
+      - [[16, 32], [1, 32]]
+    dtype_pairs: [[float32, float32], [bfloat16, bfloat16]]
+    distribution: uniform
+    scale: 8.0
+    special: [zeros, large]
+seeds_per_case: 3
+tolerance:
+  pointwise_abs: {float32: 1.0e-5, float16: 1.0e-2, bfloat16: 1.0e-2}
+  relative: 5.0e-2

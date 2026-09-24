@@ -1,0 +1,15 @@
+# empty_strided 输入与黄金数据规格（声明式，gen_golden.py 消费）
+#
+# 无数值语义（未初始化），黄金只约束元数据: shape/dtype/stride。
+op: empty_strided
+seed_base: 20260925
+cases:
+  - name: sd
+    entries:
+      - {shape: [64, 1024], stride: [1024, 1], dtypes: [bfloat16, float16, float32]}
+      - {shape: [8, 5000], stride: [5000, 1], dtypes: [float32, bfloat16]}
+      - {shape: [128, 256], stride: [1, 128], dtypes: [float32, float16]}
+      - {shape: [4, 8, 16], stride: [128, 16, 1], dtypes: [float32]}
+      - {shape: [4, 4], stride: [1, 0], dtypes: [float32]}
+      - {shape: [0, 5], stride: [5, 1], dtypes: [float32]}
+seeds_per_case: 3

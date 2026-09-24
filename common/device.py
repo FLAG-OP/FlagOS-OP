@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+import torch  # noqa: F401  # 必须早于 xpu_compat(→triton) 导入：MLU 栈
+# 要求先 import torch，否则 torch.library 的 triton 命名空间重复注册报错
 import yaml
 
 # 尽早生效: 让 XPU Triton 编译失败暴露真实原因（known-issues #14）

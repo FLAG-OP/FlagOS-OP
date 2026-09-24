@@ -1,0 +1,7 @@
+op: _local_scalar_dense
+seed_base: 20260929
+cases:
+  - name: scalar
+    shapes: [[], [1]]
+    dtypes: [float32, float16, bfloat16, int32, int64, bool]
+seeds_per_case: 3

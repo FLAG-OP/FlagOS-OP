@@ -1,0 +1,20 @@
+# clone 输入与黄金数据规格（声明式，gen_golden.py 消费）
+op: clone
+seed_base: 20260919
+cases:
+  - name: pointwise
+    shapes: [[64, 1024], [1, 14336], [8, 5000], [128, 5120]]   # 含非 BLOCK 整倍数
+    dtypes: [bfloat16, float16, float32]
+    distribution: normal
+    scale: 2.0
+    special: []
+  - name: extreme
+    shapes: [[128, 5120], [7, 4097]]
+    dtypes: [float32, bfloat16]
+    distribution: uniform
+    scale: 8.0
+    special: [zeros, large, boundary]
+seeds_per_case: 3
+tolerance:
+  pointwise_abs: {float32: 1.0e-5, float16: 1.0e-2, bfloat16: 1.0e-2}
+  relative: 5.0e-2

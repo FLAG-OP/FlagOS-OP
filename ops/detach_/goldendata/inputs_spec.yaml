@@ -1,0 +1,7 @@
+op: detach_
+seed_base: 20260927
+cases:
+  - name: base
+    shapes: [[64, 1024], [1, 14336], [8, 5000], [128, 5120]]
+    dtypes: [bfloat16, float16, float32]
+seeds_per_case: 3

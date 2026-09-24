@@ -19,6 +19,19 @@ PROVIDERS = [
     ("example.softmax-fullstack", ROOT / "examples/softmax-fullstack/example.py"),
     ("example.backward-example", ROOT / "examples/backward-example/example.py"),
     ("example.hw-kernel-example", ROOT / "examples/hw-kernel-example/example.py"),
+    ("ops.type_as", ROOT / "ops/type_as/example.py"),
+    ("ops.clone", ROOT / "ops/clone/example.py"),
+    ("ops.contiguous", ROOT / "ops/contiguous/example.py"),
+    ("ops.copy_", ROOT / "ops/copy_/example.py"),
+    ("ops.dropout", ROOT / "ops/dropout/example.py"),
+    ("ops.empty", ROOT / "ops/empty/example.py"),
+    ("ops.empty_like", ROOT / "ops/empty_like/example.py"),
+    ("ops.empty_strided", ROOT / "ops/empty_strided/example.py"),
+    ("ops.detach", ROOT / "ops/detach/example.py"),
+    ("ops.detach_", ROOT / "ops/detach_/example.py"),
+    ("ops.item", ROOT / "ops/item/example.py"),
+    ("ops._local_scalar_dense", ROOT / "ops/_local_scalar_dense/example.py"),
+    ("ops.result_type", ROOT / "ops/result_type/example.py"),
 ]
 
 _cache: dict[str, object] = {}
