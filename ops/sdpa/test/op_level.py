@@ -1,5 +1,5 @@
 # op 层验证: A1 aten 注册 → 拦截命中 → 精度不变形 → autograd 完整。
-# 运行: python3 test/op_level.py [ascend910]
+# 运行: python3 test/op_level.py [ascend910|p800-kunlunxin]
 #
 # 注: "撤销恢复"无法进程内验证（torch.library 注册不可撤销，实测
 # torch 2.10），原生对照在注册前采集 + 独立进程复跑，见 test_op_phase2.py
@@ -27,7 +27,10 @@ def _make(dtype, dev, seed=3, requires_grad=False):
 
 def run(profile):
     import torch
-    import torch_npu  # noqa: F401
+    if profile.torch_device.startswith("npu"):
+        import torch_npu  # noqa: F401
+    if profile.torch_device.startswith("mlu"):
+        import torch_mlu  # noqa: F401
 
     from kernel.triton_level import sdpa_triton
     from register import register_a1
@@ -35,13 +38,33 @@ def run(profile):
     dev = profile.torch_device
     F = torch.nn.functional
 
-    # 1) 基线: 注册前（NPU 原生实现，缓存输出）
+    # 1) 基线: 注册前（平台原生实现，缓存输出）
     q, k, v = _make(torch.float16, dev)
     out_native = F.scaled_dot_product_attention(q, k, v, is_causal=True)
 
-    # 2) A1 注册（AutogradPrivateUse1，见 register.py 注释）
+    direct_grad_check = "not-applicable"
+    if profile.vendor in ("kunlunxin", "cambricon"):
+        # 厂商/Triton 直调路径平台分化回归: q/k/v 需按需走 A1 数学 backward；
+        # 可微 float mask 厂商路径不支持，应回退 A1 数学 backward。
+        qd, kd, vd = _make(torch.float16, dev, requires_grad=True)
+        out_d = sdpa_triton(qd, kd, vd, None, 0.0, True, None, False)
+        out_d.float().sum().backward()
+        assert torch.isfinite(qd.grad).all(), "direct q/k/v backward 失败"
+
+        qm, km, vm = _make(torch.float16, dev, requires_grad=True)
+        mask = torch.randn(
+            (1, 4, 128, 128), dtype=torch.float16, device=dev,
+            requires_grad=True,
+        )
+        out_m = sdpa_triton(qm, km, vm, mask, 0.0, True, None, False)
+        out_m.float().sum().backward()
+        assert torch.isfinite(qm.grad).all() and torch.isfinite(mask.grad).all(), \
+            "direct float-mask backward 失败"
+        direct_grad_check = "vendor+math-fallback"
+
+    # 2) A1 注册（profile 提供 dispatch key）
     _CALLS["n"] = 0
-    lib = register_a1(counter=_CALLS)
+    lib = register_a1(profile.dispatch_key, counter=_CALLS)
 
     q, k, v = _make(torch.float16, dev)
     out_hooked = F.scaled_dot_product_attention(q, k, v, is_causal=True)
@@ -66,7 +89,8 @@ def run(profile):
 
     # 原生梯度（独立子进程，避免注册污染）
     ph2 = subprocess.run(
-        [sys.executable, str(OP_DIR / "test" / "op_phase2_native.py")],
+        [sys.executable, str(OP_DIR / "test" / "op_phase2_native.py"),
+         profile.torch_device],
         capture_output=True, text=True, timeout=300)
     import json as _json
     line = [ln for ln in ph2.stdout.splitlines() if ln.startswith("NATIVE_GRAD")]
@@ -85,10 +109,11 @@ def run(profile):
     return {"ok": True, "intercepted": _CALLS["n"],
             "bitwise_vs_direct": True,
             "max_diff_vs_native": round(err_native, 8),
-            "grad_check": "vs-native-subprocess"}
+            "grad_check": "vs-native-subprocess",
+            "direct_grad_check": direct_grad_check}
 
 
 if __name__ == "__main__":
     from _profile import load_profile
     print(run(load_profile(sys.argv[1] if len(sys.argv) > 1
-                           else "ascend910")))
+                           else None)))

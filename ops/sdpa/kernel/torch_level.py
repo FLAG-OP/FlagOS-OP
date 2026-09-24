@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import torch
 
-from reference import sdpa_reference
+try:  # Package-style import
+    from ..reference import sdpa_reference
+except ImportError:  # Standalone import
+    from reference import sdpa_reference
 
 
 def sdpa_torch(

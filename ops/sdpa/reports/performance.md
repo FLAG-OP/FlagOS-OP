@@ -100,7 +100,7 @@ Triton 级在该栈的合理水位 ≈ 纯 GEMM 推算下限 1.8ms（S=2k），�
 并已合入；V2 exp2 该栈负优化、V3/V1 无差异、V5 语法不可用——结论
 固化于[开发报告](development.md) §3.6 与 [../PLATFORM.md](../PLATFORM.md) §2。
 
-## 5. 复现
+## 5. Ascend 复现
 
 ```bash
 python3 script/bench_perf.py --json-out reports/perf_fp16.json      # fp16
@@ -108,4 +108,51 @@ python3 script/bench_perf.py --dtype bfloat16 --json-out reports/perf_bf16.json
 python3 script/perf_explore.py        # tile/warps/stages 扫描 + matmul 天花板
 python3 script/perf_explore2.py       # UB 绕过尝试 + dtype + 带宽核算
 python3 script/perf_variants.py       # 写法变体单项 A/B（V1-V5 + 组合）
+```
+
+## 6. p800-kunlunxin（2026-09-22）
+
+P800 不复用 Ascend Triton 结论，采用厂商 efficient-attention 委托；
+fp16 采样（warmup=20，iters=100）见
+[perf_fp16_p800-kunlunxin.json](perf_fp16_p800-kunlunxin.json)：
+每次迭代读取一个输出元素强制异步执行完成，避免只测 launch 时间。
+
+| shape | ours | Python F.sdpa | FlagGems | 加速比 = F.sdpa/ours |
+|---|---:|---:|---:|---:|
+| prefill_1k_d64 | 0.1484ms | 0.1655ms | 0.3120ms | **1.115x** |
+| prefill_1k_d128 | 0.1442ms | 0.1574ms | 0.3606ms | **1.092x** |
+| prefill_2k_d128 | 0.2584ms | 0.2941ms | 1.3283ms | **1.138x** |
+| prefill_4k_d128 | 0.6632ms | 0.6796ms | 4.3990ms | **1.025x** |
+| gqa_1k_d128 | 0.1884ms | 0.2045ms | 0.5667ms | **1.085x** |
+| decode_d128 | 0.1132ms | 0.1270ms | 0.1611ms | **1.122x** |
+
+复现：
+
+```bash
+python3 script/bench_perf.py --device cuda:1 --dtype float16 \
+  --warmup 20 --iters 100 \
+  --json-out reports/perf_fp16_p800-kunlunxin.json
+```
+
+### 6.1 仓库 perf gate（2026-09-24）
+
+注册用例：
+
+```text
+ops.sdpa.p800.forward
+ops.sdpa.native.forward
+```
+
+入库基线（B1 H16 S1024 D128 causal fp16）：
+
+| case | latency | TFLOPS |
+|---|---:|---:|
+| ops.sdpa.p800.forward | 0.149ms | 28.7 |
+| ops.sdpa.native.forward | 0.168ms | 25.6 |
+
+门禁判定：`FAIL 0 · WARN 0`。复现：
+
+```bash
+python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.sdpa
+python3 scripts/perf_compare.py --device p800-kunlunxin
 ```

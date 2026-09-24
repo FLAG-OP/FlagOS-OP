@@ -2,66 +2,115 @@
 
 | 项 | 值 |
 |---|---|
-| 算子名称 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
-| 语义 | [reference.py](reference.py)（softmax(QKᵀ·scale + mask)·V，fp32 内部计算） |
-| 目标设备 / 路线 | `ascend910`（Ascend 910, CANN 9.0.0）/ **A1**（aten 拦截） |
-| 平台绑定 | 本交付为 ascend910 专属——绑定项与移植预案见 [PLATFORM.md](PLATFORM.md) |
-| 多平台合并 | 第二平台实现完成后按 [MERGE.md](MERGE.md) 七步合入（黄金/测试/注册链复用） |
-| 日期 / 状态 | 2026-09-16 / 定稿 |
+| 算子 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
+| 语义 | [reference.py](reference.py)（fp32 内部、GQA、causal、bool/float mask） |
+| 路线 | A1 aten 拦截；平台实现由 [kernel/triton_level.py](kernel/triton_level.py) facade 分发 |
+| 平台 | ascend910（Triton 主实现）· p800-kunlunxin（厂商委托 + fp32 补偿）· mlu590（TMO FA + fused overrideable 委托） |
+| 状态 | 2026-09-23: MLU590 三层 + 黄金全绿（fused/TMO 修订后 1.00-1.33x 原生）；2026-09-22: P800 三层 + 黄金全绿 |
 
-## 实现矩阵（三级）
+## 实现矩阵
 
-| 开发级别 | 文件 | 状态 | 备注 |
-|---|---|---|---|
-| torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | ATen 组合（第二判卷人/对照） |
-| Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ✅ | **主实现**: online-softmax two-pass，causal 截断，GQA/双 mask/尾块 |
-| 硬件级 | — | ⬜ 置空 | 原生 CANN 闪电注意力即该级参照（见性能分册差距分析） |
+| 平台 | 级别 | 文件 | 状态 | 备注 |
+|---|---|---|---|---|
+| ascend910 | Triton | [kernel/backends/ascend910.py](kernel/backends/ascend910.py) | ✅ | online-softmax two-pass、causal 截断、GQA/双 mask/尾块 |
+| p800-kunlunxin | 厂商 kernel 委托 | [kernel/backends/p800_kunlunxin.py](kernel/backends/p800_kunlunxin.py) | ✅ | fp16/bf16 直调 efficient attention；fp32 走 ATen 组合 + bmm workaround |
+| mlu590 | 厂商 kernel 委托 | [kernel/backends/mlu590.py](kernel/backends/mlu590.py) | ✅ | TMO FA（半精度）→ fused overrideable；math/FlagGems 兜底 |
+| 通用 | torch | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | 第二判卷人 / 对照 |
+| 硬件级 | — | [kernel/hardware_level/README.md](kernel/hardware_level/README.md) | ⬜ 置空 | P800 硬件 SDK 不在当前容器；XMLIR/Triton 试验仍显著慢于厂商 kernel |
 
-## 验证矩阵（三层）
+## mlu590 验证矩阵
 
-| 层级 | 入口 | 结果 | 详细 |
-|---|---|---|---|
-| kernel 层 | `test/kernel_level.py`（36 组精度 + 哨兵） | ✅ 37/37 | [reports/accuracy.md](reports/accuracy.md) |
-| 框架层 | `test/op_level.py`（A1 拦截 + 梯度） | ✅ | — |
-| 应用层 | `test/framework_level.py`（mini-decoder 消费双跑） | ✅ | [说明](README.md#应用层) |
-| 黄金 | `script/gen_golden.py` + `check_accuracy.py` | ✅ 265/265 | [goldendata/](goldendata/) |
-| 性能 | `script/bench_perf.py` 三方对照 | ✅ | [reports/performance.md](reports/performance.md) |
-| 平台守卫 | `probes/guard_check.py`（元数据/调用/注册三层） | ✅ | [PLATFORM.md](PLATFORM.md) §5 |
+| 层级 | 命令 / 入口 | 结果 |
+|---|---|---|
+| kernel | `python3 test/kernel_level.py mlu590` | ✅ 37/37，最大误差 3.91e-3（bf16），哨兵通过，1k D128 0.25ms |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device mlu:0` | ✅ 397/397，worst 7.81e-3（bf16 bool，容差内） |
+| op | `python3 test/op_level.py mlu590` | ✅ AutogradPrivateUse1 拦截、注册=直调(逐位)、vs 原生 4.88e-4、梯度通过 |
+| 应用 | `python3 test/framework_level.py mlu590` | ✅ mini-decoder 拦截 28 次，logits diff=1.95e-3，续写一致率 1.00 |
+| 守卫 | `python3 probes/guard_check.py mlu590` | ✅ 元数据 / mlu 路径 / CPU 拒绝 / 注册 |
 
-## 多尺度速览（18 点扫描，详见性能分册 §2.5）
+复现报告与坑位：[reports/mlu590.md](reports/mlu590.md)。
 
-小 S（≤512）差距仅 **1.4-1.8x**；差距随 S、D **二维放大**至 22x；
-FlagGems D=256 **全部编译失败**（UB 溢出），本实现 64×64 tile 仍可跑。
-图: `reports/figs/`（7 张，顶会图式，`script/make_figs.py` 生成）。
+## mlu590 fp16 性能采样
 
-## 关键数字（fp16，S=2k D=128 H=16 causal）
+数据：[perf_fp16_mlu590.json](reports/perf_fp16_mlu590.json)
+（warmup=20，iters=100；speedup = native/ours，**>1 表示 ours 更快**）。
 
-| 指标 | 自研 Triton | FlagGems 5.3.5 | 原生 CANN |
-|---|---|---|---|
-| 精度（vs CPU fp32 黄金） | ✅ 265/265 | 未接入 aten 分发 | ✅ 265/265 |
-| prefill_2k 延迟 | 1.44 ms | 25.0 ms | **0.22 ms** |
-| 相对 | 1.00x | **0.06x（慢 17.4x）** | 6.5x 快 |
+| shape | ours | Python F.sdpa | FlagGems | speedup=F/ours |
+|---|---:|---:|---:|---:|
+| prefill 1k D64 | 0.227ms | 0.301ms | 2.915ms | **1.33x** |
+| prefill 1k D128 | 0.283ms | 0.363ms | 3.666ms | **1.28x** |
+| prefill 2k D128 | 0.351ms | 0.445ms | 8.088ms | **1.27x** |
+| prefill 4k D128 | 0.727ms | 0.902ms | 26.628ms | **1.24x** |
+| GQA 1k D128 | 0.366ms | 0.442ms | 5.176ms | **1.21x** |
+| decode D128 | 0.225ms | 0.224ms | 1.989ms | **1.00x** |
+
+路径：半精度走 TMO FA（失败则 fused overrideable）；fp32 走
+overrideable。与原生常逐位/亚 ulp 一致；FlagGems Triton 慢 10-40x。
+
+## p800-kunlunxin 验证矩阵
+
+| 层级 | 命令 / 入口 | 结果 |
+|---|---|---|
+| kernel | `python3 test/kernel_level.py p800-kunlunxin` | ✅ 37/37，最大误差 3.906e-3（bf16），哨兵通过 |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | ✅ 397/397，extreme 相对误差 4.25e-3 |
+| op | `python3 test/op_level.py p800-kunlunxin` | ✅ AutogradCUDA 拦截、注册=直调、direct 与 A1 梯度通过 |
+| 应用 | `python3 test/framework_level.py p800-kunlunxin` | ✅ mini-decoder 拦截 28 次，logits diff=0，续写一致率 1.00 |
+| 守卫 | `python3 probes/guard_check.py p800-kunlunxin` | ✅ 元数据 / CUDA 路径 / CPU 拒绝 / 注册 |
+| perf gate | `scripts/perf_run.py --device p800-kunlunxin --pattern ops.sdpa` | ✅ P800/native 两条用例入库，FAIL 0 · WARN 0 |
+
+复现报告与坑位：[reports/p800-kunlunxin.md](reports/p800-kunlunxin.md)。
+
+## 关键数字
+
+数据：[perf_fp16_p800-kunlunxin.json](reports/perf_fp16_p800-kunlunxin.json)
+（warmup=20，iters=100；加速比 = baseline 延时 / ours 延时，>1 更快）。
+
+| shape | ours | Python F.sdpa | FlagGems | 加速比 = F.sdpa/ours |
+|---|---:|---:|---:|---:|
+| prefill 1k D64 | 0.1484ms | 0.1655ms | 0.3120ms | **1.115x** |
+| prefill 1k D128 | 0.1442ms | 0.1574ms | 0.3606ms | **1.092x** |
+| prefill 2k D128 | 0.2584ms | 0.2941ms | 1.3283ms | **1.138x** |
+| prefill 4k D128 | 0.6632ms | 0.6796ms | 4.3990ms | **1.025x** |
+| GQA 1k D128 | 0.1884ms | 0.2045ms | 0.5667ms | **1.085x** |
+| decode D128 | 0.1132ms | 0.1270ms | 0.1611ms | **1.122x** |
+
+### FA2 协议下的 A100 论文参照
+
+同 `batch×S=16k`、causal、fp16 协议；A100 为 FlashAttention-2 论文图表
+读数换算，非同机复测。P800 每次读取一个输出元素强制执行完成。
+
+| 场景 | P800 ours | A100·FA2 | P800/A100 延时 |
+|---|---:|---:|---:|
+| D64 S=2k | 2.156ms | ~0.785ms | **2.75x 慢** |
+| D64 S=8k | 7.040ms | ~2.894ms | **2.43x 慢** |
+| D128 S=1k | 0.789ms | ~0.344ms | **2.30x 慢** |
+| D128 S=4k | 2.312ms | ~1.195ms | **1.94x 慢** |
+| D128 S=8k | 4.404ms | ~2.340ms | **1.88x 慢** |
+
+结论：在当前栈上，直接选择底层 efficient attention 是合理交付；
+自写 Triton 需先解决 XMLIR Triton 编译/launch 稳定性，不应为了
+“实现语言必须是 Triton”放弃厂商成熟 kernel。
 
 ## 结论与遗留
 
-三层验证 + 黄金全绿；**比 FlagGems 现有 Triton SDPA 快 3.3-17.6x**，
-落后原生 CANN（AscendC 手写闪电注意力）3.3-10.8x——差距根因为
-Triton→BiShengIR 栈的 GEMM 效率与 UB 约束下的 tile 上限，非 kernel
-结构问题（[性能分册](reports/performance.md)含纯 matmul 天花板证据）。
-遗留: ①应用层为轻量消费方（真实 vLLM 待环境）②fp32 ieee 精度模式性能代价
-未单独优化 ③PyPTO 重写路线需 910B+ 环境（见开发报告§7）。
+Ascend 三层验证、黄金 265/265、性能对标与根因分析保持有效，详见
+[reports/accuracy.md](reports/accuracy.md)、
+[reports/performance.md](reports/performance.md)、
+[reports/perf_analysis.md](reports/perf_analysis.md)。
 
 ## 交付物清单
 
 | 交付物 | 位置 |
 |---|---|
-| 开发报告（7 章） | [reports/development.md](reports/development.md) |
-| 测试报告（范围矩阵） | [reports/test-report.md](reports/test-report.md) |
-| 精度分册（含复现命令） | [reports/accuracy.md](reports/accuracy.md) |
-| 性能分册（含根因分析与复现） | [reports/performance.md](reports/performance.md) |
-| 性能根因专项（变体实验） | [reports/perf_analysis.md](reports/perf_analysis.md) |
-| A100 对标（FA2 协议） | [reports/perf_a100.md](reports/perf_a100.md) |
-| 绝对延迟视角 | [reports/absolute_latency.md](reports/absolute_latency.md) |
-| 平台绑定清单与移植指引 | [PLATFORM.md](PLATFORM.md) |
+| 平台绑定清单 | [PLATFORM.md](PLATFORM.md) |
 | 多平台合并指南 | [MERGE.md](MERGE.md) |
-| 开发证据链（探针归档） | [probes/](probes/README.md) |
+| P800 复现报告 | [reports/p800-kunlunxin.md](reports/p800-kunlunxin.md) |
+| P800 direct Triton 探针 | [reports/p800-triton-probe.md](reports/p800-triton-probe.md) |
+| P800 自研固定调度实验 | [reports/p800-custom-schedule.md](reports/p800-custom-schedule.md) |
+| MLU590 复现报告 | [reports/mlu590.md](reports/mlu590.md) |
+| MLU590 测试报告（已填样例） | [reports/examples/sdpa_mlu590_test_report.md](../../reports/examples/sdpa_mlu590_test_report.md) |
+| MLU590 开发报告 | [reports/examples/sdpa_mlu590_report.md](../../reports/examples/sdpa_mlu590_report.md) |
+| Ascend 开发报告 | [reports/development.md](reports/development.md) |
+| Ascend 测试报告 | [reports/test-report.md](reports/test-report.md) |
+| Ascend 精度 / 性能分册 | [reports/accuracy.md](reports/accuracy.md) / [reports/performance.md](reports/performance.md) |
+| 性能 JSON | [reports/perf_fp16_p800-kunlunxin.json](reports/perf_fp16_p800-kunlunxin.json) · [reports/perf_fp16_mlu590.json](reports/perf_fp16_mlu590.json) |

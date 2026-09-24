@@ -2,8 +2,8 @@
   "schema": 1,
   "device": "p800-kunlunxin",
   "created_at": "2026-08-27T10:31:10.880764+00:00",
-  "updated_at": "2026-09-23T16:24:14.947991+00:00",
-  "git_commit": "c335ff69c002a1e3bcf3125259bf11e1559af0d0",
+  "updated_at": "2026-09-23T16:32:54.525963+00:00",
+  "git_commit": "6d3e034d9e153fa631fba5e465e9433ecf2d49b0",
   "git_dirty": true,
   "env_fingerprint": {
     "torch": "2.9.0+cu129",
@@ -338,6 +338,42 @@
       "updated_at": "2026-08-27T10:36:43.115156+00:00",
       "git_commit": "83266323da7f3bbb307d2228cba46075f4d2860d",
       "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.9.0+cu129",
+        "triton": "3.0.0",
+        "flag_gems": "4.2.1.rc.0",
+        "vllm_fl": "unknown",
+        "vllm": "0.13.0"
+      }
+    },
+    "ops.sdpa.native.forward": {
+      "metrics": {
+        "latency_ms": 0.167775,
+        "TFLOPS": 25.6
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-09-23T16:32:53.144575+00:00",
+      "git_commit": "6d3e034d9e153fa631fba5e465e9433ecf2d49b0",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.9.0+cu129",
+        "triton": "3.0.0",
+        "flag_gems": "4.2.1.rc.0",
+        "vllm_fl": "unknown",
+        "vllm": "0.13.0"
+      }
+    },
+    "ops.sdpa.p800.forward": {
+      "metrics": {
+        "latency_ms": 0.149464,
+        "TFLOPS": 28.736
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-09-23T16:32:43.696603+00:00",
+      "git_commit": "6d3e034d9e153fa631fba5e465e9433ecf2d49b0",
+      "git_dirty": true,
       "env_fingerprint": {
         "torch": "2.9.0+cu129",
         "triton": "3.0.0",

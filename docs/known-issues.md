@@ -4,7 +4,7 @@
 
 ## 关于本文件
 
-本文件记录**参考实例（P800 / Kunlunxin 栈）**的实测问题，用作:
+本文件记录**参考实例（P800 / Kunlunxin 栈）与 MLU590 栈**的实测问题，用作:
 
 1. 该设备栈使用者的排障参考
 2. 其他芯片接入时的检查清单模板——每接入一种新芯片，建议用同样的
@@ -141,6 +141,60 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 全程无 mask、无调优，确定性路径；整数倍 N 零开销。测试形状补充
 3072/5000/5120 非整倍数回归。
 
+### 17. P800 SDPA 的七类平台分化（sdpa-op 实测发现）
+
+1. **Ascend Triton 不能零改动平移**: causal 循环边界中的 runtime select
+   触发 XMLIR Triton rewrite 失败（`Could not find PtrState returned by
+   the loop` / `Unsupported select predicate`）。
+2. **ATen 组合 bmm JIT 缺陷**: `S∈(320,640]` 可触发
+   `bmm_one_loop` 模板实例化编译错误；SDPA fp32 精确路径将序列 pad 到
+   768（更长边保持原长）并用 mask 还原语义。
+3. **厂商 efficient attention 全遮蔽行为分化**: 全 False 行返回有限值，
+   CPU/参考语义为 NaN；SDPA backend 显式 `masked_fill` 恢复。
+4. **efficient backward 参数分化**: q/k/v 反向要求 forward 计算
+   log-sumexp；float bias 反向暂不支持 `bias_requires_grad`。SDPA
+   direct 路径按需开启 log-sumexp，可微 mask 自动复用 A1 数学 backward。
+5. **丢弃输出计时会虚高**: 仅调用 kernel 后丢弃 tensor、再
+   `torch.cuda.synchronize()`，可能只测到 launch/异步提交时间，出现
+   9000+ TFLOPS 的物理不可能结果。基准必须读取
+   `output[0,0,0,0].item()` 强制完成。
+6. **FlagGems `_kunlunxin` SDPA Triton 前向性能低**: 固定 tile 后，
+   FA2 协议仍比厂商 efficient attention 慢约 5.4-7.0x；raw-pointer 改写
+   触发 XMLIR `PtrState returned by the loop`。复现见
+   [ops/sdpa/reports/p800-triton-probe.md](../ops/sdpa/reports/p800-triton-probe.md)。
+7. **自研固定调度无法突破 dot/loop lowering 平台**: no-mask causal、
+   GQA 与尾块可正确，但 mask launch 失败且比厂商路径慢 2.1-6.5x；
+   多组 tile/stages/exp/diagonal-order 变体无实质变化。复现见
+   [ops/sdpa/reports/p800-custom-schedule.md](../ops/sdpa/reports/p800-custom-schedule.md)。
+
+平台结论与复现命令见
+[ops/sdpa/reports/p800-kunlunxin.md](../ops/sdpa/reports/p800-kunlunxin.md)。
+
+### 18. MLU590 SDPA 的五类平台分化（sdpa-op 实测发现）
+
+1. **`efficient/flash/cudnn` attention aten 私有 op 不可用**:
+   MLU 上均 CPU fallback 失败（`NotImplementedError: ... from the 'CPU'
+   backend`）。**原生 `F.sdpa` 实际走 `_scaled_dot_product_fused_attention_
+   overrideable`（CNNL FA v2）**——直调 math private 只能拿到未融合
+   分解，早期实现 0.11-0.55x 原生。
+2. **bool mask 与 math private 分化**: math 路径直收 bool vs 参考
+   err≈0.19；必须先转 additive `-inf` bias（`F.sdpa`/reference 对
+   bool 正确）。
+3. **FlagGems `_cambricon` attention 慢 10-40x 且无 autograd**: 精度
+   397/397 全过，但 1k D64 达 8.4ms（原生 0.31ms）；不可作生产主路径，
+   仅兜底/对照。direct 可微调用复用 A1 数学 backward。
+4. **全遮蔽行返回有限值**: fused/TMO/math/FlagGems 均不返回 NaN，SDPA
+   backend 显式 `masked_fill` 恢复 CPU/aten 语义（同 #17.3）。
+5. **A1 注册 key 与 torch_npu 同为 `AutogradPrivateUse1`**:
+   `AutogradMLU`/`MLU` 亦命中，但 PrivateUse1 是 torch_mlu 后端 key；
+   `register_a1` 守卫已放宽为 torch_npu **或** torch_mlu 可用。
+
+修订后主路径 = TMO FA（半精度）→ fused overrideable；实测 **1.00-1.33x**
+原生。`SDPA_MLU_TMO=0` 可强制只走 overrideable。
+
+平台结论与复现命令见
+[ops/sdpa/reports/mlu590.md](../ops/sdpa/reports/mlu590.md)。
+
 ## 通用检测方法
 
 | 问题类型 | 检测工具 |
@@ -154,6 +208,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 | FlagGems 某算子链接失败 | `common/xpu_compat` 补丁后看 elfconv 真实 stderr；对照 #13 |
 | 尾块归约静默错误 | 精度探针含非整倍数 N（`accuracy_report.py`）；对照 #15 |
 | call_op 长循环挂起 | 短循环（≤100 次）规避；排查见 #16 |
+| SDPA 平台语义/JIT 分化 | 397 组黄金 + S=333/D=80 尾块用例；对照 #17 / #18 |
 
 ---
 

@@ -11,8 +11,8 @@
   S∈{512,1k,2k,4k,8k}，causal，fp16 前向。
   实现三路: torch 原生 F.sdpa（各平台最优后端自动生效）/
            flash-attn 包（若已安装——A100 上的论文同款）/
-           本库 Triton 自研（NPU 上可用; CUDA 上按 PLATFORM.md §2
-           需先移植, 未移植时自动跳过）
+           本库实现（ascend910 Triton / p800-kunlunxin 厂商委托，
+           未支持平台自动跳过）
 
 输出: reports/cross_platform_<device>.json（与 910 实测同 schema，
       可直接对比 / 画同图）
@@ -45,6 +45,8 @@ def detect_device() -> str:
     import torch
     if torch.npu.is_available() if hasattr(torch, "npu") else False:
         return "npu:0"
+    if torch.mlu.is_available() if hasattr(torch, "mlu") else False:
+        return "mlu:0"
     if torch.cuda.is_available():
         return "cuda:0"
     return "cpu"
@@ -53,18 +55,28 @@ def detect_device() -> str:
 def bench(fn, dev, warmup=10, iters=30):
     import torch
     for _ in range(warmup):
-        fn()
+        output = fn()
+        if isinstance(output, (tuple, list)):
+            output = output[0]
+        output[0, 0, 0, 0].item()
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
+    elif dev.startswith("mlu"):
+        torch.mlu.synchronize()
     t0 = time.perf_counter()
     for _ in range(iters):
-        fn()
+        output = fn()
+        if isinstance(output, (tuple, list)):
+            output = output[0]
+        output[0, 0, 0, 0].item()
     if dev.startswith("npu"):
         torch.npu.synchronize()
     elif dev.startswith("cuda"):
         torch.cuda.synchronize()
+    elif dev.startswith("mlu"):
+        torch.mlu.synchronize()
     return (time.perf_counter() - t0) / iters * 1000
 
 
@@ -103,11 +115,10 @@ def main() -> int:
 
     try:
         from kernel.triton_level import sdpa_triton
-        import torch_npu  # noqa: F401
-        # 平台守卫: 自研 kernel 仅 ascend910 绑定（PLATFORM.md §2）
         from kernel.triton_level import PLATFORM, SUPPORTED_DEVICE_TYPES
         if dev.split(":")[0] in SUPPORTED_DEVICE_TYPES:
-            impls["ours_triton"] = sdpa_triton
+            impls["ours_triton"] = lambda q, k, v: sdpa_triton(
+                q, k, v, is_causal=True)
         else:
             print(f"[skip] ours_triton: PLATFORM={PLATFORM} 绑定, "
                   f"当前 {dev}（移植见 MERGE.md）")

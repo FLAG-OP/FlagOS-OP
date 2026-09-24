@@ -3,19 +3,19 @@
 | 项 | 值 |
 |---|---|
 | 算子名称 | `aten::scaled_dot_product_attention` |
-| 实现路线 / 开发级别 | A1 torch 算子替换 / Triton 级 |
-| 目标设备 | `ascend910` |
-| 测试日期 | 2026-09-16 |
-| 结论 | **通过**（应用层空缺为环境限制，见说明） |
+| 实现路线 / 开发级别 | A1 torch 算子替换 / Triton（Ascend）+ 厂商委托（P800 · MLU590） |
+| 目标设备 | `ascend910` · `p800-kunlunxin` · `mlu590` |
+| 测试日期 | 2026-09-16（Ascend）· 2026-09-22/24（P800）· 2026-09-23（MLU590） |
+| 结论 | **三平台通过**（MLU590 见 §7 与 [reports/mlu590.md](mlu590.md)；示例填充见 [sdpa_mlu590_test_report](../../../reports/examples/sdpa_mlu590_test_report.md)） |
 
 ## 1. 测试范围
 
 | 层级 | 是否覆盖 | 入口 | 结果 |
 |---|---|---|---|
-| kernel 层（精度/哨兵/性能） | ✅ | `test/kernel_level.py` | PASS（36 组 + 哨兵 + 快速性能） |
-| 框架层（注册/拦截/梯度） | ✅ | `test/op_level.py` | PASS（拦截命中 · 逐位一致 · 梯度 vs 原生 ≤3.9e-3） |
+| kernel 层（精度/哨兵/性能） | ✅ | `test/kernel_level.py` | PASS（37 组 + 哨兵 + 快速性能；Ascend 36 组历史保留） |
+| 框架层（注册/拦截/梯度） | ✅ | `test/op_level.py` | PASS（拦截命中 · 逐位一致 · 梯度 vs 原生） |
 | 应用层（消费方双跑） | ✅ | `test/framework_level.py` | PASS（mini-decoder: 拦截 28 · logits 1.95e-3 · 续写一致率 1.00） |
-| 黄金回归 | ✅ | `script/gen_golden.py` + `check_accuracy.py` | PASS（265/265，双向互验生成） |
+| 黄金回归 | ✅ | `script/gen_golden.py` + `check_accuracy.py` | Ascend 历史 265/265；P800 397/397（§6） |
 | 性能三方对照 | ✅ | `script/bench_perf.py` | OK（fp16/bf16 各 6 形状） |
 | 平台守卫（三层） | ✅ | `probes/guard_check.py` | PASS（元数据/调用拦截/注册正向） |
 | 写法变体回归 | ✅ | `script/perf_variants.py` | PASS（8 变体数值全过；V4 已合入） |
@@ -75,6 +75,36 @@ dq 4.9e-4 · dk 4.9e-4 · dv 3.9e-3。
 
 ## 6. 结论
 
-kernel 层/框架层/应用层/黄金/性能五线全绿，正确性与拦截机制均有
-实验证据链；性能定位清晰（生态内 Triton 最快、原生差距根因可解释）。
-**建议合入**（真实 vLLM 场景待环境具备后补验）。
+### 2026-09-22 p800-kunlunxin 复验
+
+| 层级 | 结果 |
+|---|---|
+| kernel | 37/37；普通 fp32 ≤5e-7，bf16 最大 3.906e-3；哨兵通过 |
+| 黄金 | 397/397；extreme 相对误差 4.25e-3 |
+| A1 op | `AutogradCUDA` 拦截命中；注册=直调；direct q/k/v 与可微 mask 反向通过；dq/dk/dv 梯度对照通过 |
+| 应用 | mini-decoder 拦截 28；logits diff=0；贪心续写一致率 1.00 |
+| FlagOS 栈 | `flag_gems.only_enable(['gelu'])` 后运行应用层 | ✅ |
+| 守卫 | 元数据、`cuda:1` 正向路径、CPU 拒绝、注册全通过 |
+| perf gate | `ops.sdpa.p800/native.forward` 基线入库；FAIL 0 · WARN 0 |
+
+详细复现：[p800-kunlunxin.md](p800-kunlunxin.md)。
+
+### 2026-09-23 mlu590 复验
+
+| 层级 | 结果 |
+|---|---|
+| kernel | 37/37；fp32 1.79e-7 / fp16 4.88e-4 / bf16 3.91e-3；哨兵通过；1k D128 0.25ms |
+| 黄金 | 397/397；worst 7.81e-3（bf16 bool，容差内） |
+| A1 op | `AutogradPrivateUse1` 拦截；注册=直调逐位；vs 原生 4.88e-4；梯度 ≤6.1e-5 |
+| 应用 | mini-decoder 拦截 28；logits 1.95e-3；贪心续写一致率 1.00 |
+| 守卫 | 元数据、`mlu:0` 正向路径、CPU 拒绝、注册全通过 |
+| 性能 | fp16 相对原生 **1.00–1.33x**（TMO→fused overrideable） |
+
+详细复现：[mlu590.md](mlu590.md) ·
+已填样例 [sdpa_mlu590_test_report](../../../reports/examples/sdpa_mlu590_test_report.md)。
+
+### 总结论
+
+kernel 层/框架层/应用层/黄金/性能五线全绿（ascend910 · p800-kunlunxin ·
+mlu590 三平台），正确性与拦截机制均有实验证据链；性能定位清晰。
+**建议合入**（真实 vLLM 场景待环境具备后补验；MLU 侧 quirks 已声明）。
