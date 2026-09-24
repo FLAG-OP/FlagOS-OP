@@ -90,6 +90,17 @@ Triton forward。它通过 no-mask causal、GQA、非 causal 和尾块精度检�
 
 ## 应用层
 
+P800 框架/应用验证运行在 FlagOS 算子栈内：
+
+```python
+import flag_gems
+flag_gems.only_enable(include=["gelu"])  # mini-decoder 的 surrounding op
+```
+
+锁定镜像上全量 `flag_gems.enable()` 在该 consumer 上存在非确定性，因此
+选择稳定且真实被模型调用的 GELU 作为 FlagOS/FlagGems 代表路径；
+SDPA 由本目录 A1 注册接管。
+
 `test/framework_level.py` 构建 Llama 风格 4 层 mini-decoder
 （GQA 8/2、causal），业务代码只调用
 `F.scaled_dot_product_attention`。P800 使用 bf16 规避该随机模型

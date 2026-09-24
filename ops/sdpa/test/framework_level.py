@@ -99,6 +99,14 @@ def run(profile):
     from register import register_a1
 
     dev = profile.torch_device
+    if profile.vendor == "kunlunxin":
+        # Framework validation runs inside the FlagOS operator stack.  The
+        # locked P800 image is not deterministic with the full FlagGems op set,
+        # so enable the stable GELU actually consumed by this mini-decoder.
+        import flag_gems
+        flag_gems.only_enable(include=["gelu"])
+        assert "gelu" in flag_gems.current_work_registrar.include_ops
+
     # P800 的 nn.Linear/LayerNorm fp16 链路在本随机 mini-decoder 上溢出；
     # 应用语义仍是低精度注意力，使用栈上稳定的 bf16。
     dt = torch.bfloat16 if profile.vendor == "kunlunxin" else torch.float16
@@ -139,6 +147,7 @@ def run(profile):
     # FlagOS-OP 断言策略: 自定义数值实现允许混沌分叉，一致率 ≥ 2/3
     assert seq_rate >= 2 / 3, f"贪心续写一致率 {seq_rate} < 2/3"
 
+    print(f"  FlagOS stack: flag_gems.only_enable(['gelu']) active")
     print(f"  消费方: mini-decoder 4层 GQA8/2 causal {str(dt).removeprefix('torch.')} "
           f"({N_PROMPTS} prompts × {S0}+{STEPS} tokens)")
     print(f"  拦截: count={_CALLS['n']} (≥4 层调用)")

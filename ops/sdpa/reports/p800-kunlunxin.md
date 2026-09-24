@@ -87,6 +87,8 @@ python3 probes/guard_check.py p800-kunlunxin
 
 应用层使用 bf16：该随机 mini-decoder 的 Linear/LayerNorm fp16 链路在
 P800 栈上溢出；bf16 下基线与插件输出均稳定。
+框架/应用测试先启动 FlagOS/FlagGems 的稳定 GELU 路径
+（`flag_gems.only_enable(include=["gelu"])`），SDPA 仍由 A1 backend 接管。
 
 ## 5. 性能采样
 
