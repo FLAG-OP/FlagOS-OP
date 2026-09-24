@@ -65,7 +65,7 @@ FlagGems `5.3.5`、设备 **MLU590-M9 / `mlu:0`**。
 | bool / GQA | bool→additive bias；overrideable 无 `enable_gqa` → `repeat_interleave` 扩 KV |
 | causal+mask | 与 `_native_shim`/`F.sdpa` 相同：先折叠进 mask |
 | 全遮蔽行 | fused/TMO 返回有限值，输出端 `masked_fill` 恢复 NaN |
-| FlagGems `_cambricon` | 精度 265/265 全过，但比原生慢 10-40x 且无 autograd——仅作兜底/对照 |
+| FlagGems `_cambricon` | 精度 397/397 全过，但比原生慢 10-40x 且无 autograd——仅作兜底/对照 |
 | 性能水位 | **1.00-1.33x** 原生（早期 math-only 为 0.12-0.52x，已废） |
 
 ## 4. 平台专属数字（不可跨平台引用）

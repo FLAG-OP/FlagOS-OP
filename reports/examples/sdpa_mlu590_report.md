@@ -142,7 +142,7 @@ TMO fast path（fp16/bf16, SDPA_MLU_TMO=0 可关）
 | 算子库层 | kernel 直测 | ✅ | 37/37，max_err 3.91e-3（bf16），哨兵过，1k D128 0.25ms |
 | 框架层 | op 注册/分发 | ✅ | 拦截 2；注册=直调逐位；vs 原生 4.88e-4；梯度 ≤6.1e-5 |
 | 应用层 | framework 消费 | ✅ | mini-decoder 拦截 28；logits 1.95e-3；续写一致 1.00 |
-| 黄金 | 黄金回归 | ✅ | 265/265，worst 7.81e-3 |
+| 黄金 | 黄金回归 | ✅ | 397/397，worst 7.81e-3 |
 | 守卫 | 平台守卫 | ✅ | 元数据 / mlu / CPU 拒绝 / 注册 |
 | 基础设施 | pytest | ✅ | 20 passed |
 

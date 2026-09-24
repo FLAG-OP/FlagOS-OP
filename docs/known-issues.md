@@ -181,7 +181,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
    err≈0.19；必须先转 additive `-inf` bias（`F.sdpa`/reference 对
    bool 正确）。
 3. **FlagGems `_cambricon` attention 慢 10-40x 且无 autograd**: 精度
-   265/265 全过，但 1k D64 达 8.4ms（原生 0.31ms）；不可作生产主路径，
+   397/397 全过，但 1k D64 达 8.4ms（原生 0.31ms）；不可作生产主路径，
    仅兜底/对照。direct 可微调用复用 A1 数学 backward。
 4. **全遮蔽行返回有限值**: fused/TMO/math/FlagGems 均不返回 NaN，SDPA
    backend 显式 `masked_fill` 恢复 CPU/aten 语义（同 #17.3）。
@@ -208,7 +208,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 | FlagGems 某算子链接失败 | `common/xpu_compat` 补丁后看 elfconv 真实 stderr；对照 #13 |
 | 尾块归约静默错误 | 精度探针含非整倍数 N（`accuracy_report.py`）；对照 #15 |
 | call_op 长循环挂起 | 短循环（≤100 次）规避；排查见 #16 |
-| SDPA 平台语义/JIT 分化 | 265 组黄金 + S=333/D=80 尾块用例；对照 #17 / #18 |
+| SDPA 平台语义/JIT 分化 | 397 组黄金 + S=333/D=80 尾块用例；对照 #17 / #18 |
 
 ---
 

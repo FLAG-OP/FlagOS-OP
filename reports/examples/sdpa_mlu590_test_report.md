@@ -16,7 +16,7 @@
 | kernel 层（精度/哨兵/性能） | ✅ | `ops/sdpa/test/kernel_level.py mlu590` | PASS（**37/37** + 哨兵 + 1k D128 0.25ms） |
 | 框架层（注册/拦截/梯度） | ✅ | `ops/sdpa/test/op_level.py mlu590` | PASS（A1 拦截 · 注册=直调逐位 · vs 原生 4.88e-4 · 梯度 ≤6.1e-5） |
 | 应用层（消费方双跑） | ✅ | `ops/sdpa/test/framework_level.py mlu590` | PASS（mini-decoder 拦截 28 · logits 1.95e-3 · 续写一致率 1.00） |
-| 黄金回归 | ✅ | `script/check_accuracy.py --impl triton --device mlu:0` | PASS（**265/265**，worst 7.81e-3 @ bf16 bool） |
+| 黄金回归 | ✅ | `script/check_accuracy.py --impl triton --device mlu:0` | PASS（**397/397**，worst 7.81e-3 @ bf16 bool） |
 | 性能三方对照 | ✅ | `script/bench_perf.py --device mlu:0` | OK（fp16 6 形状，**1.00–1.33x** 原生） |
 | 平台守卫（三层） | ✅ | `probes/guard_check.py mlu590` | PASS（元数据 / mlu 路径 / CPU 拒绝 / 注册） |
 | 环境锁定 | ✅ | `scripts/check_env.py --device mlu590` | OK（lock 对齐） |
@@ -63,11 +63,11 @@
 shape 覆盖: basic/batch/尾块 100·333/ViT D=80/GQA/bool/float mask/
 Sq=1 decode。哨兵: 确定性 ✓ · 输入敏感 ✓。
 
-### 黄金回归（265 组）
+### 黄金回归（397 组）
 
 | 实现 | PASS | worst |
 |---|---|---|
-| 自研路径（TMO→fused→…） | **265/265** | 7.81e-3（`basic_bfloat16_..._mbool`，容差内） |
+| 自研路径（TMO→fused→…） | **397/397** | 7.81e-3（`basic_bfloat16_..._mbool`，容差内） |
 
 ### 框架层（A1 注册后）
 

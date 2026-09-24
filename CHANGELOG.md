@@ -13,7 +13,7 @@
     math-only 主路径实测仅 0.11-0.55x 原生
   - facade 增加 `"mlu"` 分发；`register_a1` 守卫放宽为 torch_npu **或**
     torch_mlu 可用；`_profile`/`configs/devices/mlu590.yaml`/`mlu590.lock.yaml` 接入
-  - A1 `AutogradPrivateUse1` 拦截；kernel 37/37、黄金 265/265、
+  - A1 `AutogradPrivateUse1` 拦截；kernel 37/37、黄金 397/397、
     op/framework/guard 三层全绿
   - 实测修订后 **1.00-1.33x** 原生（prefill 1k D64 1.33x；FA2 协议
     多点 TFLOPS 高于 native）；FlagGems 仍慢 10-40x 仅兜底

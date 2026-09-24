@@ -175,7 +175,7 @@ _kunlunxin/...` 各厂商目录并列，已实际存在），所以:
 - [x] 旧引用零改动（`kernel.triton_level.sdpa_triton` 保留）
 - [x] 误配平台触发调用守卫（`probes/guard_check.py p800-kunlunxin`）
 - [x] 性能 JSON 按平台命名，报告不跨平台引用数字
-- [x] mlu590: 黄金 265/265 + kernel 层 37/37 + op/framework/guard 绿
+- [x] mlu590: 黄金 397/397 + kernel 层 37/37 + op/framework/guard 绿
 - [x] PLATFORM.md 有 mlu590 小节（§3b），FlagGems 慢路径与 fused/TMO
       委托、math bool-mask 分化已显式标注
 - [x] `probes/guard_check.py mlu590` 全绿；`reports/perf_fp16_mlu590.json`

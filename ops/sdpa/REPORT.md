@@ -23,7 +23,7 @@
 | 层级 | 命令 / 入口 | 结果 |
 |---|---|---|
 | kernel | `python3 test/kernel_level.py mlu590` | ✅ 37/37，最大误差 3.91e-3（bf16），哨兵通过，1k D128 0.25ms |
-| 黄金 | `python3 script/check_accuracy.py --impl triton --device mlu:0` | ✅ 265/265，worst 7.81e-3（bf16 bool，容差内） |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device mlu:0` | ✅ 397/397，worst 7.81e-3（bf16 bool，容差内） |
 | op | `python3 test/op_level.py mlu590` | ✅ AutogradPrivateUse1 拦截、注册=直调(逐位)、vs 原生 4.88e-4、梯度通过 |
 | 应用 | `python3 test/framework_level.py mlu590` | ✅ mini-decoder 拦截 28 次，logits diff=1.95e-3，续写一致率 1.00 |
 | 守卫 | `python3 probes/guard_check.py mlu590` | ✅ 元数据 / mlu 路径 / CPU 拒绝 / 注册 |
