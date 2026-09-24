@@ -81,6 +81,10 @@ def _sync(device: Optional[str]) -> None:
         import torch
         if torch.cuda.is_available():
             torch.cuda.synchronize()
+            return
+        # MLU 等 PrivateUse1 后端（cambricon）: torch.cuda 不可用
+        if hasattr(torch, "mlu") and torch.mlu.is_available():
+            torch.mlu.synchronize()
     except Exception:
         pass
 

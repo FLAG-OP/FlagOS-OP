@@ -1,0 +1,15 @@
+# empty 输入与黄金数据规格（声明式，gen_golden.py 消费）
+#
+# empty 无数值语义（未初始化），黄金只约束元数据: shape/dtype/stride。
+op: empty
+seed_base: 20260924
+cases:
+  - name: base
+    shapes: [[64, 1024], [1, 14336], [8, 5000], [128, 5120]]
+    dtypes: [bfloat16, float16, float32]
+    memory_formats: [contiguous_format]
+  - name: channels_last
+    shapes: [[2, 3, 16, 16], [4, 8, 8, 8]]
+    dtypes: [float32, bfloat16]
+    memory_formats: [channels_last]
+seeds_per_case: 3

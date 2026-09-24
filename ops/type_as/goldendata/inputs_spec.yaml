@@ -1,0 +1,33 @@
+# type_as 输入与黄金数据规格（声明式，gen_golden.py 消费）
+#
+# 与通用模板的差异: type_as 有 self / other 两个输入，other 只贡献 dtype。
+# 故用 `dtypes` 表示 self 的 dtype，用 `target_dtypes` 表示 other（输出）dtype。
+op: type_as
+seed_base: 20260918
+cases:
+  - name: pointwise
+    shapes: [[64, 1024], [1, 14336], [8, 5000], [128, 5120]]   # 含非 BLOCK 整倍数
+    dtypes: [bfloat16, float16, float32]
+    target_dtypes: [bfloat16, float16, float32]
+    distribution: normal
+    scale: 2.0
+    special: []
+  - name: long_tail
+    shapes: [[1, 14336], [8, 5000], [7, 4097]]
+    dtypes: [bfloat16, float32]
+    target_dtypes: [float32, float16]
+    distribution: normal
+    scale: 2.0
+    special: [boundary]           # dtype 边界附近的值（含宽->窄溢出到 inf）
+  - name: extreme
+    shapes: [[128, 5120], [3, 1023]]
+    dtypes: [float32, bfloat16]
+    target_dtypes: [bfloat16, float32]
+    distribution: uniform
+    scale: 8.0
+    special: [zeros, large]        # 全零行 + 大值行
+seeds_per_case: 3
+tolerance:
+  # 容差按「输出 dtype」取（cast 的精度由目标 dtype 决定）
+  pointwise_abs: {float32: 1.0e-5, float16: 1.0e-2, bfloat16: 1.0e-2}
+  relative: 5.0e-2
