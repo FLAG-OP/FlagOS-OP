@@ -8,7 +8,8 @@ A separate Kunlunxin hardware-language implementation is intentionally left
 empty because:
 
 1. the native gather already reaches parity with `aten::embedding`;
-2. the experimental Triton gather is 43-142x slower in the larger cases;
+2. the local flattened Triton gather is 3.5-102x slower, and the P800
+   specialization of FLAG-OP/gatherFIX is 10.9-177.9x slower;
 3. writing another source-level gather would duplicate the vendor kernel
    without exposing new scheduling freedom for this memory-bound operation.
 

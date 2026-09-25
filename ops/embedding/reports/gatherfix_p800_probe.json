@@ -1,0 +1,57 @@
+{
+  "source": "https://github.com/FLAG-OP/gatherFIX",
+  "device": "cuda:1",
+  "completion_guard": "reshape(-1)[0].item()",
+  "rows": [
+    {
+      "M": 1024,
+      "num_weights": 4096,
+      "dim": 128,
+      "native_ms": 0.0386,
+      "production_ms": 0.0392,
+      "gatherfix_specialized_ms": 0.4213,
+      "gatherfix_over_native": 10.92,
+      "max_err": 0.0
+    },
+    {
+      "M": 16384,
+      "num_weights": 4096,
+      "dim": 128,
+      "native_ms": 0.0705,
+      "production_ms": 0.0738,
+      "gatherfix_specialized_ms": 3.2452,
+      "gatherfix_over_native": 46.058,
+      "max_err": 0.0
+    },
+    {
+      "M": 131072,
+      "num_weights": 4096,
+      "dim": 128,
+      "native_ms": 0.2696,
+      "production_ms": 0.3595,
+      "gatherfix_specialized_ms": 22.6192,
+      "gatherfix_over_native": 83.901,
+      "max_err": 0.0
+    },
+    {
+      "M": 16384,
+      "num_weights": 4096,
+      "dim": 512,
+      "native_ms": 0.0636,
+      "production_ms": 0.0763,
+      "gatherfix_specialized_ms": 11.3235,
+      "gatherfix_over_native": 177.907,
+      "max_err": 0.0
+    },
+    {
+      "M": 16384,
+      "num_weights": 128256,
+      "dim": 128,
+      "native_ms": 0.0525,
+      "production_ms": 0.0535,
+      "gatherfix_specialized_ms": 3.3008,
+      "gatherfix_over_native": 62.813,
+      "max_err": 0.0
+    }
+  ]
+}

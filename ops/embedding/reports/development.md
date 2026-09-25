@@ -74,6 +74,12 @@ P800 native row-gather 显著快于当前 Triton gather。为避免 A1 递归，
 forward 内部使用等价的 `aten::index_select`；dense backward 使用
 `aten::embedding_backward`。
 
+组织内 [FLAG-OP/gatherFIX](https://github.com/FLAG-OP/gatherFIX) 修复的
+是 Ascend `torch.gather` 非连续 index 的正确性问题。本 PR 在 P800 上将其
+stride-aware 算法特化为 embedding row lookup：精度 0 error，但 1k×D128
+0.4213ms、16k×D128 3.2452ms、16k×D512 11.3235ms，仍显著慢于 native
+row gather。因此它不能直接替代本 backend 的生产路径。
+
 ### 3.2 kernel 实现要点
 
 ```text
