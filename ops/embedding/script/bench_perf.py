@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Benchmark P800 embedding forward/backward against native implementations."""
+"""Benchmark embedding forward/backward against native implementations.
+
+Runs on either platform: pass ``--device cuda:1`` (P800/XMLIR) or
+``--device mlu:0`` (Cambricon); the backend is picked by device type.
+"""
 from __future__ import annotations
 
 import argparse
@@ -43,12 +47,7 @@ def main() -> int:
     import torch
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from register import _BACKENDS
-    _plat = os.environ.get("EMBEDDING_PROFILE", "p800-kunlunxin")
-    if _plat.startswith("ascend"):
-        _plat = "ascend910"
-    _b = _BACKENDS[_plat]
-    embedding, embedding_backward = _b.embedding, _b.embedding_backward
+    from kernel.platform import embedding, embedding_backward
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--device", default=(os.environ.get("EMBEDDING_TEST_DEVICE")
@@ -117,7 +116,9 @@ def main() -> int:
             f"{triton_ms:11.4f} {native_ms / ours_ms:8.3f}x"
         )
 
-    # Backward comparison. Native XPU does not implement scale_grad_by_freq.
+    # Backward comparison. Native may not implement scale_grad_by_freq
+    # (XPU raises ``Check scale_grad_by_freq == false failed``; torch_mlu
+    # supports it) -> try native per platform and skip on failure.
     bwd_rows = []
     num_weights, num_indices, dim = 4096, 16384, 128
     torch.manual_seed(4321)
@@ -136,13 +137,17 @@ def main() -> int:
             "scale_grad_by_freq": scale,
             "ours_ms": round(ours_ms, 4),
         }
-        if not scale:
+        try:
             native_ms = _bench(
                 lambda: _consume(torch.ops.aten.embedding_backward(
-                    grad, indices, num_weights, -1, False, False
+                    grad, indices, num_weights, -1, scale, False
                 )),
                 args.warmup, args.iters,
             )
+        except RuntimeError as exc:  # native 缺口（XPU）如实记为 null
+            native_ms = None
+            item["native_error"] = str(exc).splitlines()[0][:80]
+        if native_ms is not None:
             item["native_ms"] = round(native_ms, 4)
             item["speedup_vs_native"] = round(native_ms / ours_ms, 3)
         bwd_rows.append(item)

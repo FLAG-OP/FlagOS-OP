@@ -121,3 +121,7 @@ def embedding_backward(grad_output: torch.Tensor,
     if padding_idx is not None and padding_idx != -1:
         grad[padding_idx].zero_()
     return grad
+
+# wt 2026-10-03-fix 注册守卫用能力探测声明 (attr, fn)
+# # wt <wangt635@ustc.edu.cn>
+_DEVICE_PROBE = ("npu", (lambda: __import__("torch") and torch.npu.is_available()))
