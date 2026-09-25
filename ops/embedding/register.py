@@ -1,14 +1,20 @@
-"""A1 registration for ``aten::embedding`` on XMLIR/CUDA tensors."""
+"""A1 registration for ``aten::embedding`` on XMLIR/CUDA and MLU tensors.
+
+The kernel functions come from the platform facade (``kernel/platform.py``),
+which routes each call by tensor device type, so this module serves both
+platforms unchanged: Kunlunxin P800 (``AutogradCUDA``) and Cambricon MLU590
+(``AutogradPrivateUse1``).
+"""
 from __future__ import annotations
 
 import torch
 
 try:
-    from .kernel.p800_kunlunxin import embedding, embedding_backward
-    from .kernel.p800_kunlunxin import PLATFORM
+    from .kernel.platform import PLATFORM
+    from .kernel.platform import embedding, embedding_backward
 except ImportError:
-    from kernel.p800_kunlunxin import embedding, embedding_backward
-    from kernel.p800_kunlunxin import PLATFORM
+    from kernel.platform import PLATFORM
+    from kernel.platform import embedding, embedding_backward
 
 
 class _EmbeddingA1Function(torch.autograd.Function):
@@ -38,9 +44,19 @@ class _EmbeddingA1Function(torch.autograd.Function):
 
 def register_a1(dispatch_key: str = "AutogradCUDA", counter: dict | None = None):
     """Override Python ``F.embedding``/``torch.embedding`` dispatch."""
+    # 注册守卫: 跨平台误用在注册时拦截，而不是运行时静默错
+    # （与 ops/sdpa/register.py 同口径）。
     if dispatch_key in ("CUDA", "AutogradCUDA") and not torch.cuda.is_available():
         raise RuntimeError(
-            f"register_a1 binding={PLATFORM!r} requires an available CUDA/XMLIR device"
+            f"register_a1 binding={PLATFORM!r}, dispatch_key={dispatch_key!r} "
+            "requires an available CUDA/XMLIR device"
+        )
+    if dispatch_key in ("PrivateUse1", "AutogradPrivateUse1") and not (
+        hasattr(torch, "mlu") and torch.mlu.is_available()
+    ):
+        raise RuntimeError(
+            f"register_a1 binding={PLATFORM!r}, dispatch_key={dispatch_key!r} "
+            "requires an available torch_mlu/MLU device"
         )
 
     def impl(weight, indices, padding_idx=-1, scale_grad_by_freq=False,

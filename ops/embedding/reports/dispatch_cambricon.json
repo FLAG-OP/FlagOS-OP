@@ -1,0 +1,32 @@
+{
+  "device": "mlu:0",
+  "shape": {
+    "num_weights": 4096,
+    "num_indices": 16384,
+    "dim": 128,
+    "dtype": "float16"
+  },
+  "completion_guard": "reshape(-1)[0].item()",
+  "rows": [
+    {
+      "mode": "native",
+      "median_ms": 0.045035,
+      "p20_ms": 0.044771,
+      "p80_ms": 0.04537
+    },
+    {
+      "mode": "direct",
+      "median_ms": 0.06003,
+      "p20_ms": 0.05962,
+      "p80_ms": 0.060771
+    },
+    {
+      "mode": "a1",
+      "median_ms": 0.104061,
+      "p20_ms": 0.103541,
+      "p80_ms": 0.105351
+    }
+  ],
+  "a1_minus_native_ms": 0.059026,
+  "a1_minus_direct_ms": 0.044031
+}

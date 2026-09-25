@@ -43,14 +43,24 @@ def main() -> None:
     print("\n[embedding] three levels passed. Goldens and performance:")
     print("  python3 script/gen_golden.py")
     print(
-        "  python3 script/check_accuracy.py --impl p800 "
+        f"  python3 script/check_accuracy.py --impl {_platform_tag(profile)} "
         f"--device {profile.torch_device}"
     )
     print(
         "  python3 script/bench_perf.py "
         f"--device {profile.torch_device} --json-out "
-        "reports/perf_fp16_p800-kunlunxin.json"
+        f"reports/perf_fp16_{profile.name}.json"
     )
+
+
+def _platform_tag(profile) -> str:
+    """perf case id / check_accuracy --impl 的平台标签。
+
+    p800-kunlunxin 映射成历史标签 "p800"，保证入库基线
+    ops.embedding.p800.forward 不改名；其余平台直接用 profile 名。
+    """
+    name = getattr(profile, "name", "p800-kunlunxin")
+    return {"p800-kunlunxin": "p800"}.get(name, name)
 
 
 def perf_cases(profile):
@@ -88,16 +98,17 @@ def perf_cases(profile):
 
     import torch
 
-    from kernel.p800_kunlunxin import embedding
+    from kernel.platform import embedding
 
     def native(weight, indices):
         return torch.ops.aten.embedding(
             weight, indices, -1, False, False
         )
 
+    tag = _platform_tag(profile)
     return [
         PerfCase(
-            "ops.embedding.p800.forward",
+            f"ops.embedding.{tag}.forward",
             group="ops", level="kernel",
             make_fn=make(embedding), derived=bandwidth,
         ),
