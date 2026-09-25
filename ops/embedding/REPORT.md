@@ -28,6 +28,7 @@
 | 应用层 | `test/framework_level.py`（FlagGems enabled） | `nn.Embedding` + MLP；logits/梯度 0 diff；贪心一致率 1.00 |
 | 性能 | `script/bench_perf.py` | 大 shape native parity；Triton 显著慢 |
 | dispatch | `script/bench_dispatch.py` | A1 vs native 附加约 0.024ms |
+| gatherFIX 对照 | `script/probe_gatherfix.py` | 正确性 0 error；P800 特化比 native 慢 10.9-177.9x |
 
 ## 关键数字
 
