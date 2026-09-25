@@ -55,7 +55,8 @@ def run(profile):
     dev = profile.torch_device
     # Framework/application validation is deliberately run inside the FlagOS
     # operator stack.  Enable the stable FlagGems GELU used by this consumer;
-    # enabling the full op set is not deterministic on the locked P800 image.
+    # enabling the full op set is not deterministic on the locked P800 image,
+    # and the same narrow FlagGems path keeps both platforms comparable.
     import flag_gems
     flag_gems.only_enable(include=["gelu"])
     assert flag_gems.current_work_registrar is not None

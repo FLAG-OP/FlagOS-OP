@@ -2,7 +2,7 @@
 """Measure native→A1 dispatch overhead for the embedding operator.
 
 The default invocation launches separate subprocesses for native/direct/A1 so
-process-wide ``AutogradCUDA`` registration cannot pollute the baseline.
+process-wide A1 registration cannot pollute the baseline.
 """
 from __future__ import annotations
 
@@ -28,6 +28,8 @@ def _consume(output):
 def _run_mode(mode: str, dev: str, warmup: int, iters: int) -> dict:
     import torch
 
+    from kernel.platform import dispatch_key_for, embedding, synchronize
+
     torch.manual_seed(20260924)
     weight = (
         torch.randn(4096, 128, device=dev, dtype=torch.float16) * 0.1
@@ -40,14 +42,15 @@ def _run_mode(mode: str, dev: str, warmup: int, iters: int) -> dict:
                 weight, indices, -1, False, False
             ))
     elif mode == "direct":
-        from kernel.p800_kunlunxin import embedding
-
         def call():
             return _consume(embedding(weight, indices))
     elif mode == "a1":
         from register import register_a1
 
-        register_a1("AutogradCUDA")
+        # 必须持有 Library: 析构即反注册, 否则 a1 子进程测的是未注册状态
+        # (register 返回的 lib 被 GC 后 impl 立即失效)。
+        _a1_lib = register_a1(dispatch_key_for(dev))
+        assert _a1_lib is not None
 
         def call():
             return _consume(torch.nn.functional.embedding(
@@ -59,13 +62,13 @@ def _run_mode(mode: str, dev: str, warmup: int, iters: int) -> dict:
 
     for _ in range(warmup):
         call()
-    torch.cuda.synchronize()
+    synchronize(dev)
     samples = []
     for _ in range(iters):
         t0 = time.perf_counter()
         call()
         samples.append((time.perf_counter() - t0) * 1000)
-    torch.cuda.synchronize()
+    synchronize(dev)
     return {
         "mode": mode,
         "median_ms": round(statistics.median(samples), 6),

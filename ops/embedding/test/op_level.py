@@ -28,7 +28,7 @@ def run(profile):
     import torch
     import torch.nn.functional as F
 
-    from kernel.p800_kunlunxin import embedding as direct_embedding
+    from kernel.platform import embedding as direct_embedding
     from reference import embedding_backward_reference
     from register import register_a1
 
@@ -62,8 +62,10 @@ def run(profile):
     err = (weight_g.grad.float() - baseline_grad.float()).abs().max().item()
     assert err < 2e-3, err
 
-    # P800 native backward does not implement scale_grad_by_freq; the A1
-    # wrapper supplies inverse-frequency scaling and compares to CPU semantics.
+    # Native backward semantics must match CPU on both platforms.  P800 XPU
+    # native backward lacks scale_grad_by_freq, so the A1 wrapper supplies
+    # inverse-frequency scaling there; Cambricon native implements it
+    # directly.  Both are compared against the CPU reference below.
     weight_s, indices_s = _make(dev, dtype, requires_grad=True)
     grad = (torch.randn(*indices_s.shape, weight_s.shape[-1]) * 0.1)
     grad = grad.to(dtype).to(dev)

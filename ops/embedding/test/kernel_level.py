@@ -38,7 +38,7 @@ def _backward_case(device, dtype, scale):
 def run(profile):
     import torch
 
-    from kernel.p800_kunlunxin import embedding, embedding_backward
+    from kernel.platform import embedding, embedding_backward
     from reference import embedding_backward_reference, embedding_reference
 
     dev = profile.torch_device
@@ -65,7 +65,7 @@ def run(profile):
                 f"shape={tuple(out.shape)}"
             )
 
-    # int32 is accepted by the current XMLIR native row gather.
+    # int32 is accepted by both native row gathers (XMLIR and torch_mlu).
     weight = torch.randn(32, 8, device=dev, dtype=torch.float16)
     indices = torch.tensor([1, 4, 8], device=dev, dtype=torch.int32)
     assert torch.equal(
@@ -113,7 +113,7 @@ def run(profile):
 
     grad = torch.randn_like(weight)
     try:
-        from kernel.p800_kunlunxin import embedding_backward
+        from kernel.platform import embedding_backward
         embedding_backward(grad, indices, weight.shape[0], -1, False, True)
     except NotImplementedError:
         results.append("[OK] guard: sparse backward rejected")
@@ -147,18 +147,18 @@ def _consume(output):
 def _quick_perf(dev):
     import torch
 
-    from kernel.p800_kunlunxin import embedding
+    from kernel.platform import embedding, synchronize
 
     torch.manual_seed(7)
     weight = torch.randn(4096, 128, device=dev, dtype=torch.float16) * 0.1
     indices = torch.randint(0, 4096, (16384,), device=dev)
     for _ in range(5):
         _consume(embedding(weight, indices))
-    torch.cuda.synchronize()
+    synchronize(dev)
     t0 = time.perf_counter()
     for _ in range(20):
         _consume(embedding(weight, indices))
-    torch.cuda.synchronize()
+    synchronize(dev)
     return round((time.perf_counter() - t0) / 20 * 1000, 4)
 
 

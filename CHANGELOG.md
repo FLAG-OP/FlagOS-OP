@@ -3,6 +3,29 @@
 ## [Unreleased]
 
 ### Added
+- **embedding 第二平台: cambricon**（Cambricon MLU590 / torch_mlu）
+  - 新增 [ops/embedding/kernel/cambricon.py](ops/embedding/kernel/cambricon.py)：
+    前向委托原生 `aten::index_select`，反向委托原生 `aten::embedding_backward`
+    ——MLU 原生 `padding_idx` + `scale_grad_by_freq` 完整（6/6 组合 err=0），
+    **无需** P800/XPU 那套 inverse-frequency 补偿；`sparse=True` backward
+    显式 `NotImplementedError`（否则 torch_mlu 返回 COO 稀疏梯度）
+  - 新增多平台门面 [ops/embedding/kernel/platform.py](ops/embedding/kernel/platform.py)：
+    按 `tensor.device.type` 路由 `mlu→cambricon` / `cuda→p800`，
+    附 `dispatch_key_for`/`synchronize`；`p800_kunlunxin.py` 逐字节未改
+  - A1 key = `AutogradPrivateUse1`：两个 key 实测都命中，但 `PrivateUse1`
+    会覆盖 functorch 的 batch rule（`BatchRulesModules.cpp`）；Autograd key
+    同时与 p800 `AutogradCUDA` 同构
+  - 平台命名统一 `cambricon`（别名 `mlu`/`mlu590`/`cambricon-mlu590` 归一），
+    与 13 个既有 MLU 算子、`configs/devices/cambricon.yaml`、
+    `perf/baselines/cambricon.json` 同名
+  - 验证全绿：kernel 20/20 前向 + 6/6 反向 err 0、黄金 **174/174 逐位**、
+    A1 op 拦截 5 次（注册=直调）、应用层拦截 8 次 logits/梯度 0 diff、
+    greedy 1.00、`pytest tests/unit` 20 passed、`example.py cambricon` 三层 PASS
+  - perf gate 注册 `ops.embedding.cambricon.forward`（0.060ms / 142.8 GB/s）
+    与 `ops.embedding.native.forward`（0.045ms / 187.9 GB/s），
+    `perf/baselines/cambricon.json` 增至 33 条 case，门禁 `FAIL 0 · WARN 0 · NEW 0`
+  - 新增 [ops/embedding/reports/cambricon.md](ops/embedding/reports/cambricon.md)
+    与 `perf_fp16_cambricon.json` / `dispatch_cambricon.json`
 - **新算子: [ops/embedding](ops/embedding/)**（`aten::embedding`，
   A1 路线，p800-kunlunxin）
   - forward 复用 XMLIR native `index_select` row-gather；任意 rank indices、
@@ -13,6 +36,7 @@
     （含 `sparse=True` 前向）、6 组反向、`nn.Embedding` 应用层前向/反向
     全部通过；perf gate 注册与 P800 基线更新，硬件级显式置空
   - 新增 A1 dispatch 独立子进程基准，native→A1 附加开销约 0.024ms
+    （⚠️ 该 a1 数字因下述 Library GC 缺陷作废，待复测）
 - **SDPA 第三平台: mlu590**（Cambricon MLU590 / torch_mlu）
   - 新增 `kernel/backends/mlu590.py`：分层委托——
     **TMO** `torch_mlu_ops.flash_attention`（半精度快路径）→
@@ -44,6 +68,19 @@
 - P800 自研固定调度 Triton forward 实验与复现脚本：no-mask causal、
   GQA、非 causal 与尾块正确，但 mask launch 失败且慢于厂商路径
   2.1-6.5x，因此暂不接入生产 backend
+
+### Fixed
+- `ops/embedding/script/bench_dispatch.py` a1 分支裸调 `register_a1`：
+  返回的 `torch.library.Library` 无引用时被 GC，**析构即反注册**，旧写法
+  测的是未注册状态（`F.embedding` 落回原生）。改为持有 `_a1_lib` 并断言；
+  全仓扫描确认为唯一裸调用点（sdpa 与各测试均持有 `lib`）
+  - 作废待复测：P800 a1 数字 `A1−native ≈0.024ms`、"A1 与 direct 同档/略快"
+    （本机无 `torch_xmlir` 无法重测；native / direct 两行仍有效）
+  - 三层精度结论不受影响（测试持有 `lib`，拦截计数 5/8 均 > 0）
+  - MLU 修复后复测：A1 − native ≈ **+0.059ms**、A1 − direct ≈ **+0.044ms**
+- `ops/embedding/script/bench_perf.py` 反向分支原为 XPU 专用的
+  `if not scale:` 跳过，MLU 上拿不到 `scale_grad_by_freq` 对照——
+  改为按平台 try/except 逐个尝试原生 scale，两平台反向表均含 native 对照
 
 ## [0.13.0] - 2026-09-17
 
