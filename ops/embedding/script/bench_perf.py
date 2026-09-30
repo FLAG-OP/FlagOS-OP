@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import sys
 import time
@@ -41,10 +42,18 @@ def _bench(call, warmup: int, iters: int) -> float:
 def main() -> int:
     import torch
 
-    from kernel.p800_kunlunxin import embedding, embedding_backward
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from register import _BACKENDS
+    _plat = os.environ.get("EMBEDDING_PROFILE", "p800-kunlunxin")
+    if _plat.startswith("ascend"):
+        _plat = "ascend910"
+    _b = _BACKENDS[_plat]
+    embedding, embedding_backward = _b.embedding, _b.embedding_backward
 
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--device", default="cuda:1")
+    ap.add_argument("--device", default=(os.environ.get("EMBEDDING_TEST_DEVICE")
+            or ("npu:0" if os.environ.get("EMBEDDING_PROFILE", "").startswith("ascend")
+               else "cuda:1")))
     ap.add_argument("--dtype", choices=["float32", "float16", "bfloat16"],
                     default="float16")
     ap.add_argument("--warmup", type=int, default=5)

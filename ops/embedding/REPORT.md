@@ -1,73 +1,53 @@
-# 算子总体报告: embedding
+# 算子总体报告: embedding（aten::embedding）
 
 | 项 | 值 |
 |---|---|
-| 算子 | `aten::embedding` |
-| 范围 | 普通查表 forward + dense backward；`sparse=True` forward 可用，稀疏 backward 不覆盖 |
-| 硬件平台 | **1 个**：Kunlunxin P800（profile `p800-kunlunxin`，`torch_xmlir`） |
-| 路线 | A1，`AutogradCUDA` |
-| 日期 / 状态 | 2026-09-23 / 三层与黄金全绿 |
+| 算子名称 | `aten::embedding`（稠密查表 + dense 反向） |
+| 语义 | [reference.py](reference.py)（`weight[index]` 任意 index 形状；padding/scale_grad/sparse 不改前向） |
+| 硬件平台 | **2 个**：p800-kunlunxin（厂商委托）· **ascend910**（本 PR） |
+| 路线 | **A1**（aten 拦截） |
+| 日期 / 状态 | 2026-09-30 / 定稿（第二平台） |
 
-## 实现矩阵（三级）
+## 实现矩阵（每平台）
 
-| 平台 / 级别 | 文件 | 状态 | 说明 |
-|---|---|---|---|
-| P800 厂商委托 | [kernel/p800_kunlunxin.py](kernel/p800_kunlunxin.py) | ✅ | forward 走 native `index_select`；dense backward 走 native `embedding_backward` |
-| Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ✅ 探针 | 正确但比 native gather 慢，未接入生产 |
-| torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | 独立 index-select 参考/对照 |
-| 硬件级 | [kernel/hardware_level/README.md](kernel/hardware_level/README.md) | ⬜ 置空 | native row-gather 已达到生产水位，暂无重写收益 |
+| 平台 | 级别 | 文件 | 生产路径 | 状态 |
+|---|---|---|---|---|
+| p800-kunlunxin | 厂商委托 / Triton 探针 | kernel/p800_kunlunxin.py · kernel/triton_level.py | `aten::index_select` 委托 | ✅ |
+| **ascend910** | 厂商委托 | **kernel/ascend910.py** | `aten::index_select`（CANN 行采集，实测 0.185ms@131k×4k×16k 与 F.embedding 同源同速）· dense 反向委托 `aten::embedding_dense_backward` + scale_grad_by_freq 逐出现逆频率缩放 | ✅ |
 
-## 验证矩阵（三层）
+Triton gather 在两平台均慢数十倍（P800 4.6-69x、Ascend 探针见
+reports/performance.md），保留为可复现平台探针——embedding 的本质是
+gather，行采集是厂商库强项，**生产委托是两平台一致的工程结论**。
+
+## 验证矩阵（ascend910 本 PR 实测）
 
 | 层级 | 入口 | 结果 |
 |---|---|---|
-| kernel forward | `test/kernel_level.py` | 20/20，FP32/FP16/BF16 全部 0 error |
-| kernel backward | 同上 | 6/6；重复 index、padding、`scale_grad_by_freq` 全部 0 error |
-| 黄金 | `script/check_accuracy.py --impl p800` | 174/174，worst=0 |
-| A1 op | `test/op_level.py` | 拦截 5 次；hooked=direct 逐位；dense/scale/sparse 边界全绿 |
-| 应用层 | `test/framework_level.py`（FlagGems enabled） | `nn.Embedding` + MLP；logits/梯度 0 diff；贪心一致率 1.00 |
-| 性能 | `script/bench_perf.py` | 大 shape native parity；Triton 显著慢 |
-| dispatch | `script/bench_dispatch.py` | A1 vs native 附加约 0.024ms |
+| kernel 层 | `EMBEDDING_PROFILE=ascend910 python3 test/kernel_level.py` | ✅ 20 前向 + 6 反向 case，err=0.0（委托原生本征精确） |
+| op 层 | `test/op_level.py` | ✅ 拦截 5 次 · 注册=直调逐位 · dense/scale_freq 梯度 err=0.0 · sparse bwd 守卫 |
+| 应用层 | `test/framework_level.py` | ✅ nn.Embedding+TokenMLP 消费: logits diff=0 · top1=1.0 · 续写一致率 1.0 |
+| 黄金 | `gen_golden.py` + `check_accuracy.py --impl ascend` | ✅ 350 PASS（data 本地生成） |
+| 一键 | `EMBEDDING_PROFILE=ascend910 python3 example.py` | ✅ 三层全绿 |
 
-## 关键数字
+## 性能速览（fp16）
 
-| shape | ours | native | Triton | ours/native |
-|---|---:|---:|---:|---:|
-| 1k×D128 | 0.0680ms | 0.0358ms | 0.2403ms | 0.526x |
-| 16k×D128 | 0.0514ms | 0.0494ms | 2.2206ms | 0.963x |
-| 131k×D128 | 0.1665ms | 0.1530ms | 16.9373ms | 0.919x |
-| 16k×D512 | 0.0616ms | 0.0548ms | 8.7184ms | 0.889x |
-| vocab128k 16k×D128 | 0.0514ms | 0.0515ms | 2.2458ms | 1.001x |
+| shape | ours（index_select） | native F.embedding | Triton 探针 |
+|---|---|---|---|
+| prefill_16k_d128 | 0.081ms | 0.060ms | 1.45ms（18x 慢） |
+| long_131k_d128 | 0.152ms | 0.095ms | 10.4ms（69x 慢） |
+| backward 16k | 0.197ms | 0.192ms | —（0.98x） |
 
-backward 16k×D128：
+完整数据: reports/perf_fp16_ascend910.json。
 
-| mode | ours | native | ours/native |
-|---|---:|---:|---:|
-| dense | 1.3306ms | 1.2993ms | 0.976x |
-| scale_grad_by_freq | 1.9562ms | XPU native 不支持 | — |
+## A1 注册点（平台差异，sdpa 开发报告 §3.1 证据链复用）
 
-## 结论与遗留
+torch_npu 栈拦截点为 **AutogradPrivateUse1**（PrivateUse1 永不命中）；
+register_a1 已按 dispatch_key 自动选择 backend（p800→AutogradCUDA /
+ascend→AutogradPrivateUse1），或显式 `platform="ascend910"`。
 
-该需求适合“同名接口 + 厂商原生 row-gather 委托”的交付形态。与 SDPA 的
-P800 结论一致：backend 存在不等于现有 Triton kernel 竞争力足够。本算子中
-native embedding/index-select 已经是最优路径。
+## 结论
 
-## 交付物清单
-
-| 内容 | 位置 |
-|---|---|
-| 需求 | [requirement.md](requirement.md) |
-| 语义参考 | [reference.py](reference.py) |
-| P800 backend | [kernel/p800_kunlunxin.py](kernel/p800_kunlunxin.py) |
-| A1 注册 | [register.py](register.py) |
-| 一键三层 | [example.py](example.py) |
-| 测试报告 | [reports/test-report.md](reports/test-report.md) |
-| 精度报告 | [reports/accuracy.md](reports/accuracy.md) |
-| 性能报告 | [reports/performance.md](reports/performance.md) |
-| 开发报告 | [reports/development.md](reports/development.md) |
-
-## 遗留
-
-1. `sparse=True` backward / sparse weight gradient 不在本期范围；
-2. `scale_grad_by_freq=True` 是能力补齐路径，比 dense backward 慢约 47%；
-3. Triton gather 仅保留为平台证据，不作为生产实现。
+第二平台按 MERGE 流程合入: 生产路径与 P800 同构（厂商委托），
+三层 + 黄金 + 性能全绿，委托实现 err=0.0。Triton 探针数据进一步
+佐证两平台一致的结论——embedding 峰值属厂商库，Triton 价值在
+长尾与可移植（若未来需要自定义 padding 语义/量化查表再启用）。

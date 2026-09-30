@@ -24,7 +24,11 @@ def load_profile(name: str | None = None) -> LocalProfile:
             import torch_xmlir  # noqa: F401
             name = "p800-kunlunxin"
         except ImportError:
-            name = "cpu"
+            try:
+                import torch_npu  # noqa: F401
+                name = "ascend910"
+            except ImportError:
+                name = "cpu"
     if name == "p800-kunlunxin":
         return LocalProfile(
             name=name,
@@ -32,6 +36,15 @@ def load_profile(name: str | None = None) -> LocalProfile:
             torch_device=os.environ.get("EMBEDDING_TEST_DEVICE", "cuda:1"),
             # Dense embedding autograd is intercepted on AutogradCUDA.
             dispatch_key="AutogradCUDA",
+        )
+    if name == "ascend910":
+        # wt 2026-09-23-fix 第二平台接入: torch_npu 的 A1 拦截点
+        # AutogradPrivateUse1（sdpa 开发报告 §3.1 dispatch 证据链）
+        return LocalProfile(
+            name=name,
+            vendor="ascend",
+            torch_device=os.environ.get("EMBEDDING_TEST_DEVICE", "npu:0"),
+            dispatch_key="AutogradPrivateUse1",
         )
     if name == "cpu":
         return LocalProfile("cpu", "cpu", "cpu", "CPU")
