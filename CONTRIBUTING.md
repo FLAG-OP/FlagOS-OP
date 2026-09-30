@@ -3,7 +3,7 @@
 ## 快速开始
 
 ```bash
-git clone git@github.com:TruNcat3/FlagOS-OP.git
+git clone https://github.com/FLAG-OP/FlagOS-OP.git
 cd FlagOS-OP
 python3 run.py --list                    # 查看设备与矩阵
 python3 run.py --route a1 --level op     # 跑最轻的一格
