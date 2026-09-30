@@ -195,6 +195,38 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 平台结论与复现命令见
 [ops/sdpa/reports/mlu590.md](../ops/sdpa/reports/mlu590.md)。
 
+### 19. SDPA math 后端的六类语义/注册分化（sdpa_math 实测发现）
+
+1. **torch_npu 的 `F.sdpa` 从不调用 math 后端**: NPU 上
+   `F.sdpa(sdpa_kernel(MATH))` 对本 op 命中 **0 次**（整条走
+   `npu_fusion_attention`），CPU 上才命中 → NPU 消费方只能直调
+   `torch.ops.aten._scaled_dot_product_attention_math`。算子层/应用层
+   测试据此设计两套入口。证据
+   [probes/native_semantics.py](../ops/sdpa_math/probes/native_semantics.py) §5。
+2. **math op 直调的 bool mask 是 0/1 加性怪癖**: 直调 `bool` attn_mask
+   按加法（遮蔽位 e_add=0.0；全 True 段 e_fill=0.514），而
+   `F.sdpa`/reference 语义是 `-inf` 遮蔽 → 本实现取 `-inf`（有意分歧，
+   `check_accuracy --impl native` 对 44 组 bool 用例 SKIP 并注明）。
+   MLU 侧同类见 [#18.2](#18-mlu590-sdpa-的五类平台分化sdpa-op-实测发现)。
+3. **必须成对注册 `Autograd*` + 纯设备 key**: 只注册 `Autograd*` →
+   `torch.inference_mode()` 下不命中（counter 不增），反向时 torch 报
+   "an autograd kernel was not registered" 警告；只注册纯 key →
+   requires_grad 调用先落 `Autograd*`（仍是原生 composite）。两键缺一不可。
+4. **同进程多 impl 互相覆盖 + lib 被 GC**: 共享 autograd.Function 类属性
+   会互相覆盖（npu=triton、CPU=torch 同进程注册），每次注册必须绑定独立
+   子类闭包；返回的 lib 列表**必须持有引用**（GC 后 counter 恒 0，表现为
+   "注册了但不拦截"）。
+5. **dropout 有两条不同的 native 规则**: 显式 `dropout_mask` →
+   `keep=(mask!=0)`、返回的 P **不缩放**、`O=(P/(1-p))@V`（即 `O≠P@V`）；
+   随机路径 P/O 同乘 `keep/(1-p)`（自洽）。反向必须用**预 dropout** 的
+   P0 雅可比，否则 gradcheck 与黄金都会暴露。
+6. **`causal` 与 `attn_mask` 互斥**: 同时给（bool/float 皆然）直接
+   raise `Explicit attn_mask should not be set when is_causal=True`；
+   全 `-inf` 行返回 P=O=0 而非 NaN。
+
+复现: `python3 ops/sdpa_math/probes/native_semantics.py`（6 节证据表）·
+黄金互验: `ops/sdpa_math/script/gen_golden.py`。
+
 ## 通用检测方法
 
 | 问题类型 | 检测工具 |
@@ -209,6 +241,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 | 尾块归约静默错误 | 精度探针含非整倍数 N（`accuracy_report.py`）；对照 #15 |
 | call_op 长循环挂起 | 短循环（≤100 次）规避；排查见 #16 |
 | SDPA 平台语义/JIT 分化 | 397 组黄金 + S=333/D=80 尾块用例；对照 #17 / #18 |
+| A1 注册漏键 / lib 被 GC | counter dict 逐次递增 + `inference_mode`/消费方两路 intercept 计数；对照 #19 |
 
 ---
 
