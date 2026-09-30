@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "device": "ascend910",
+  "created_at": "2026-09-30T05:24:57.629594+00:00",
+  "updated_at": "2026-09-30T06:54:07.939429+00:00",
+  "git_commit": "13396c997008e2b2b2841c0af843c2b1555ccc91",
+  "git_dirty": true,
+  "env_fingerprint": {
+    "torch": "2.10.0+cpu",
+    "triton": "3.5.1",
+    "flag_gems": "5.3.5",
+    "vllm_fl": null,
+    "vllm": "0.20.2"
+  },
+  "cases": {
+    "ops.sdpa_math.reference": {
+      "metrics": {
+        "latency_ms": 0.891694,
+        "TFLOPS": 4.817
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-09-30T06:54:03.649727+00:00",
+      "git_commit": "13396c997008e2b2b2841c0af843c2b1555ccc91",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.10.0+cpu",
+        "triton": "3.5.1",
+        "flag_gems": "5.3.5",
+        "vllm_fl": null,
+        "vllm": "0.20.2"
+      }
+    },
+    "ops.sdpa_math.torch": {
+      "metrics": {
+        "latency_ms": 0.568965,
+        "TFLOPS": 7.549
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-09-30T06:53:49.812702+00:00",
+      "git_commit": "13396c997008e2b2b2841c0af843c2b1555ccc91",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.10.0+cpu",
+        "triton": "3.5.1",
+        "flag_gems": "5.3.5",
+        "vllm_fl": null,
+        "vllm": "0.20.2"
+      }
+    },
+    "ops.sdpa_math.triton": {
+      "metrics": {
+        "latency_ms": 0.503851,
+        "TFLOPS": 8.524
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-09-30T06:53:35.450655+00:00",
+      "git_commit": "13396c997008e2b2b2841c0af843c2b1555ccc91",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.10.0+cpu",
+        "triton": "3.5.1",
+        "flag_gems": "5.3.5",
+        "vllm_fl": null,
+        "vllm": "0.20.2"
+      }
+    }
+  }
+}
