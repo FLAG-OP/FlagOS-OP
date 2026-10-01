@@ -79,8 +79,8 @@ def main() -> int:
 
     dt = getattr(torch, args.dtype)
     dev = args.device
-    # ours 按平台选: triton 绑定 ascend910，CPU 上用 ATen 组合（同语义）
-    if dev.startswith("cpu"):
+    # ours 按平台选: triton 绑定 ascend910；CPU/P800(XMLIR CUDA) 用 ATen 组合
+    if dev.startswith("cpu") or dev.startswith("cuda"):
         from kernel.torch_level import sdpa_math_torch as ours_fn
     else:
         from kernel.triton_level import sdpa_math_triton as ours_fn
@@ -124,9 +124,13 @@ def main() -> int:
 
     if args.register:
         # 原生基线已采完 → 现在接管，再测 A1 路径（含 autograd.Function 包装）
-        libs = register_a1("AutogradPrivateUse1" if dev.startswith("npu")
-                           else "CPU", None,
-                           "triton" if dev.startswith("npu") else "torch")
+        if dev.startswith("npu"):
+            key, impl = "AutogradPrivateUse1", "triton"
+        elif dev.startswith("cuda"):
+            key, impl = "AutogradCUDA", "torch"
+        else:
+            key, impl = "CPU", "torch"
+        libs = register_a1(key, None, impl)
         for row in rows:
             tag, B, Hq, Hkv, S, D = (row["shape"], row["B"], row["Hq"],
                                      row["Hkv"], row["S"], row["D"])

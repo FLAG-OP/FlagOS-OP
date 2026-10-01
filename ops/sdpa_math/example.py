@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """sdpa_math 一键编排: 三层测试一跑完 + 黄金精度入口提示。
 
-运行: python3 example.py [ascend910|cpu]
+运行: python3 example.py [ascend910|cpu|p800-kunlunxin]
 应用层为轻量消费方（mini-decoder + 概率图消费者，对齐 FlagOS-OP
 softmax-fullstack 先例——Python 层真实计算任务，不依赖 vLLM）。
 """
@@ -92,9 +92,22 @@ def perf_cases(profile):
     def tflops(ms):
         return {"TFLOPS": flops / (ms / 1000) / 1e12}
 
-    triton = _load_by_path("kernel/triton_level.py", "sdpa_math_triton")
     torch_fn = _load_by_path("kernel/torch_level.py", "sdpa_math_torch")
     ref = _load_by_path("reference.py", "sdpa_math_reference")
+    if profile.vendor == "kunlunxin":
+        import torch
+
+        def native(q, k, v, *args, **kwargs):
+            return torch.ops.aten._scaled_dot_product_attention_math(
+                q, k, v, *args, **kwargs)
+        return [
+            PerfCase("ops.sdpa_math.p800", group="ops", level="kernel",
+                     make_fn=make(torch_fn), derived=tflops, iters=50),
+            PerfCase("ops.sdpa_math.native", group="ops", level="kernel",
+                     make_fn=make(native), derived=tflops, iters=50),
+        ]
+
+    triton = _load_by_path("kernel/triton_level.py", "sdpa_math_triton")
     return [
         PerfCase("ops.sdpa_math.triton", group="ops", level="kernel",
                  make_fn=make(triton), derived=tflops, iters=50),

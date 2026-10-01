@@ -10,16 +10,18 @@
 | 算子 | `aten::_scaled_dot_product_attention_math`（torch SDPA 的 **math 后端**，`CompositeImplicitAutograd`） |
 | 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 输入保持 fp64，供 gradcheck） |
 | 路线 | **A1** aten 拦截（成对注册 `Autograd*` + 纯设备键），旧业务代码零改动 |
-| 平台 | **ascend910**: 自研 Triton（两段式 probs + PV）；**cpu**: ATen 组合（对照/梯度兜底） |
-| 验证 | kernel 52 组 ×2 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 21 项（6 gradcheck）· 应用层 8 项 ✅ |
+| 平台 | **ascend910**: 自研 Triton；**p800-kunlunxin**: ATen 组合 + A1；**cpu**: ATen 组合（对照/梯度兜底） |
+| 验证 | kernel 52 组 ×3 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 21 项（6 gradcheck）· 应用层 8-9 项 ✅ |
 | NPU 性能（fp16，vs 同为"返回 out+P"的原生 math） | prefill1k D64 **1.20x** · 1k D128 **1.32x** · 2k D128 **2.05x** · GQA **1.74x** · decode 0.92x |
 | CPU 性能（fp32，同口径） | 1.05-1.40x（6 形状全过） |
+| P800 性能（fp16，同口径） | direct **1.03-1.27x** native；A1 大 shape **1.02-1.24x** |
 
 ## 快速开始
 
 ```bash
 python3 example.py ascend910          # 三层一键（kernel/op/framework）
 python3 example.py cpu
+python3 example.py p800-kunlunxin
 
 python3 test/kernel_level.py ascend910
 python3 test/op_level.py ascend910
@@ -28,11 +30,14 @@ python3 test/framework_level.py ascend910
 # 黄金（CPU 生成一次，跨平台复用）
 python3 script/gen_golden.py
 python3 script/check_accuracy.py --impl triton   --device npu:0
+python3 script/check_accuracy.py --impl torch    --device cuda:1
 python3 script/check_accuracy.py --impl reference --device cpu
 python3 script/check_accuracy.py --impl native   --device npu:0   # 原生对照
 
 python3 script/bench_perf.py --device npu:0 --register \
   --json-out reports/perf_ascend910.json
+python3 script/bench_perf.py --device cuda:1 --register \
+  --json-out reports/perf_p800-kunlunxin.json
 python3 probes/native_semantics.py ascend910     # native 语义证据表
 ```
 
@@ -66,7 +71,7 @@ python3 probes/native_semantics.py ascend910     # native 语义证据表
 sdpa_math/
 ├── reference.py              # CPU 语义参考（判卷标准，含 dropout 双规则顶注）
 ├── register.py               # A1 成对注册 + autograd.Function（dout/dprobs 两路）
-├── _profile.py               # ascend910 / cpu 本地 profile
+├── _profile.py               # ascend910 / p800-kunlunxin / cpu 本地 profile
 ├── kernel/
 │   ├── triton_level.py       # 两段式 _probs_kernel + _pv_kernel（NPU）
 │   └── torch_level.py        # ATen 组合（独立写法，非 reference 转发）
@@ -76,6 +81,30 @@ sdpa_math/
 ├── probes/native_semantics.py# native 语义证据（schema/参数形态/dropout 表/注册键）
 └── reports/                  # development / test-report / accuracy / performance
 ```
+
+## P800 / Kunlunxin 路线
+
+P800 生产实现选择 `torch_level.sdpa_math_torch`：
+
+```text
+A1 AutogradCUDA + CUDA 成对注册
+    ↓
+torch_level ATen composition
+```
+
+本算子必须 materialize 第二输出 `P`，不能直接替换为 efficient attention。
+当前 torch 组合与原生 private math 同为 ATen 路径，P800 实测 direct
+**1.03-1.27x** native，A1 大 shape **1.02-1.24x**。
+
+框架层运行在 FlagOS 算子栈内：
+
+```python
+import flag_gems
+flag_gems.only_enable(include=["gelu"])
+```
+
+锁定镜像上全量 `flag_gems.enable()` 非确定，因此选择稳定且真实被消费方
+调用的 GELU 作为 surrounding op；目标 `sdpa_math` 走 A1。
 
 ## 硬约束（本栈已内建）
 

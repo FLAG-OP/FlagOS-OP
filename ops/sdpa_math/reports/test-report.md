@@ -2,22 +2,22 @@
 
 | 项 | 值 |
 |---|---|
-| 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ torch（CPU） |
-| 目标设备 / 测试日期 | `ascend910`（Ascend910_9382）· `cpu` / 2026-09-30 |
+| 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ torch（P800/CPU） |
+| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `cpu` / 2026-09-30~10-01 |
 | 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · 四件套 ☑） |
 
 ## 1. 测试范围
 
 | 层级 | 覆盖 | 入口 | 结果 |
 |---|---|---|---|
-| kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×2 profile |
+| kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×3 profile |
 | 框架层 | ☑ | `test/op_level.py [ascend910\|cpu]` | PASS：21 项（四模式拦截 · 注册=直调逐位 · 6 组 gradcheck · F.sdpa(MATH)） |
 | 应用层 | ☑ | `test/framework_level.py [ascend910\|cpu]` | PASS：8 项（mini-decoder + 概率图消费者双跑） |
 | 黄金回归 | ☑ | `script/gen_golden.py` + `check_accuracy.py` | **175/175** ×3 实现；原生对照 131/131（44 bool 跳过） |
 | 性能门禁 | ☑ | `scripts/perf_run.py --pattern sdpa_math` + `perf_compare.py` | OK：FAIL 0 · WARN 0（triton 0.504ms / 8.524 TFLOPS 入库基线） |
 | 语义证据 | ☑ | `probes/native_semantics.py [ascend910\|cpu]` | 6 节全过（schema / dropout 双规则表 / bool 怪癖 / 冲突边界 / F.sdpa 参数形态 / 注册键） |
 | 跨层一致性 | ☑ | 黄金生成的三重互验（§3） | 参考 vs `F.sdpa(MATH)` vs 原生直调 vs 自洽式，全一致 |
-| 一键 | ☑ | `python3 example.py [ascend910\|cpu]` | 三层全绿 |
+| 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin]` | 三层全绿 |
 
 ## 2. 环境
 
@@ -101,6 +101,26 @@ kept 上缩放 2.000（期望 `1/(1-p)`）。
 
 门禁：`perf_compare --device ascend910` → **OK，FAIL 0 · WARN 0**。
 本算子延迟 >100µs，不触发微算子 `bench_dispatch` 附加项。
+
+### 2026-10-01 P800 复验
+
+| 层级 | 结果 |
+|---|---|
+| kernel | 52/52；`torch_level` direct 与 CPU reference 全部对齐 |
+| 黄金 | `--impl torch --device cuda:1` **175/175**，worst 9.766e-4 |
+| A1 | `AutogradCUDA+CUDA` 成对注册；21/21 项通过（含 6 组 fp64 gradcheck） |
+| 应用层 | `flag_gems.only_enable(['gelu'])` 后 9/9；logits / 概率图 / 梯度 diff 均为 0 |
+| perf gate | `ops.sdpa_math.p800` / `.native` 入库；FAIL 0 · WARN 0 |
+
+P800 direct 性能 **1.03-1.27x** native；A1 生产相关大 shape
+**1.02-1.24x**。复现：
+
+```bash
+python3 example.py p800-kunlunxin
+python3 script/check_accuracy.py --impl torch --device cuda:1
+python3 script/bench_perf.py --device cuda:1 --register \
+  --json-out reports/perf_p800-kunlunxin.json
+```
 
 ## 5. 问题与风险
 

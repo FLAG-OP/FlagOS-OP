@@ -76,11 +76,12 @@ dispatch dump），旧代码零改动。
 
 | 层级 | 结果 | 明细 |
 |---|---|---|
-| kernel 层 | ☑ PASS | 52 组（16 shape × 3 dtype + 掩码/边界/错误路径）×2 profile；最差（NPU）fp32/fp16/bf16 见 reports/accuracy.md §2；哨兵确定性+敏感；dropout 显式一致 + 随机 keep=0.499、×2.000 |
+| kernel 层 | ☑ PASS | 52 组（16 shape × 3 dtype + 掩码/边界/错误路径）×3 profile；最差（NPU）fp32/fp16/bf16 见 reports/accuracy.md §2；哨兵确定性+敏感；dropout 显式一致 + 随机 keep=0.499、×2.000 |
 | 框架层 | ☑ PASS | 21 项：四模式拦截（grad/no_grad/inference_mode/无 requires_grad）、注册=直调逐位、vs 原生 3.6e-7、6 组 fp64 gradcheck、`F.sdpa(MATH)` 拦截 + 输出=参考；拦截计数 3822 |
 | 应用层 | ☑ PASS | 8 项：mini-decoder + 概率图消费者，拦截 21 次，logits L∞ 1.86e-8，top1=1.000，贪心序列 1.000，全权重梯度 L∞ 1.75e-10 |
 | 黄金回归 | ☑ 175/175 | reference / torch(CPU) / triton(NPU) 三实现全过；`--impl native` 131/131（44 组 bool 按 §2 分歧跳过） |
 | perf 门禁 | ☑ FAIL 0 | `perf_run --pattern sdpa_math` + `perf_compare`：triton 0.504ms / torch 0.569ms / reference 0.892ms（warmup 20 · iters 50） |
+| P800 | ☑ PASS | kernel 52/52；黄金 torch @ cuda:1 175/175；A1 21/21；FlagGems 应用层 9/9；P800 perf gate FAIL 0 |
 
 ## 5. 性能
 
@@ -98,6 +99,13 @@ NPU fp16（`script/bench_perf.py`，speedup = 原生 math / ours，>1 更快）:
 CPU fp32 同口径 1.05-1.40x（6 形状全过）。**精度代价**: 零——两实现
 同走黄金 175/175（自研 worst 3.9e-3 / 原生 1.95e-3，同为 bf16 量化级）。
 详细分析见 [reports/performance.md](performance.md)。
+
+### P800 / Kunlunxin
+
+P800 生产实现为 `torch_level`，A1 成对注册到 `AutogradCUDA+CUDA`。因本算子
+必须返回概率图，不能替换为 efficient attention。P800 fp16 direct
+**1.03-1.27x** native，A1 生产相关大 shape **1.02-1.24x**；原始数据见
+`reports/perf_p800-kunlunxin.json`。
 
 ## 6. 已知问题与风险
 
@@ -132,6 +140,9 @@ python3 script/check_accuracy.py --impl triton --device npu:0 && \
 python3 script/check_accuracy.py --impl native --device npu:0
 python3 script/bench_perf.py --device npu:0 --register \
   --json-out reports/perf_ascend910.json
+python3 example.py p800-kunlunxin
+python3 script/bench_perf.py --device cuda:1 --register \
+  --json-out reports/perf_p800-kunlunxin.json
 cd ../.. && python3 scripts/perf_run.py --device ascend910 --pattern sdpa_math
 python3 scripts/perf_compare.py --device ascend910
 ```

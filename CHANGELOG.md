@@ -34,6 +34,11 @@
 ## [Unreleased]
 
 ### Added
+- **sdpa_math 第二平台: p800-kunlunxin**（torch 级 + A1）
+  - `_profile` / benchmark / framework 消费方接入 P800；A1 使用
+    `AutogradCUDA+CUDA` 成对注册，生产实现为同语义 `torch_level` 组合
+  - kernel 52/52、黄金 175/175、op 21 项、FlagGems 应用层 9 项、
+    P800 perf gate 全绿；direct 1.03-1.27x native
 - **新算子: [ops/embedding](ops/embedding/)**（`aten::embedding`，
   A1 路线，p800-kunlunxin）
   - forward 复用 XMLIR native `index_select` row-gather；任意 rank indices、

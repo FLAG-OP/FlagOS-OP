@@ -9,8 +9,8 @@
 
 | 项 | 值 |
 |---|---|
-| shape / dtype | `prefill 1k/2k × D64/D128` · `GQA 1k (H32/8)` · `decode S64` · `tail S100`；NPU=fp16、CPU=fp32 |
-| 设备 | Ascend910_9382（`npu:0`）· CPU（128 线程容器） |
+| shape / dtype | `prefill 1k/2k × D64/D128` · `GQA 1k (H32/8)` · `decode S64` · `tail S100`；NPU/P800=fp16、CPU=fp32 |
+| 设备 | Ascend910_9382（`npu:0`）· P800（`cuda:1`）· CPU（128 线程容器） |
 | 口径说明 | **同输出契约**才算数：本算子必须物化 `(B,Hq,Sq,Skv)` 概率图，因此基线选同为"返回 `(out, P)`"的原生 **math 后端**；`F.sdpa` 走融合注意力（**不返回 P**）只作参考列 |
 
 ## 2. 结果：NPU fp16（`--device npu:0 --register`）
@@ -45,6 +45,25 @@ speedup = 原生 math / ours（>1 表示 ours 更快）。数据: [perf_ascend91
 | GQA 1k D128 | 438.80ms | 460.83ms | 1.05x | 380.66ms | 1.21x |
 | decode D128 | 1.059ms | 1.316ms | **1.24x** | 1.180ms | 1.12x |
 | tail100 D64 | 0.924ms | 1.184ms | **1.28x** | 1.026ms | 1.15x |
+
+## 3.1 结果：P800 fp16（`--device cuda:1 --register`）
+
+数据: [perf_p800-kunlunxin.json](perf_p800-kunlunxin.json)。P800 生产路径为
+`torch_level`，A1 使用 `AutogradCUDA+CUDA` 成对注册；native baseline 同样
+返回 `(out, P)`。
+
+| shape | torch direct | native math | direct speedup | A1 | A1 speedup |
+|---|---:|---:|---:|---:|---:|
+| prefill 1k D64 | 1.077ms | 1.197ms | **1.111x** | 0.820ms | **1.459x** |
+| prefill 1k D128 | 0.804ms | 1.019ms | **1.267x** | 0.834ms | **1.222x** |
+| prefill 2k D128 | 2.392ms | 2.999ms | **1.253x** | 2.420ms | **1.239x** |
+| GQA 1k D128 | 1.363ms | 1.727ms | **1.266x** | 1.404ms | **1.230x** |
+| decode D128 | 0.370ms | 0.382ms | **1.031x** | 0.407ms | 0.939x |
+| tail100 D64 | 0.328ms | 0.383ms | **1.166x** | 0.375ms | **1.019x** |
+
+结论：P800 direct 路径 **1.03-1.27x** native；生产相关 prefill/GQA/tail
+A1 路径 **1.02-1.24x**。decode 小 shape 受 Python/A1 wrapper 与完成读回
+开销影响为 0.94x。
 
 ## 4. 回归门禁（入库基线）
 
@@ -91,6 +110,8 @@ python3 script/bench_perf.py --device npu:0 --register \
         --json-out reports/perf_ascend910.json                # NPU fp16
 python3 script/bench_perf.py --device cpu \
         --json-out reports/perf_cpu.json                      # CPU fp32
+python3 script/bench_perf.py --device cuda:1 --register \
+        --json-out reports/perf_p800-kunlunxin.json           # P800 fp16
 python3 ../../scripts/perf_run.py     --device ascend910 --pattern sdpa_math \
         --update-baseline                                    # 采基线（有意动作）
 python3 ../../scripts/perf_compare.py --device ascend910      # 门禁（FAIL 0）
