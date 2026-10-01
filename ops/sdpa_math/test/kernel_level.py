@@ -34,9 +34,11 @@ def _make(B, Hq, Hkv, Sq, Skv, D, dt, dev, seed, mask=None,
 
 
 def _impl_for(profile):
-    """按 profile 选被测实现（ascend910 → triton；cpu → torch）。"""
+    """按 profile 选被测实现（ascend910 → triton；P800 → fast）。"""
     if profile.vendor == "ascend":
         from kernel.triton_level import sdpa_math_triton as fn
+    elif profile.vendor == "kunlunxin":
+        from kernel.p800_fast_level import sdpa_math_p800_fast as fn
     else:
         from kernel.torch_level import sdpa_math_torch as fn
     return fn

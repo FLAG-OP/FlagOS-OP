@@ -64,7 +64,7 @@ def load_profile(name: str | None = None) -> LocalProfile:
             # keep the stable card used by the repository P800 profile.
             torch_device=os.environ.get("SDPA_MATH_TEST_DEVICE", "cuda:1"),
             dispatch_key="AutogradCUDA",   # paired with CUDA by register_a1
-            default_impl="torch",           # XMLIR-native ATen composition
+            default_impl="p800",            # vendor O/LSE + exact-P composition
         )
     raise ValueError(
         f"未知设备 profile: {name}（内置 cpu / ascend910 / p800-kunlunxin）")

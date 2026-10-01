@@ -43,7 +43,7 @@ def main() -> None:
     print("\n[sdpa_math] 三层全绿。黄金精度与性能:")
     print("  python3 script/gen_golden.py            # CPU 生成（175 组）")
     print(f"  python3 script/check_accuracy.py --impl "
-          f"{'triton' if profile.vendor == 'ascend' else 'torch'} "
+          f"{profile.default_impl} "
           f"--device {profile.torch_device}")
     print(f"  python3 script/check_accuracy.py --impl native "
           f"--device {profile.torch_device}   # 原生对照（bool 用例跳过）")
@@ -96,13 +96,15 @@ def perf_cases(profile):
     ref = _load_by_path("reference.py", "sdpa_math_reference")
     if profile.vendor == "kunlunxin":
         import torch
+        p800_fn = _load_by_path(
+            "kernel/p800_fast_level.py", "sdpa_math_p800_fast")
 
         def native(q, k, v, *args, **kwargs):
             return torch.ops.aten._scaled_dot_product_attention_math(
                 q, k, v, *args, **kwargs)
         return [
             PerfCase("ops.sdpa_math.p800", group="ops", level="kernel",
-                     make_fn=make(torch_fn), derived=tflops, iters=50),
+                     make_fn=make(p800_fn), derived=tflops, iters=50),
             PerfCase("ops.sdpa_math.native", group="ops", level="kernel",
                      make_fn=make(native), derived=tflops, iters=50),
         ]

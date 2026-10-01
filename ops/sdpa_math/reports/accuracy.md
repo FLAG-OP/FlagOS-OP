@@ -34,7 +34,7 @@ fp16/bf16 `2e-2`（abs）；extreme 用 `relative 1e-3`。
 |---|---|---|---:|---:|---|
 | 自研 `triton` | npu:0 | **175/175** | 3.906e-3（bf16） | 1.118e-8~ | ✓ |
 | 自研 `torch` | cpu | **175/175** | 1.953e-3（bf16） | 3.7e-9~ | ✓ |
-| 自研 `torch` | cuda:1（P800） | **175/175** | 9.766e-4（bf16） | 同档 | ✓ |
+| P800 `p800` | cuda:1 | **175/175** | 3.906e-3（bf16） | 3.906e-3（bf16） | ✓ |
 | 参考 `reference` | cpu | **175/175** | 0 | 0 | ✓ |
 | 原生 `native` | npu:0 | **131/131**（44 跳过） | 9.766e-4（bf16） | 同档 | ✓ |
 | FlagGems | — | 不适用 | — | — | 无"返回概率图"的同语义实现 |
@@ -51,6 +51,7 @@ fp16/bf16 `2e-2`（abs）；extreme 用 `relative 1e-3`。
 |---|---|
 | `bool attn_mask` 按 `-inf` 遮蔽，不抄 native 直调的 0/1 加性 | `probes/native_semantics.py` §3：直调 vs 0/1 加性 `0.00e+00`，vs `-inf` 遮蔽 `5.14e-01`；而 `F.sdpa` 到达本算子前已把 bool 转成 float32 `-inf` 加性（§5 记录：`range=[-inf,0.0]`）→ 真实消费方只可能见到遮蔽语义 |
 | 内部 fp32，fp64 输入保持 fp64 | native 同口径；fp64 是 gradcheck 的唯一可行精度（`register.py` backward `acc` 选择） |
+| P800 fast 只在 fp16/bf16 无 mask/dropout 时启用 | `efficient_attention` 产出 O/LSE，`P=exp(scale·QKᵀ-LSE)`；fp32、mask、dropout 与 direct-autograd 回退 `torch_level`。黄金 175/175，bf16 worst 3.9e-3 < 2e-2 |
 | 极端 case 从 `scale=8.0` 改 `0.5` | `scale=8` 令全矩阵饱和、任意两行并列时 fp32 累加顺序差一点就翻转 argmax，跨实现相对误差 2.3e-2——病态输入不可判卷（`inputs_spec.yaml` 注释）；改后 single-row 饱和仍在（`large_row=40`），相对容差 1e-3 可用 |
 | 全遮蔽行 → `P=0、O=0`（不是 NaN） | `probes` §4：float mask 整行 `-inf` → `max\|P\|=0.00e+00`、输出 finite；torch_level 用 `nan_to_num(softmax)` 落地 |
 | `causal + attn_mask` 报错（bool/float 皆然） | `probes` §4 两种 dtype 均抛 `Explicit attn_mask should not be set...` |
@@ -86,6 +87,7 @@ python3 script/gen_golden.py                                  # 175 组（CPU，
 python3 script/check_accuracy.py --impl reference --device cpu   # 175/175
 python3 script/check_accuracy.py --impl torch     --device cpu   # 175/175
 python3 script/check_accuracy.py --impl triton    --device npu:0 # 175/175
+python3 script/check_accuracy.py --impl p800      --device cuda:1 # 175/175
 python3 script/check_accuracy.py --impl native    --device npu:0 # 131/131 + 44 bool 跳过
 python3 test/kernel_level.py ascend910                         # 52 组直测（精度表）
 python3 probes/native_semantics.py ascend910                   # native 语义证据 6 节

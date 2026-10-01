@@ -53,21 +53,53 @@ speedup = 原生 math / ours（>1 表示 ours 更快）。数据: [perf_ascend91
 ## 3.1 结果：P800 fp16（`--device cuda:1 --register`）
 
 数据: [perf_p800-kunlunxin.json](perf_p800-kunlunxin.json)。P800 生产路径为
-`torch_level`，A1 使用 `AutogradCUDA+CUDA` 成对注册；native baseline 同样
-返回 `(out, P)`。
+`kernel/p800_fast_level.py`：vendor efficient kernel 计算 `O/LSE`，再用
+`P=exp(scale·QKᵀ-LSE)` 物化概率图；A1 使用 `AutogradCUDA+CUDA` 成对注册。
+native baseline 同样返回 `(out, P)`。
 
-| shape | torch direct | native math | direct speedup | A1 | A1 speedup |
+| shape | P800 fast direct | native math | direct speedup | A1 | A1 speedup |
 |---|---:|---:|---:|---:|---:|
-| prefill 1k D64 | 1.077ms | 1.197ms | **1.111x** | 0.820ms | **1.459x** |
-| prefill 1k D128 | 0.804ms | 1.019ms | **1.267x** | 0.834ms | **1.222x** |
-| prefill 2k D128 | 2.392ms | 2.999ms | **1.253x** | 2.420ms | **1.239x** |
-| GQA 1k D128 | 1.363ms | 1.727ms | **1.266x** | 1.404ms | **1.230x** |
-| decode D128 | 0.370ms | 0.382ms | **1.031x** | 0.407ms | 0.939x |
-| tail100 D64 | 0.328ms | 0.383ms | **1.166x** | 0.375ms | **1.019x** |
+| prefill 1k D64 | 0.509ms | 1.021ms | **2.004x** | 0.497ms | **2.054x** |
+| prefill 1k D128 | 0.494ms | 1.036ms | **2.096x** | 0.499ms | **2.075x** |
+| prefill 2k D128 | 1.429ms | 3.013ms | **2.109x** | 1.442ms | **2.089x** |
+| GQA 1k D128 | 0.783ms | 1.726ms | **2.206x** | 0.796ms | **2.168x** |
+| decode D128 | 0.290ms | 0.474ms | **1.637x** | 0.311ms | **1.526x** |
+| tail100 D64 | 0.278ms | 0.405ms | **1.458x** | 0.310ms | **1.307x** |
 
-结论：P800 direct 路径 **1.03-1.27x** native；生产相关 prefill/GQA/tail
-A1 路径 **1.02-1.24x**。decode 小 shape 受 Python/A1 wrapper 与完成读回
-开销影响为 0.94x。
+结论：P800 direct 路径 **1.46-2.21x** native；A1 路径 **1.31-2.17x**。
+相对原 `torch_level` 组合（约 0.34-2.41ms），主要收益来自两点：
+vendor kernel 承接 `O` 的 PV 调度，`LSE` 使 `P` 生成免做行 max/sum 归约。
+
+### 3.2 P800 参考口径：与不返回 `P` 的 `F.sdpa`
+
+数据: [perf_f_context_p800-kunlunxin.json](perf_f_context_p800-kunlunxin.json)。
+入口: `script/bench_f_context.py`（fp16，warmup=20，iters=100）。
+
+| shape | exact-contract math | native math | no-P `F.sdpa` | math / F |
+|---|---:|---:|---:|---:|
+| prefill 1k D64 | 0.481ms | 1.037ms | 0.161ms | **2.98x** |
+| prefill 1k D128 | 0.490ms | 1.055ms | 0.170ms | **2.89x** |
+| prefill 2k D128 | 1.426ms | 3.011ms | 0.320ms | **4.46x** |
+| GQA 1k D128 | 0.791ms | 1.730ms | 0.217ms | **3.65x** |
+| decode D128 | 0.277ms | 0.408ms | 0.140ms | **1.98x** |
+| tail100 D64 | 0.277ms | 0.408ms | 0.137ms | **2.03x** |
+
+该列**不参与判卷、不参与 speedup 结论**：前两者返回 `(out, P)` 并物化
+`(B,Hq,Sq,Skv)`；`F.sdpa` 只返回 `out`，可选择 FlashAttention/efficient
+路径且不落概率图。它只回答“若下游不需要 `P`，契约本身留下多少延迟”。
+这也解释了内部融合的收益上限：即使把 `P` 生成和 `PV` 完全融合，
+仍必须写出全量 `P`，无法达到 no-P FlashAttention 的带宽/显存形态。
+
+### 3.3 A100 绝对性能口径
+
+当前缺少同机/同协议的 A100 `aten::_scaled_dot_product_attention_math`
+数据，因此**不能给出同输出契约的 A100 加速比**。已有
+[ops/sdpa/reports/perf_a100.md](../../sdpa/reports/perf_a100.md) 与
+[P800 cross-platform 数据](../../sdpa/reports/cross_platform_p800-kunlunxin.json)
+只覆盖 public/no-P fused SDPA：在该非等价口径下，P800 vendor efficient
+约为论文 A100·FA2 的 **36-53%**（即慢约 **1.9-2.8x**）。exact-P math
+还额外物化概率图，绝对差距大概率存在；结论需待 A100 private-math
+实测补齐。
 
 ## 4. 回归门禁（入库基线）
 
@@ -88,6 +120,22 @@ A1 路径 **1.02-1.24x**。decode 小 shape 受 Python/A1 wrapper 与完成读�
 > 说明：`ops.sdpa_math` 的 perf 用例已登记进
 > [`common/perf_registry.py`](../../../common/perf_registry.py)。基线于
 > 2026-09-30 首次入库（算子新增，非环境升级触发）。
+
+### 4.1 P800 门禁（优化后基线）
+
+```bash
+python3 scripts/perf_run.py --device p800-kunlunxin \
+        --pattern ops.sdpa_math --update-baseline
+python3 scripts/perf_compare.py --device p800-kunlunxin
+```
+
+| case | 入库基线 | 复测 ms | Δ | 附加指标 | 判定 |
+|---|---:|---:|---:|---|---|
+| ops.sdpa_math.p800 | 0.485ms | 0.489ms | +0.9% | TFLOPS=8.779 | **OK** |
+| ops.sdpa_math.native | 1.035ms | 1.039ms | +0.4% | TFLOPS=4.133 | **OK** |
+
+**结论: FAIL 0 · WARN 0 · NEW 0**。本次基线更新是 P800 exact-P fast path
+的 intentional optimization，不是环境漂移。
 
 ## 5. 分析
 
@@ -125,8 +173,13 @@ P 往返访存 ~28%、计算效率 ~69%）：
 - `scale` 为 tensor 的慢路径（当前转 python float）；
 - A1 包装的图节点开销（~0.078ms）。
 
-**与基线的回归情况**：门禁 OK（triton +7.8%、torch/reference ±2% 内），
-无超阈回退。
+**P800 剩余差距**：exact-P 路径仍比 no-P `F.sdpa` 慢 **1.98-4.46x**。
+其中不可避免的部分是全量 `P` 写出与额外 QK；可继续压缩的是 causal
+mask 构造、GQA `K` expansion 与 P 写出调度。掩码/dropout/fp32/直连
+autograd 场景按语义保守回退 `torch_level`。
+
+**与基线的回归情况**：Ascend 门禁 OK（triton +7.8%、torch/reference
+±2% 内，无超阈回退）；P800 门禁 OK（新 fast-path 基线 Δ=0.0%）。
 
 ## 6. 单 kernel 融合实验（2026-10-01）
 
@@ -183,7 +236,12 @@ python3 script/bench_perf.py --device cpu \
         --json-out reports/perf_cpu.json                      # CPU fp32
 python3 script/bench_perf.py --device cuda:1 --register \
         --json-out reports/perf_p800-kunlunxin.json           # P800 fp16
+python3 script/bench_f_context.py --device cuda:1 \
+        --json-out reports/perf_f_context_p800-kunlunxin.json # 仅参考列
 python3 ../../scripts/perf_run.py     --device ascend910 --pattern sdpa_math \
         --update-baseline                                    # 采基线（有意动作）
 python3 ../../scripts/perf_compare.py --device ascend910      # 门禁（FAIL 0）
+python3 ../../scripts/perf_run.py     --device p800-kunlunxin \
+        --pattern ops.sdpa_math --update-baseline             # 优化后基线
+python3 ../../scripts/perf_compare.py --device p800-kunlunxin # 门禁（FAIL 0）
 ```

@@ -8,13 +8,13 @@
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::_scaled_dot_product_attention_math`（torch SDPA 的 **math 后端**，`CompositeImplicitAutograd`） |
-| 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 输入保持 fp64，供 gradcheck） |
+| 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 保持；P800 半精度 fast path 见下） |
 | 路线 | **A1** aten 拦截（成对注册 `Autograd*` + 纯设备键），旧业务代码零改动 |
-| 平台 | **ascend910**: 自研 Triton（两段式 probs + PV，小形状单 kernel 融合）；**p800-kunlunxin**: ATen 组合 + A1；**cpu**: ATen 组合（对照/梯度兜底） |
+| 平台 | **ascend910**: 自研 Triton（两段式 probs + PV，小形状单 kernel 融合）；**p800-kunlunxin**: vendor O/LSE + exact-P + A1；**cpu**: ATen 组合（对照/梯度兜底） |
 | 验证 | kernel 52 组 ×3 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 21 项（6 gradcheck）· 应用层 8-9 项 ✅ |
 | NPU 性能（fp16，vs 同为"返回 out+P"的原生 math） | prefill1k D64 **1.22x** · 1k D128 **1.29x** · 2k D128 **2.03x** · GQA **1.67x** · decode **1.17x** · tail100 **1.16x** |
 | CPU 性能（fp32，同口径） | 1.05-1.40x（6 形状全过） |
-| P800 性能（fp16，同口径） | direct **1.03-1.27x** native；A1 大 shape **1.02-1.24x** |
+| P800 性能（fp16，同口径） | direct **1.46-2.21x** native；A1 **1.31-2.17x** |
 
 ## 快速开始
 
@@ -30,7 +30,7 @@ python3 test/framework_level.py ascend910
 # 黄金（CPU 生成一次，跨平台复用）
 python3 script/gen_golden.py
 python3 script/check_accuracy.py --impl triton   --device npu:0
-python3 script/check_accuracy.py --impl torch    --device cuda:1
+python3 script/check_accuracy.py --impl p800     --device cuda:1
 python3 script/check_accuracy.py --impl reference --device cpu
 python3 script/check_accuracy.py --impl native   --device npu:0   # 原生对照
 
@@ -38,6 +38,8 @@ python3 script/bench_perf.py --device npu:0 --register \
   --json-out reports/perf_ascend910.json
 python3 script/bench_perf.py --device cuda:1 --register \
   --json-out reports/perf_p800-kunlunxin.json
+python3 script/bench_f_context.py --device cuda:1 \
+  --json-out reports/perf_f_context_p800-kunlunxin.json  # no-P 参考列
 python3 probes/native_semantics.py ascend910     # native 语义证据表
 ```
 
@@ -74,27 +76,38 @@ sdpa_math/
 ├── _profile.py               # ascend910 / p800-kunlunxin / cpu 本地 profile
 ├── kernel/
 │   ├── triton_level.py       # 两段式 _probs_kernel + _pv_kernel（NPU）
+│   ├── p800_fast_level.py    # vendor O/LSE + exact-P（P800 fast path）
 │   └── torch_level.py        # ATen 组合（独立写法，非 reference 转发）
 ├── test/                     # kernel / op / framework 三层
 ├── goldendata/               # 声明式 175 组黄金（inputs_spec.yaml）
-├── script/                   # gen_golden / check_accuracy / bench_perf
+├── script/                   # gen_golden / check_accuracy / bench_perf / bench_f_context
 ├── probes/native_semantics.py# native 语义证据（schema/参数形态/dropout 表/注册键）
 └── reports/                  # development / test-report / accuracy / performance
 ```
 
 ## P800 / Kunlunxin 路线
 
-P800 生产实现选择 `torch_level.sdpa_math_torch`：
+P800 生产实现选择 `p800_fast_level.sdpa_math_p800_fast`：
 
 ```text
 A1 AutogradCUDA + CUDA 成对注册
     ↓
-torch_level ATen composition
+aten::_scaled_dot_product_efficient_attention → output + LSE
+QKᵀ → exp(scale·QKᵀ - LSE) → full P
+return (output, P)
 ```
 
 本算子必须 materialize 第二输出 `P`，不能直接替换为 efficient attention。
-当前 torch 组合与原生 private math 同为 ATen 路径，P800 实测 direct
-**1.03-1.27x** native，A1 大 shape **1.02-1.24x**。
+fast path 只在 fp16/bf16、无 mask、无 dropout 时启用；fp32、mask、dropout
+与 direct-autograd 场景回退 `torch_level`。P800 实测 direct
+**1.46-2.21x** native，A1 **1.31-2.17x**。
+
+`script/bench_f_context.py` 另提供 no-P `F.sdpa` 参考列：P800 fp16 下
+exact-contract math 约慢 **1.98-4.46x**。这不是同输出结论，因为 `F.sdpa`
+不返回 `P`、也不物化概率图；它说明后续 P800 内部融合有机会继续压缩
+QK/GQA expansion/mask/P 写出，但受“必须写全量 P”限制，不应以
+no-P FlashAttention 作为可达目标。源码级 exact-P Triton 双 pass 目前会触发
+XMLIR pointer-state rewrite 限制，故先采用 vendor LSE 组合。
 
 框架层运行在 FlagOS 算子栈内：
 
