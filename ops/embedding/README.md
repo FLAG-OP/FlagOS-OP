@@ -15,7 +15,7 @@
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::embedding(weight, indices, padding_idx, scale_grad_by_freq, sparse)` |
-| 平台 | p800-kunlunxin / torch_xmlir |
+| 平台 | p800-kunlunxin（torch_xmlir，呈 CUDA）· **ascend910**（torch_npu，本 PR） |
 | 路线 | A1 `AutogradCUDA` 拦截 |
 | forward 生产实现 | XMLIR native `aten::index_select` row gather |
 | dense backward | native `aten::embedding_backward` |
@@ -26,7 +26,7 @@
 ## 快速开始
 
 ```bash
-python3 example.py p800-kunlunxin
+python3 example.py p800-kunlunxin   # 或 EMBEDDING_PROFILE=ascend910 python3 example.py
 
 python3 script/gen_golden.py
 python3 script/check_accuracy.py --impl p800 --device cuda:1

@@ -38,7 +38,9 @@ def _backward_case(device, dtype, scale):
 def run(profile):
     import torch
 
-    from kernel.p800_kunlunxin import embedding, embedding_backward
+    from test_kernel_common import _load_backend
+    _b = _load_backend(profile)
+    embedding, embedding_backward = _b.embedding, _b.embedding_backward
     from reference import embedding_backward_reference, embedding_reference
 
     dev = profile.torch_device
@@ -113,7 +115,8 @@ def run(profile):
 
     grad = torch.randn_like(weight)
     try:
-        from kernel.p800_kunlunxin import embedding_backward
+        from test_kernel_common import _load_backend
+        embedding_backward = _load_backend(profile).embedding_backward
         embedding_backward(grad, indices, weight.shape[0], -1, False, True)
     except NotImplementedError:
         results.append("[OK] guard: sparse backward rejected")
@@ -127,7 +130,7 @@ def run(profile):
     else:
         raise AssertionError("invalid padding_idx should be rejected")
 
-    perf = _quick_perf(dev)
+    perf = _quick_perf(profile, dev)
     for line in results:
         print(line)
     return {
@@ -144,21 +147,24 @@ def _consume(output):
     return output.reshape(-1)[0].item()
 
 
-def _quick_perf(dev):
+def _quick_perf(profile, dev):
     import torch
 
-    from kernel.p800_kunlunxin import embedding
+    from test_kernel_common import _load_backend
+    embedding = _load_backend(profile).embedding
 
     torch.manual_seed(7)
     weight = torch.randn(4096, 128, device=dev, dtype=torch.float16) * 0.1
     indices = torch.randint(0, 4096, (16384,), device=dev)
     for _ in range(5):
         _consume(embedding(weight, indices))
-    torch.cuda.synchronize()
+    _sync = torch.npu.synchronize if profile.torch_device.startswith('npu') else torch.cuda.synchronize
+    _sync()
     t0 = time.perf_counter()
     for _ in range(20):
         _consume(embedding(weight, indices))
-    torch.cuda.synchronize()
+    _sync = torch.npu.synchronize if profile.torch_device.startswith('npu') else torch.cuda.synchronize
+    _sync()
     return round((time.perf_counter() - t0) / 20 * 1000, 4)
 
 

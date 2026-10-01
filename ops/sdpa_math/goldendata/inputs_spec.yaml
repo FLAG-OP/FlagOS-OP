@@ -1,0 +1,97 @@
+# 输入与黄金数据规格（声明式，gen_golden.py 消费）
+# 算子: aten::_scaled_dot_product_attention_math（第二输出 = 注意力概率图 P）
+op: sdpa_math
+seed_base: 20260929
+cases:
+  - name: basic
+    desc: 标准多头注意力（因果 / 无 mask），S 含尾块（非 64 整倍）
+    B: [1, 2]
+    Hq: [4]
+    Hkv: [4]
+    S: [128, 100]
+    D: [64]
+    dtypes: [float32, float16, bfloat16]
+    causal: [false, true]
+    mask: [null, bool, float]
+    scale: 0.5
+    seeds_per_case: 2
+
+  - name: gqa
+    desc: GQA（Hq=8, Hkv=2）+ ViT 形态长序列
+    B: [1]
+    Hq: [8]
+    Hkv: [2]
+    S: [128, 197]
+    D: [64, 80]
+    dtypes: [float32, float16]
+    causal: [false, true]
+    mask: [null, bool]
+    scale: 0.5
+    seeds_per_case: 2
+
+  - name: broadcast
+    desc: 广播 mask 形态（(S,S) / (B,1,S,S)），右对齐广播规则
+    B: [2]
+    Hq: [4]
+    Hkv: [4]
+    S: [64]
+    D: [64]
+    dtypes: [float32, float16]
+    causal: [false]
+    mask: [bool2d, float2d, bool_b1]
+    scale: 0.5
+    seeds_per_case: 1
+
+  - name: nonsq
+    desc: 非方阵 Sq≠Skv（causal 左上对齐 tril；decode 形态 Skv>Sq）
+    B: [1]
+    Hq: [4]
+    Hkv: [4]
+    Sq: [6, 1]
+    Skv: [4, 64]
+    D: [64]
+    dtypes: [float32, float16]
+    causal: [true, false]
+    mask: [null]
+    scale: 0.5
+    seeds_per_case: 2
+
+  - name: dropout
+    desc: 确定性 dropout（显式 dropout_mask 存为输入，跨设备可判卷）
+    B: [1]
+    Hq: [4]
+    Hkv: [4]
+    S: [64]
+    D: [64]
+    dtypes: [float32, float16]
+    causal: [false, true]
+    mask: [null]
+    dropout_p: [0.3]
+    scale: 0.5
+    seeds_per_case: 2
+
+  - name: extreme
+    desc: 全零 q 行 / 大值行（softmax 稳定性 + 全遮蔽行语义）
+    B: [1]
+    Hq: [4]
+    Hkv: [4]
+    S: [128]
+    D: [64]
+    dtypes: [float32]      # 不配 fp16/bf16: 饱和 softmax 下输入量化翻转
+                           # argmax 属 dtype 固有性质（native 与 ours 同误差）
+    causal: [true]
+    mask: [null]
+    scale: 0.5           # 输入幅值与其它 case 一致；饱和压力来自 special 行
+                          # （large_row=40 → 该行 score 数百 → one-hot）。
+                          # 曾用 scale=8.0 让**全矩阵**饱和: 任意两行近似并列
+                          # 时 fp32 累加顺序差一点就翻转 argmax，跨实现互验
+                          # 实测 2.3e-2 相对误差——属判卷不可用的病态输入。
+    special: [zeros_row, large_row]
+    seeds_per_case: 1
+
+tolerance:
+  # 判卷口径: 黄金在 CPU fp32 内部计算后 cast 回输入 dtype；
+  # 被测实现同为 fp32 内部计算 → 误差 = 累加顺序 + 输出量化
+  pointwise_abs: {float32: 1.0e-5, float16: 2.0e-2, bfloat16: 2.0e-2}
+  relative: 1.0e-3        # extreme（单行饱和）case 用相对容差（输入幅值已改正常）
+  probs_pointwise_abs: {float32: 1.0e-5, float16: 2.0e-2, bfloat16: 2.0e-2}

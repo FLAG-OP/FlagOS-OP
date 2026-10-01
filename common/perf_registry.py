@@ -20,6 +20,7 @@ PROVIDERS = [
     ("example.backward-example", ROOT / "examples/backward-example/example.py"),
     ("example.hw-kernel-example", ROOT / "examples/hw-kernel-example/example.py"),
     ("ops.sdpa", ROOT / "ops/sdpa/example.py"),
+    ("ops.sdpa_math", ROOT / "ops/sdpa_math/example.py"),
     ("ops.embedding", ROOT / "ops/embedding/example.py"),
     ("ops.type_as", ROOT / "ops/type_as/example.py"),
     ("ops.clone", ROOT / "ops/clone/example.py"),

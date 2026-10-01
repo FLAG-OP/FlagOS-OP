@@ -28,7 +28,8 @@ def run(profile):
     import torch
     import torch.nn.functional as F
 
-    from kernel.p800_kunlunxin import embedding as direct_embedding
+    from test_kernel_common import _load_backend
+    direct_embedding = _load_backend(profile).embedding
     from reference import embedding_backward_reference
     from register import register_a1
 

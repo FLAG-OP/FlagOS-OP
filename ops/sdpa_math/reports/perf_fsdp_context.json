@@ -1,0 +1,26 @@
+[
+  {
+    "shape": "prefill_1k_d64",
+    "fsdp_fused_ms": 0.125
+  },
+  {
+    "shape": "prefill_1k_d128",
+    "fsdp_fused_ms": 0.1246
+  },
+  {
+    "shape": "prefill_2k_d128",
+    "fsdp_fused_ms": 0.2279
+  },
+  {
+    "shape": "gqa_1k_d128",
+    "fsdp_fused_ms": 0.154
+  },
+  {
+    "shape": "decode_d128",
+    "fsdp_fused_ms": 0.0544
+  },
+  {
+    "shape": "tail100_d64",
+    "fsdp_fused_ms": 0.0824
+  }
+]

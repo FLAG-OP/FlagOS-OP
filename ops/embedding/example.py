@@ -13,6 +13,10 @@ sys.path.insert(0, str(ROOT))
 
 
 def _load_level(name: str):
+    import sys
+    test_dir = str(OP_DIR / "test")
+    if test_dir not in sys.path:
+        sys.path.insert(0, test_dir)   # test_kernel_common 可达（两种加载方式）
     path = OP_DIR / "test" / f"{name}_level.py"
     spec = importlib.util.spec_from_file_location(
         f"embedding_{name}", path
@@ -88,7 +92,8 @@ def perf_cases(profile):
 
     import torch
 
-    from kernel.p800_kunlunxin import embedding
+    from test.test_kernel_common import _load_backend
+    embedding = _load_backend(profile).embedding
 
     def native(weight, indices):
         return torch.ops.aten.embedding(

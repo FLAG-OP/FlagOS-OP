@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0] - 2026-09-30
+
+### Added
+- **embedding 第二平台 ascend910**（kernel/ascend910.py，厂商委托
+  index_select + dense_backward；register/_profile/tests 按
+  dispatch_key 平台分发；三层 + 黄金 350 PASS + Triton 探针数据
+  ——P800"生产委托"结论在 Ascend 复现，Triton gather 慢 18-69x）
+
 ## [Unreleased]
 
 ### Added
