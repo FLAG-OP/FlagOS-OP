@@ -31,6 +31,7 @@ import torch
 import torch.nn.functional as _F
 
 _ORIG_SDPA = _F.scaled_dot_product_attention     # 原始引用（patch 前固定）
+_SDPA_REG = None                                # register 模块单例（防同名冲突+类对象漂移）
 _patched = False
 
 # 路由统计（op 层断言与可观测性用; 进程级累计）
@@ -54,18 +55,28 @@ def reset_stats() -> None:
 def _triton_with_grad(query, key, value, attn_mask, dropout_p, is_causal,
                       scale, enable_gqa):
     """自研 Triton 前向 + 统一数学梯度（复用 register 的 autograd 包装）。"""
-    try:  # Package-style import: ops.sdpa.kernel.auto_dispatch
-        from .. import register
-    except ImportError:
-        import register
-    saved = register._SDPA_A1_Function._impl
-    register._SDPA_A1_Function._impl = "triton"   # 防 auto 循环
+    # wt 2026-10-01-fix 修复与其它算子同名模块冲突: e2e 场景中 embedding
+    # 的 register 先入 sys.modules, 裸 import register 拿错模块
+    # （AttributeError: no attribute _SDPA_A1_Function 实证）。
+    # 按本文件位置锚定导入。
+    # # wt <wangt635@ustc.edu.cn>
+    global _SDPA_REG
+    if _SDPA_REG is None:
+        import importlib.util as _ilu
+        from pathlib import Path as _P
+        _reg_path = _P(__file__).resolve().parents[1] / "register.py"
+        _spec = _ilu.spec_from_file_location("sdpa_register", _reg_path)
+        _SDPA_REG = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_SDPA_REG)
+    _reg = _SDPA_REG
+    saved = getattr(_reg._SDPA_A1_Function, "_impl", "triton")
+    _reg._SDPA_A1_Function._impl = "triton"   # 防 auto 循环
     try:
-        return register._SDPA_A1_Function.apply(
+        return _reg._SDPA_A1_Function.apply(
             query, key, value, attn_mask, dropout_p, is_causal, scale,
             enable_gqa)
     finally:
-        register._SDPA_A1_Function._impl = saved
+        _reg._SDPA_A1_Function._impl = saved
 
 
 def sdpa_auto(query, key, value, attn_mask=None, dropout_p=0.0,
