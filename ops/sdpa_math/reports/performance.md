@@ -19,13 +19,17 @@ speedup = 原生 math / ours（>1 表示 ours 更快）。数据: [perf_ascend91
 
 | shape | 自研 triton | 原生 math | speedup | 自研 A1 包装 | A1 vs 原生 |
 |---|---:|---:|---:|---:|---:|
-| prefill 1k D64 | 0.528ms | 0.634ms | **1.20x** | 0.618ms | 1.03x |
-| prefill 1k D128 | 0.527ms | 0.697ms | **1.32x** | 0.565ms | 1.23x |
-| prefill 2k D128 | 1.316ms | 2.692ms | **2.05x** | 1.350ms | 1.99x |
-| GQA 1k D128 | 0.804ms | 1.398ms | **1.74x** | 0.836ms | 1.67x |
-| decode D128 | 0.287ms | 0.264ms | 0.92x | 0.361ms | 0.73x |
-| tail100 D64 | 0.285ms | 0.275ms | 0.97x | 0.362ms | 0.76x |
+| prefill 1k D64 | 0.515ms | 0.626ms | **1.22x** | 0.555ms | 1.13x |
+| prefill 1k D128 | 0.538ms | 0.695ms | **1.29x** | 0.572ms | 1.21x |
+| prefill 2k D128 | 1.369ms | 2.776ms | **2.03x** | 1.402ms | 1.98x |
+| GQA 1k D128 | 0.810ms | 1.351ms | **1.67x** | 0.863ms | 1.57x |
+| decode D128 | 0.217ms | 0.255ms | **1.17x** | 0.295ms | 0.86x |
+| tail100 D64 | 0.219ms | 0.253ms | **1.16x** | 0.295ms | 0.86x |
 | **精度代价** | 0（175/175） | 0（131/131） | | 0 | |
+
+> decode/tail 为 §6 单 kernel 融合生效后的数字（融合前 0.287/0.285ms、
+> 0.92x/0.97x）；大形状走两段式（§6 阈值），与融合前持平在测量噪声内。
+> A1 列为经 `torch.ops` 注册拦截路径，含 ~0.078ms `autograd.Function` 包装。
 
 参考列——`F.sdpa`（torch_npu 融合注意力，**不返回概率图**，输出契约不同）:
 `prefill 1k D128 0.125ms · 2k 0.228ms · GQA 0.154ms · decode 0.054ms`
@@ -72,12 +76,14 @@ A1 路径 **1.02-1.24x**。decode 小 shape 受 Python/A1 wrapper 与完成读�
 
 | case | 基线 ms | 本次 ms | Δ | 判定 | 附加指标 |
 |---|---:|---:|---:|---|---|
-| ops.sdpa_math.triton | 0.504 | 0.504 | +0.0% | **OK** | TFLOPS=8.524 |
-| ops.sdpa_math.torch | 0.569 | 0.569 | +0.0% | **OK** | TFLOPS=7.549 |
-| ops.sdpa_math.reference | 0.892 | 0.892 | +0.0% | **OK** | TFLOPS=4.817 |
+| ops.sdpa_math.triton | 0.504 | 0.543 | +7.8% | **OK** | TFLOPS=7.909 |
+| ops.sdpa_math.torch | 0.569 | 0.567 | -0.4% | **OK** | TFLOPS=7.578 |
+| ops.sdpa_math.reference | 0.892 | 0.874 | -2.0% | **OK** | TFLOPS=4.916 |
 
 **结论: FAIL 0 · WARN 0 · NEW 0**（`examples/` 提供者与本算子无关的
-`ops.embedding` 加载失败为既有环境问题，不计入本次门禁）。
+`ops.embedding` 加载失败为既有环境问题，不计入本次门禁）。本次为
+2026-10-01 §6 融合改动后的复测：triton +7.8%（门禁阈值 30% 内），
+系 1k 用例两段式路径的进程间波动，未更新基线。
 
 > 说明：`ops.sdpa_math` 的 perf 用例已登记进
 > [`common/perf_registry.py`](../../../common/perf_registry.py)。基线于
@@ -85,25 +91,90 @@ A1 路径 **1.02-1.24x**。decode 小 shape 受 Python/A1 wrapper 与完成读�
 
 ## 5. 分析
 
+**测量口径两点**：
+- **JIT 编译不进均值**：triton 首次调用含在线编译（实测 4261ms），随后
+  60 次稳态 mean 0.470ms；`warmup=20` 在计时段外，所有数字均为稳态。
+- **单次 kernel launch 地板 ~0.097ms**（本栈最小 add kernel 实测）：
+  launch 次数直接决定 0.2ms 级形状的上限——causal 路径原为 3 次
+  （`zeros` + probs + PV），现已减到 2 次（causal 尾块补零收进 probs
+  kernel），小形状收益见 §6。
+
 **为什么大形状快**：两段式 `_probs_kernel` + `_pv_kernel` 对 NPU 的
 tile 化更友好，原生 math 后端走 ATen 组合（多轮 `matmul` + `softmax` +
-`masked_fill` 中间张量），2k 形状下显存流量差距被放大到 2.05x。
+`masked_fill` 中间张量），2k 形状下显存流量差距被放大到 2.03x。
 
-**为什么小形状略慢（0.92-0.97x）**：
-1. 本算子必须物化 `(1,16,64,64)` 概率图（额外一次全量写 + 一次全量读），
-   `S=64/100` 时计算量小、内存/启动占比高；
-2. triton 固定 64×64 tile，`S=64/100` 只有 1-2 个 tile，kernel 利用率低；
-3. A1 包装另加约 0.04-0.09ms（`autograd.Function` 的图节点开销），
-   对 0.3ms 级调用有感（decode A1 0.361ms vs 原生 0.264ms）。
+**与融合库 `F.sdpa` 的差距是栈级的**（差距构成实测：launch ~3%、
+P 往返访存 ~28%、计算效率 ~69%）：
+1. **计算效率**：同栈纯 `tl.dot` matmul 就比 CANN 优化 GEMM 慢
+   **5.2x**——Ascend UB 仅 192KB，BM/BN>64 全组合 MLIR 编译失败，
+   tile 调优封死在 64×64（证据见
+   [`ops/sdpa/reports/perf_analysis.md`](../../sdpa/reports/perf_analysis.md)）；
+2. **P 往返**：输出契约必须物化 `(B,Hq,Sq,Skv)` 概率图（一次全量写 +
+   下游一次全量读），融合库不落 P；
+3. **launch**：已从 3 次降到 2 次（§6）。
+   → 单算子内再优化也无法追平 `F.sdpa`；消费方不需要概率图时应优先
+   用 `F.sdpa`（§2 参考列）。
+
+**小形状现状**：decode/tail 经 §6 单 kernel 融合后为 1.17x/1.16x
+（融合前 0.92x/0.97x）；A1 路径 0.86x 是因为包装开销 ~0.078ms 对
+0.29ms 级调用占比高，且该开销在 `torch.library`/autograd 图节点层，
+非本算子可控。
 
 **优化方向**（未做，非阻塞）：
-- 小形状合并 pass1/pass2、减少一次中间张量落地；
 - 4k+ 长序列按行块分段 PV，压峰值显存；
-- `decode` 场景（`Sq=1`）专用分支，跳过 causal 构造。
+- `scale` 为 tensor 的慢路径（当前转 python float）；
+- A1 包装的图节点开销（~0.078ms）。
 
-**与基线的回归情况**：门禁 OK（Δ=0.0%），无回退。
+**与基线的回归情况**：门禁 OK（triton +7.8%、torch/reference ±2% 内），
+无超阈回退。
 
-## 6. 复现
+## 6. 单 kernel 融合实验（2026-10-01）
+
+**动机**：小形状被 launch 主导（地板 97µs），causal 路径 3 次 launch
+≈0.29ms ≈ decode 整体耗时。做法：`_probs_kernel` 增加 `HAS_PV` 模式，
+QK→softmax→PV 在一个 kernel 内完成，P 块只在寄存器里存在、结果直接
+写 `O`（`probs` 仍按契约物化），causal 尾块补零也一并收进 kernel
+（去掉独立 `torch.zeros`）。选择逻辑按形状自动走（`SDPA_MATH_FUSED`
+=on/off/auto 可强制，仅实验用）。
+
+**阈值不是形状面积，而是实际处理的 score tile 数**（causal 按行块截断），
+实测两路径对比（`thr*.py`，D128、causal，ratio<1 = 融合更快）：
+
+| shape | tiles | 融合 | 两段式 | ratio |
+|---|---:|---:|---:|---:|
+| 64×64（bench decode 形状） | 1 | 0.177 | 0.225 | **0.78** |
+| 1×1024（decode 长上下文） | 1 | 0.169 | 0.229 | **0.74** |
+| 1×8192 | 1 | 0.185 | 0.227 | **0.82** |
+| 64×1024 | 1 | 0.179 | 0.226 | **0.79** |
+| 128×2048 | 3 | 0.195 | 0.229 | **0.85** |
+| 128×128 | 3 | 0.187 | 0.224 | **0.84** |
+| 100×100（bench tail 形状） | 3 | 0.188 | 0.227 | **0.83** |
+| 256×256（causal） | 10 | 0.201 | 0.222 | **0.91** |
+| 320×320（causal） | 15 | 0.218 | 0.222 | **0.98** |
+| 256×256（非 causal） | 16 | 0.214 | 0.221 | **0.97** |
+| 384×384（causal） | 21 | 0.241 | 0.226 | 1.07 |
+| 448×448（causal） | 28 | 0.257 | 0.238 | 1.08 |
+| 512×512（causal） | 36 | 0.292 | 0.258 | 1.13 |
+| 512×512（非 causal） | 64 | 0.364 | 0.314 | 1.16 |
+| 1024×1024（causal） | 136 | 0.614 | 0.469 | 1.31 |
+| 2048×2048（causal） | 528 | 1.855 | 1.317 | 1.41 |
+
+交叉点在 15~21 tiles → **阈值取 16 tiles**（`_FUSED_MAX_TILES`）。
+同为 262k 面积的 causal 512²（36 tiles）融合慢 13%、而 causal
+128×2048（3 tiles）融合快 15%——故判据用 tiles 而非 `max(Sq,Skv)`。
+`dropout_p>0` 恒走两段式（掩码须先作用在 P 上，见文件头注）。
+
+**结果**（直接收益，见 §2 表）：decode 0.287→0.217ms（**-24%**，
+0.92x→1.17x）、tail100 0.285→0.219ms（**-23%**，0.97x→1.16x）；
+大形状按阈值走两段式，与融合前持平。**代价**：融合模式在大形状上
+劣化 13-41%（见上表），因此不能全局开；进程内多一套参数组合使
+1k 门禁用例 +7.8%（噪声带内）。
+
+**回归**：`check_accuracy --impl triton` **175/175，worst 3.906e-3
+不变**（融合/两段式两路径都覆盖）；`example.py ascend910` 52/21/8
+全绿；`example.py cpu` 全绿；门禁 FAIL 0（§4）。
+
+## 7. 复现
 
 ```bash
 python3 script/bench_perf.py --device npu:0 --register \
