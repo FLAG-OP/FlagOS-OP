@@ -50,10 +50,12 @@ dispatch dump），旧代码零改动。
 |---|---|---|---|
 | reference | `reference.py` | 判卷标准 | `masked_fill` + exp/sum 守卫；`_validate` 集中校验（causal+mask 冲突 / GQA 整除 / K-V 头一致） |
 | torch | `kernel/torch_level.py` | CPU 交付 + 第二判卷人 | `where` 生成 causal bias、`nan_to_num(softmax)` 守卫（与 reference 不同写法） |
-| triton | `kernel/triton_level.py` | NPU 交付 | 两段式：`_probs_kernel`(pass1 行最大 + pass2 归一) → `_pv_kernel`；`_score_block` 两 pass 共用；固定 64×64 tile；dropout 用 ATen 收口 |
+| triton | `kernel/triton_level.py` | NPU 交付 | 两段式：`_probs_kernel`(pass1 行最大 + pass2 归一) → `_pv_kernel`；`_score_block` 两 pass 共用；固定 64×64 tile；dropout 用 ATen 收口。**小形状按 score tile 数（≤16）自动改走单 kernel 融合**（QK→softmax→PV 一趟，见 [performance.md §6](performance.md)） |
 
 **Triton 关键决策**:
 1. 必须物化 P（算子契约），故不能用 flash 的重算策略 → 两段式而非单遍；
+   小形状例外：tile 数 ≤16 时单 kernel 融合（P 块只在寄存器里、O 直写）
+   省一次 launch，阈值与实测见 [performance.md §6](performance.md)；
 2. `flag_gems.runtime.torch_device_fn.device` 上下文包裹启动（#11）；
 3. 尾块 masked load（#15a），不用 `@triton.autotune`（#15b）；
 4. fp32 走 `input_precision="ieee"`；
@@ -80,7 +82,7 @@ dispatch dump），旧代码零改动。
 | 框架层 | ☑ PASS | 21 项：四模式拦截（grad/no_grad/inference_mode/无 requires_grad）、注册=直调逐位、vs 原生 3.6e-7、6 组 fp64 gradcheck、`F.sdpa(MATH)` 拦截 + 输出=参考；拦截计数 3822 |
 | 应用层 | ☑ PASS | 8 项：mini-decoder + 概率图消费者，拦截 21 次，logits L∞ 1.86e-8，top1=1.000，贪心序列 1.000，全权重梯度 L∞ 1.75e-10 |
 | 黄金回归 | ☑ 175/175 | reference / torch(CPU) / triton(NPU) 三实现全过；`--impl native` 131/131（44 组 bool 按 §2 分歧跳过） |
-| perf 门禁 | ☑ FAIL 0 | `perf_run --pattern sdpa_math` + `perf_compare`：triton 0.504ms / torch 0.569ms / reference 0.892ms（warmup 20 · iters 50） |
+| perf 门禁 | ☑ FAIL 0 | `perf_run --pattern sdpa_math` + `perf_compare`：triton 0.543ms(+7.8%) / torch 0.567ms / reference 0.874ms（warmup 20 · iters 50，融合改动后复测） |
 | P800 | ☑ PASS | kernel 52/52；黄金 torch @ cuda:1 175/175；A1 21/21；FlagGems 应用层 9/9；P800 perf gate FAIL 0 |
 
 ## 5. 性能
@@ -89,12 +91,12 @@ NPU fp16（`script/bench_perf.py`，speedup = 原生 math / ours，>1 更快）:
 
 | shape | ours | 原生 math | speedup | A1 路径 |
 |---|---:|---:|---:|---:|
-| prefill 1k D64 | 0.528ms | 0.634ms | **1.20x** | 0.618ms |
-| prefill 1k D128 | 0.527ms | 0.697ms | **1.32x** | 0.565ms |
-| prefill 2k D128 | 1.316ms | 2.692ms | **2.05x** | 1.350ms |
-| GQA 1k D128 | 0.804ms | 1.398ms | **1.74x** | 0.836ms |
-| decode 64 D128 | 0.287ms | 0.264ms | 0.92x | 0.361ms |
-| tail100 D64 | 0.285ms | 0.275ms | 0.97x | 0.362ms |
+| prefill 1k D64 | 0.515ms | 0.626ms | **1.22x** | 0.555ms |
+| prefill 1k D128 | 0.538ms | 0.695ms | **1.29x** | 0.572ms |
+| prefill 2k D128 | 1.369ms | 2.776ms | **2.03x** | 1.402ms |
+| GQA 1k D128 | 0.810ms | 1.351ms | **1.67x** | 0.863ms |
+| decode 64 D128 | 0.217ms | 0.255ms | **1.17x** | 0.295ms |
+| tail100 D64 | 0.219ms | 0.253ms | **1.16x** | 0.295ms |
 
 CPU fp32 同口径 1.05-1.40x（6 形状全过）。**精度代价**: 零——两实现
 同走黄金 175/175（自研 worst 3.9e-3 / 原生 1.95e-3，同为 bf16 量化级）。
@@ -114,7 +116,7 @@ P800 生产实现为 `torch_level`，A1 成对注册到 `AutogradCUDA+CUDA`。�
 | 1 | `bool attn_mask` **直调**是 0/1 加性怪癖（`probes` §3 实测 0/0 vs `-inf` 遮蔽 0.514） | 只影响绕过 `F.sdpa` 直调 bool mask 的调用方；本实现按 `-inf` 遮蔽（对齐 `F.sdpa`） | 有意分歧，黄金 44 组在 `--impl native` 下跳过并注明 |
 | 2 | 只注册 `Autograd*` → `torch.inference_mode()` 不命中（counter 不增）；反向报 "an autograd kernel was not registered" | 推理/守卫路径绕过自研实现 | **已修**：成对注册（`probes` §6 前后对照） |
 | 3 | 朴素 Python impl 不建图（Triton launch 不产生 grad_fn） | 反向断裂 | **已修**：`autograd.Function` + 数学 backward |
-| 4 | decode/tail 小形状 0.92-0.97x（原生更快） | 小形状 kernel 启动占比高，且必须物化 P | 接受；`A1` 包装另加 ~0.09ms |
+| 4 | decode/tail 直调经单 kernel 融合后 1.16-1.17x；**A1 包装路径仍 0.86x** | 包装 ~0.078ms 对 0.29ms 级调用占比高，且在 autograd 图节点层 | 接受（[performance.md §6](performance.md)）；直调已反超原生 |
 | 5 | `dropout_p>0` 的 A1 路径 `out` 走 ATen matmul 而非 fused PV | 仅 dropout 场景，非性能路径 | 接受（`register.py` 已注明） |
 | 6 | `torch.library` 无官方撤销 API（`unhook_a1` 仅删引用） | 同进程注册不可回滚 | 接受：基线须在注册前采集（bench/test 已按此实现） |
 
@@ -125,7 +127,9 @@ shape + 三 dtype + 特殊用例）· 哨兵 ☑ · 黄金 100% ☑ · 三层全
 性能门禁 FAIL 0 ☑ · 报告四件套 ☑ → **可交付**。
 
 后续优化方向（非阻塞）:
-1. decode 小形状：合并 pass1/pass2 的 tail 路径、减少 launch 次数；
+1. ~~decode 小形状：合并 pass1/pass2、减少 launch 次数~~ **已完成**
+   （单 kernel 融合：decode 0.287→0.217ms、tail 0.285→0.219ms，
+   见 [performance.md §6](performance.md)）；
 2. 4k+ 长序列：P 分块落盘 + 分段 PV，压峰值显存；
 3. `scale` 为 tensor 的慢路径（当前转 python float）。
 

@@ -94,12 +94,13 @@ kept 上缩放 2.000（期望 `1/(1-p)`）。
 
 | 实现 | NPU fp16 1k D128 | 基线对比 | 精度代价 |
 |---|---:|---|---|
-| 自研 triton | 0.504-0.528ms | 基线 | 0（同过 175/175） |
-| 自研 A1 包装 | 0.565ms | +0.04ms（autograd.Function） | 0 |
-| 原生 math（同返回 out+P） | 0.697ms | 1.32x 慢于自研 | 0（131/131） |
+| 自研 triton | 0.515-0.561ms | 基线 | 0（同过 175/175） |
+| 自研 A1 包装 | 0.572ms | +0.034ms（autograd.Function） | 0 |
+| 原生 math（同返回 out+P） | 0.695ms | 1.29x 慢于自研 | 0（131/131） |
 | 原生 F.sdpa（融合，**不返回 P**） | 参考值见 [performance.md](performance.md) | 输出契约不同，不可直接判卷 | 不适用 |
 
-门禁：`perf_compare --device ascend910` → **OK，FAIL 0 · WARN 0**。
+门禁：`perf_compare --device ascend910` → **OK，FAIL 0 · WARN 0**
+（triton 0.543ms vs 基线 0.504ms，+7.8%，阈值内）。
 本算子延迟 >100µs，不触发微算子 `bench_dispatch` 附加项。
 
 ### 2026-10-01 P800 复验
@@ -128,7 +129,7 @@ python3 script/bench_perf.py --device cuda:1 --register \
 |---|---|---|---|
 | 1 | `bool attn_mask` 直调的 0/1 加性怪癖 vs 本实现的 `-inf` 遮蔽 | 44 组黄金在 `--impl native` 下跳过；`F.sdpa` 调用方不受影响 | 有意分歧（[development.md](development.md) §6 #1） |
 | 2 | 只注册 `Autograd*` 时 inference_mode 不命中 | 推理路径绕过自研实现 | 已修（成对注册），有前后对照证据 |
-| 3 | decode/tail 小形状 0.92-0.97x 慢于原生 | 小形状启动占比高 | 接受，已记录 |
+| 3 | decode/tail 直调 0.92-0.97x 慢于原生 | 小形状启动占比高 | **已优化**：单 kernel 融合后 1.16-1.17x（[performance.md](performance.md) §6）；A1 包装路径仍 0.86x |
 | 4 | `configs/env/ascend910.lock.yaml` 缺失 | `check_env` 无法核对 | 记录在 development §1；黄金/性能数字均注明环境 |
 | 5 | `torch.library` 注册不可撤销 | 同进程测试必须先采原生基线 | bench/test/probe 均已按"先基线后注册"实现 |
 
