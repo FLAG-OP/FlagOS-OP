@@ -1,7 +1,7 @@
 # A1 注册: torch.library.Library("aten","IMPL") 接管
-# aten::scaled_dot_product_attention。
-# 平台 dispatch key 由 _profile 提供: torch_npu/torch_mlu=AutogradPrivateUse1，
-# Kunlunxin XMLIR=AutogradCUDA（绑定结论见 ../PLATFORM.md）。
+# aten::scaled_dot_product_attention（NPU/torch_npu 栈）。
+# ⚠ 平台: AutogradPrivateUse1 注册点是 torch_npu 特有——其他后端
+# 用各自 dispatch key（见 ../PLATFORM.md §2）。
 # wt <wangt635@ustc.edu.cn>
 #
 # 实测结论（Ascend910 + torch_npu 2.10，2026-09-16）:
@@ -16,14 +16,35 @@
 #      SDPA 数学梯度（fp32 ATen 组合，与 reference 同层）
 import torch
 
-try:  # Package-style import: ops.sdpa.register
-    from .kernel.auto_dispatch import sdpa_auto
-    from .kernel.auto_dispatch import install_patch, stats as _auto_stats
-    from .kernel.triton_level import PLATFORM, sdpa_triton
-except ImportError:  # Standalone import with OP_DIR on sys.path
-    from kernel.auto_dispatch import sdpa_auto
-    from kernel.auto_dispatch import install_patch, stats as _auto_stats
-    from kernel.triton_level import PLATFORM, sdpa_triton
+
+_MOD_CACHE: dict = {}
+
+
+def _load_kernel_mod_mod(mod_name: str):
+    """整模块锚定加载（sys.modules 单例语义——多算子同进程时顶层名
+    被遮蔽的根治; 重复调用返回同一实例, stats/patch 状态才一致）。"""
+    import importlib.util
+    import sys
+    from pathlib import Path
+    key = f"sdpa_{mod_name}"
+    if key in _MOD_CACHE:
+        return _MOD_CACHE[key]
+    path = Path(__file__).resolve().parent / "kernel" / f"{mod_name}.py"
+    spec = importlib.util.spec_from_file_location(key, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[key] = mod          # 单例注册（防重复 exec）
+    _MOD_CACHE[key] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _load_kernel_mod(mod_name: str, attr: str):
+    """锚定加载并取属性（单例语义, 委托 _load_kernel_mod_mod）。
+
+    wt 2026-10-01-fix 同进程多算子时顶层名 kernel 被遮蔽的锚定加载
+    （e2e 实证）; 单例缓存保证 stats/patch 状态一致。
+    # wt <wangt635@ustc.edu.cn>"""
+    return getattr(_load_kernel_mod_mod(mod_name), attr)
 
 
 class _SDPA_A1_Function(torch.autograd.Function):
@@ -36,9 +57,9 @@ class _SDPA_A1_Function(torch.autograd.Function):
         # 详见 kernel/auto_dispatch.py）；默认 "triton" 保持原验证口径
         # # wt <wangt635@ustc.edu.cn>
         if getattr(_SDPA_A1_Function, "_impl", "triton") == "auto":
-            fn = sdpa_auto
+            fn = _load_kernel_mod("auto_dispatch", "sdpa_auto")
         else:
-            fn = sdpa_triton
+            fn = _load_kernel_mod("triton_level", "sdpa_triton")
         ctx.save_for_backward(query, key, value)
         ctx.attn_mask = attn_mask
         ctx.dropout_p = dropout_p
@@ -123,16 +144,18 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
     counter: 可选 dict，'n' 计数（op 层拦截验证）。
     返回 (lib, fn)，lib 必须保持引用。
     """
-    # wt 2026-09-16-fix 注册守卫: torch_npu/torch_mlu 特有 key 上来注册
-    # 非对应平台的 kernel 是跨平台误用——在注册时就拦截，而不是运行时静默错。
+    _tl = _load_kernel_mod_mod("triton_level")
+    PLATFORM, sdpa_triton = _tl.PLATFORM, _tl.sdpa_triton
+
+    # wt 2026-09-16-fix 注册守卫: torch_npu 特有 key 上来注册非 npu 平台
+    # 的 kernel 是跨平台误用——在注册时就拦截，而不是运行时静默错。
     # # wt <wangt635@ustc.edu.cn>
     if dispatch_key in ("AutogradPrivateUse1", "PrivateUse1") and \
-            not ((hasattr(torch, "npu") and torch.npu.is_available())
-                 or (hasattr(torch, "mlu") and torch.mlu.is_available())):
+            not torch.npu.is_available():
         raise RuntimeError(
             f"register_a1 绑定 PLATFORM={PLATFORM!r}，dispatch_key="
-            f"{dispatch_key!r} 需要 torch_npu 或 torch_mlu 可用环境。"
-            f"跨平台集成请按 PLATFORM.md §4 选择对应实现目录。")
+            f"{dispatch_key!r} 需要 torch_npu 可用环境。跨平台集成请"
+            f"按 PLATFORM.md §4 选择对应实现目录。")
     _SDPA_A1_Function._impl = impl  # 类属性: forward 内读取
 
     if impl == "auto":
@@ -141,23 +164,24 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
         # 实证）, 改用函数层 patch（kernel/auto_dispatch.py install_patch）。
         # 业务代码经 F.sdpa 自动获得 shape-aware 路由。
         # # wt <wangt635@ustc.edu.cn>
-        install_patch()
+        _ad = _load_kernel_mod('auto_dispatch', 'install_patch')
+        _st = _load_kernel_mod('auto_dispatch', 'stats')
+        _ad()
         if counter is not None:
             counter["patched"] = True
-        return _auto_stats  # 返回 stats 供调用方断言（无 lib 需保持引用）
+        return _st  # 返回 stats 供调用方断言（无 lib 需保持引用）
 
-    # impl="triton": 原 aten 注册路径（验证口径不变）。
-    # CUDA/XMLIR dispatcher 可能省略 schema 默认值，必须补齐后再进入
-    # autograd.Function；torch_npu 此前实测由 dispatcher 展开全部参数。
-    def impl_fn_(query, key, value, attn_mask=None, dropout_p=0.0,
-                 is_causal=False, scale=None, enable_gqa=False):
-        if counter is not None:
+    # impl="triton": 原 aten 注册路径（验证口径不变）
+    impl_fn = _SDPA_A1_Function.apply
+
+    if counter is not None:
+        def impl_fn_(query, key, value, attn_mask=None, dropout_p=0.0,
+                     is_causal=False, scale=None, enable_gqa=False):
             counter["n"] += 1
-        return _SDPA_A1_Function.apply(
-            query, key, value, attn_mask, dropout_p, is_causal, scale,
-            enable_gqa)
-
-    impl_fn = impl_fn_
+            return _SDPA_A1_Function.apply(
+                query, key, value, attn_mask, dropout_p, is_causal,
+                scale, enable_gqa)
+        impl_fn = impl_fn_
 
     lib = torch.library.Library("aten", "IMPL")
     lib.impl("scaled_dot_product_attention", impl_fn, dispatch_key)

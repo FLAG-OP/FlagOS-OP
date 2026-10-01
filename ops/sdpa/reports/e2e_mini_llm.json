@@ -1,0 +1,20 @@
+{
+  "A": {
+    "prefill_1k_b8": 4.255,
+    "prefill_2k_b4": 4.705,
+    "prefill_4k_b2": 5.296,
+    "decode_b32": 1.872
+  },
+  "B": {
+    "prefill_1k_b8": 4.193,
+    "prefill_2k_b4": 4.652,
+    "prefill_4k_b2": 5.265,
+    "decode_b32": 2.095
+  },
+  "C": {
+    "prefill_1k_b8": 9.362,
+    "prefill_2k_b4": 15.048,
+    "prefill_4k_b2": 26.41,
+    "decode_b32": 2.264
+  }
+}
