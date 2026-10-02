@@ -29,10 +29,10 @@ speedup = 原生 math / ours（>1 表示 ours 更快）。数据: [perf_ascend91
 
 > decode/tail 为 §6 单 kernel 融合 + §9 微优化（跳 contiguous / P+O
 > 合并分配、阈值 56）生效后的数字（融合前 0.287/0.285ms、
-> 0.92x/0.97x）；大形状走两段式（§6/§9 阈值）。2026-10-02 复测，
-> 含环境漂移（门禁 reference 同步 +13.9%，见 §4），绝对值与 10-01 版
-> 不可直接比。A1 列为经 `torch.ops` 注册拦截路径，含 ~0.078ms
-> `autograd.Function` 包装。
+> 0.92x/0.97x）；大形状走两段式（§6/§9 阈值）。2026-10-02 复测；
+> 共享机单次运行波动可达 ±5%（同形状相邻运行实测），跨日绝对值仅作
+> 参考，同运行内 speedup 列可比。A1 列为经 `torch.ops` 注册拦截路径，
+> 含 ~0.078ms `autograd.Function` 包装。
 
 参考列——`F.sdpa`（torch_npu 融合注意力，**不返回概率图**，输出契约不同）:
 `prefill 1k D128 0.125ms · 2k 0.228ms · GQA 0.154ms · decode 0.054ms`
@@ -132,15 +132,15 @@ train **0.89-1.00x**。模型中 GEMM/MLP 占比较高，单算子 1.46-2.21x �
 
 | case | 基线 ms | 本次 ms | Δ | 判定 | 附加指标 |
 |---|---:|---:|---:|---|---|
-| ops.sdpa_math.triton | 0.504 | 0.558 | +10.8% | **OK** | TFLOPS=7.690 |
-| ops.sdpa_math.torch | 0.569 | 0.616 | +8.2% | **OK** | TFLOPS=6.977 |
-| ops.sdpa_math.reference | 0.892 | 1.016 | +13.9% | **OK** | TFLOPS=4.228 |
+| ops.sdpa_math.triton | 0.504 | 0.544 | +7.9% | **OK** | TFLOPS=7.901 |
+| ops.sdpa_math.torch | 0.569 | 0.566 | -0.4% | **OK** | TFLOPS=7.582 |
+| ops.sdpa_math.reference | 0.892 | 0.884 | -0.8% | **OK** | TFLOPS=4.857 |
 
 **结论: FAIL 0 · WARN 0 · NEW 0**（`examples/` 提供者与本算子无关的
 `ops.embedding` 加载失败为既有环境问题，不计入本次门禁）。本次为
-2026-10-02 §9 微优化 + 融合阈值重定标后的复测：triton +10.8%，但
-**同机 reference 也 +13.9%**（三者同向漂移 → 环境噪声，非代码回退），
-均在门禁阈值 30% 内，未更新基线。
+2026-10-02 §9 微优化 + 融合阈值重定标（rebase 后复测）：triton
++7.9%、torch/reference ±1% 内，均在门禁阈值 30% 内，未更新基线。
+共享机负载有窗口性波动（同形状相邻运行可差 ±5%），判定看趋势非单次绝对值。
 
 > 说明：`ops.sdpa_math` 的 perf 用例已登记进
 > [`common/perf_registry.py`](../../../common/perf_registry.py)。基线于
@@ -203,9 +203,9 @@ P 往返访存 ~28%、计算效率 ~69%）：
 mask 构造、GQA `K` expansion 与 P 写出调度。掩码/dropout/fp32/直连
 autograd 场景按语义保守回退 `torch_level`。
 
-**与基线的回归情况**：Ascend 门禁 OK（triton +10.8%、同机 reference
-+13.9% 同向漂移，见 §4，无超阈回退）；P800 门禁 OK（新 fast-path
-基线 Δ=0.0%）。
+**与基线的回归情况**：Ascend 门禁 OK（triton +7.9%、torch/reference
+±1% 内，见 §4，无超阈回退）；P800 门禁 OK（新 fast-path 基线
+Δ=0.0%）。
 
 ## 6. 单 kernel 融合实验（2026-10-01）
 
