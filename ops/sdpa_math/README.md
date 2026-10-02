@@ -8,18 +8,20 @@
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::_scaled_dot_product_attention_math`（torch SDPA 的 **math 后端**，`CompositeImplicitAutograd`） |
-| 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 输入保持 fp64，供 gradcheck） |
+| 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 保持；P800 半精度 fast path 见下） |
 | 路线 | **A1** aten 拦截（成对注册 `Autograd*` + 纯设备键），旧业务代码零改动 |
-| 平台 | **ascend910**: 自研 Triton（两段式 probs + PV）；**cpu**: ATen 组合（对照/梯度兜底） |
-| 验证 | kernel 52 组 ×2 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 21 项（6 gradcheck）· 应用层 8 项 ✅ |
-| NPU 性能（fp16，vs 同为"返回 out+P"的原生 math） | prefill1k D64 **1.20x** · 1k D128 **1.32x** · 2k D128 **2.05x** · GQA **1.74x** · decode 0.92x |
+| 平台 | **ascend910**: 自研 Triton（两段式 probs + PV，小形状单 kernel 融合）；**p800-kunlunxin**: vendor O/LSE + exact-P + A1；**cpu**: ATen 组合（对照/梯度兜底） |
+| 验证 | kernel 52 组 ×3 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 21 项（6 gradcheck）· 应用层 8-9 项 · FlagOS E2E ✅ |
+| NPU 性能（fp16，vs 同为"返回 out+P"的原生 math） | prefill1k D64 **1.22x** · 1k D128 **1.29x** · 2k D128 **2.03x** · GQA **1.67x** · decode **1.17x** · tail100 **1.16x** |
 | CPU 性能（fp32，同口径） | 1.05-1.40x（6 形状全过） |
+| P800 性能（fp16，同口径） | direct **1.46-2.21x** native；A1 **1.31-2.17x** |
 
 ## 快速开始
 
 ```bash
 python3 example.py ascend910          # 三层一键（kernel/op/framework）
 python3 example.py cpu
+python3 example.py p800-kunlunxin
 
 python3 test/kernel_level.py ascend910
 python3 test/op_level.py ascend910
@@ -28,11 +30,17 @@ python3 test/framework_level.py ascend910
 # 黄金（CPU 生成一次，跨平台复用）
 python3 script/gen_golden.py
 python3 script/check_accuracy.py --impl triton   --device npu:0
+python3 script/check_accuracy.py --impl p800     --device cuda:1
 python3 script/check_accuracy.py --impl reference --device cpu
 python3 script/check_accuracy.py --impl native   --device npu:0   # 原生对照
 
 python3 script/bench_perf.py --device npu:0 --register \
   --json-out reports/perf_ascend910.json
+python3 script/bench_perf.py --device cuda:1 --register \
+  --json-out reports/perf_p800-kunlunxin.json
+python3 script/bench_f_context.py --device cuda:1 \
+  --json-out reports/perf_f_context_p800-kunlunxin.json  # no-P 参考列
+python3 script/e2e_flagos.py --device cuda:1 --dtype bfloat16
 python3 probes/native_semantics.py ascend910     # native 语义证据表
 ```
 
@@ -64,18 +72,61 @@ python3 probes/native_semantics.py ascend910     # native 语义证据表
 
 ```
 sdpa_math/
+├── __init__.py              # 包化入口：from ops.sdpa_math import register_a1
 ├── reference.py              # CPU 语义参考（判卷标准，含 dropout 双规则顶注）
 ├── register.py               # A1 成对注册 + autograd.Function（dout/dprobs 两路）
-├── _profile.py               # ascend910 / cpu 本地 profile
+├── _profile.py               # ascend910 / p800-kunlunxin / cpu 本地 profile
 ├── kernel/
 │   ├── triton_level.py       # 两段式 _probs_kernel + _pv_kernel（NPU）
+│   ├── p800_fast_level.py    # vendor O/LSE + exact-P（P800 fast path）
 │   └── torch_level.py        # ATen 组合（独立写法，非 reference 转发）
 ├── test/                     # kernel / op / framework 三层
 ├── goldendata/               # 声明式 175 组黄金（inputs_spec.yaml）
-├── script/                   # gen_golden / check_accuracy / bench_perf
+├── script/                   # gen_golden / accuracy / perf / F-context / FlagOS E2E
 ├── probes/native_semantics.py# native 语义证据（schema/参数形态/dropout 表/注册键）
 └── reports/                  # development / test-report / accuracy / performance
 ```
+
+## P800 / Kunlunxin 路线
+
+P800 生产实现选择 `p800_fast_level.sdpa_math_p800_fast`：
+
+```text
+A1 AutogradCUDA + CUDA 成对注册
+    ↓
+aten::_scaled_dot_product_efficient_attention → output + LSE
+QKᵀ → exp(scale·QKᵀ - LSE) → full P
+return (output, P)
+```
+
+本算子必须 materialize 第二输出 `P`，不能直接替换为 efficient attention。
+fast path 只在 fp16/bf16、无 mask、无 dropout 时启用；fp32、mask、dropout
+与 direct-autograd 场景回退 `torch_level`。P800 实测 direct
+**1.46-2.21x** native，A1 **1.31-2.17x**。
+
+`script/bench_f_context.py` 另提供 no-P `F.sdpa` 参考列：P800 fp16 下
+exact-contract math 约慢 **1.98-4.46x**。这不是同输出结论，因为 `F.sdpa`
+不返回 `P`、也不物化概率图；它说明后续 P800 内部融合有机会继续压缩
+QK/GQA expansion/mask/P 写出，但受“必须写全量 P”限制，不应以
+no-P FlashAttention 作为可达目标。源码级 exact-P Triton 双 pass 目前会触发
+XMLIR pointer-state rewrite 限制，故先采用 vendor LSE 组合。
+
+框架层运行在 FlagOS 算子栈内：
+
+```python
+import flag_gems
+flag_gems.only_enable(include=["gelu"])
+```
+
+锁定镜像上全量 `flag_gems.enable()` 非确定，因此选择稳定且真实被消费方
+调用的 GELU 作为 surrounding op；目标 `sdpa_math` 走 A1。
+
+端到端入口 `script/e2e_flagos.py` 自建 4 层 Llama 风格 mini-LLM
+（D128 · GQA 8/2 · vocab1024），每层直调本算子并把 `P` 送入注意力熵
+正则，覆盖 forward、backward、8 步贪心生成与 FlagGems GELU。实测
+推理/生成 **1.02-1.12x** native，训练 **0.89-1.00x**（自定义 backward
+会抵消部分 forward 收益）；原始数据见
+[reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json)。
 
 ## 硬约束（本栈已内建）
 

@@ -34,6 +34,17 @@
 ## [Unreleased]
 
 ### Added
+- **sdpa_math 第二平台: p800-kunlunxin**（vendor O/LSE + exact-P + A1）
+  - `_profile` / benchmark / framework 消费方接入 P800；A1 使用
+    `AutogradCUDA+CUDA` 成对注册；fast path 由 vendor efficient attention
+    产出 `O/LSE`，再物化 `P=exp(scale·QKᵀ-LSE)`，fp32/mask/dropout 回退
+    `torch_level`
+  - kernel 52/52、黄金 175/175、op 21 项、FlagGems 应用层 9 项、
+    P800 perf gate 全绿；direct 1.46-2.21x native
+  - 新增 FlagOS mini-LLM 端到端：FlagGems GELU + A1 sdpa_math +
+    概率图熵正则，forward/generate 1.02-1.12x，训练 0.89-1.00x
+    （backward 为下一瓶颈）
+  - `ops.sdpa_math` 包化，支持 `from ops.sdpa_math import register_a1`
 - **新算子: [ops/embedding](ops/embedding/)**（`aten::embedding`，
   A1 路线，p800-kunlunxin）
   - forward 复用 XMLIR native `index_select` row-gather；任意 rank indices、

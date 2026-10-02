@@ -23,12 +23,12 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 ## 算子索引
 
-> 硬件平台合计 **3 个**：`ascend910`（sdpa / sdpa_math）· `p800-kunlunxin`（sdpa / embedding）· `cambricon` / `mlu590`（MLU590，sdpa + 13 个算子）。 算子级明细见下表「硬件平台」列与各算子的 `REPORT.md` 表头。
+> 硬件平台合计 **3 个**：`ascend910`（sdpa / sdpa_math）· `p800-kunlunxin`（sdpa / sdpa_math / embedding）· `cambricon` / `mlu590`（MLU590，sdpa + 13 个算子）。 算子级明细见下表「硬件平台」列与各算子的 `REPORT.md` 表头。
 
 | 算子 | 硬件平台 | 开发级别 | 路线 | 状态 | 交付报告 | 备注 |
 |---|---|---|---|---|---|---|
 | [sdpa](sdpa/)（scaled_dot_product_attention） | **3** · ascend910 / p800-kunlunxin / mlu590 | Triton / 厂商委托 | A1（aten 拦截） | ✅ 定稿 | [REPORT](sdpa/REPORT.md) | ascend910 + p800-kunlunxin + mlu590 · 三平台黄金 397/397（Ascend 历史 265/265） · [平台绑定](sdpa/PLATFORM.md) / [多平台合并](sdpa/MERGE.md) |
-| [sdpa_math](sdpa_math/)（aten::_scaled_dot_product_attention_math） | 1 · ascend910 | Triton 级 | A1（aten 拦截） | ✅ 定稿 | [REPORT](sdpa_math/REPORT.md) | ascend910 · SDPA math 后端（双输出 out+概率图）· 黄金 175/175 · 原生对照 131/131（44 组 bool 按有意分歧跳过）· NPU fp16 1.20-2.05x |
+| [sdpa_math](sdpa_math/)（aten::_scaled_dot_product_attention_math） | 2 · ascend910 / p800-kunlunxin | Triton / vendor O/LSE + exact-P | A1（aten 拦截） | ✅ 定稿 | [REPORT](sdpa_math/REPORT.md) | SDPA math 后端（双输出 out+概率图）· 三平台黄金 175/175 · NPU fp16 1.16-2.03x · P800 direct 1.46-2.21x native |
 | [embedding](embedding/)（aten::embedding） | 2 · p800-kunlunxin / ascend910 | 厂商委托 / Triton 探针 | A1（aten 拦截） | ✅ 定稿 | [REPORT](embedding/REPORT.md) | p800-kunlunxin + ascend910 · 稠密查表/反向 · 黄金 117/117（Ascend 三层+350 PASS）|
 | [type_as](type_as/) | 1 · cambricon | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](type_as/REPORT.md) | 黄金 111/111；位级一致 |
 | [clone](clone/) | 1 · cambricon | Triton 级 | A1 aten | 三层全绿 | [REPORT.md](clone/REPORT.md) | 黄金 48/48；存储独立 |
@@ -60,7 +60,8 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 - **目录名 = 算子名**（小写下划线，如 `gelu_and_mul`）
 - **包化导入（多算子同进程必用）**: 目录含 `__init__.py`，
   `from ops.sdpa import register_a1` / `from ops.embedding import
-  register_a1` 顶层名带包前缀，互不遮蔽（根因与验证见
+  register_a1` / `from ops.sdpa_math import register_a1` 顶层名带包前缀，
+  互不遮蔽（根因与验证见
   sdpa/reports/e2e_mini_llm.md + ops/test_packaging.py）；
   单算子脚本模式（sys.path 注入目录）继续兼容
 - 未实现的级别**置空 + 说明**（`kernel/hardware_level/README.md`），

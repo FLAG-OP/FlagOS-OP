@@ -1,0 +1,184 @@
+{
+  "ok": true,
+  "framework": "FlagOS/FlagGems GELU + sdpa_math A1",
+  "comparison": {
+    "ok": true,
+    "logits_linf": 0.015625,
+    "top1_rate": 0.9875,
+    "entropy_abs": 0.0007710456848144531,
+    "greedy_sequence_match": true,
+    "embedding_grad": 1.144e-05,
+    "q0_grad": 3.81e-06,
+    "head_grad": 0.00024414
+  },
+  "performance": {
+    "forward_b1_s256": {
+      "native_ms": 7.8412,
+      "plugin_ms": 7.6964,
+      "speedup_native_over_plugin": 1.019
+    },
+    "forward_b2_s128": {
+      "native_ms": 7.8854,
+      "plugin_ms": 7.6686,
+      "speedup_native_over_plugin": 1.028
+    },
+    "train_b1_s128": {
+      "native_ms": 36.4115,
+      "plugin_ms": 36.3233,
+      "speedup_native_over_plugin": 1.002
+    },
+    "generate8_b1_s96": {
+      "native_ms": 72.9543,
+      "plugin_ms": 65.2107,
+      "speedup_native_over_plugin": 1.119
+    }
+  },
+  "native": {
+    "phase": "native",
+    "device": "cuda:1",
+    "dtype": "bfloat16",
+    "flag_gems": [
+      "gelu"
+    ],
+    "model": {
+      "layers": 4,
+      "d_model": 128,
+      "heads": "8/2",
+      "vocab": 1024,
+      "ffn": 256,
+      "probs_consumer": "attention entropy regularizer"
+    },
+    "cases": {
+      "forward_b1_s256": 7.8412,
+      "forward_b2_s128": 7.8854,
+      "train_b1_s128": 36.4115,
+      "generate8_b1_s96": 72.9543
+    },
+    "interceptions": 0,
+    "fixed_sample": {
+      "logits_shape": [
+        1,
+        160,
+        1024
+      ],
+      "logits_sum": -196.0477294921875,
+      "entropy": 4.045184135437012,
+      "generated": [
+        644,
+        45,
+        289,
+        561,
+        388,
+        273,
+        988,
+        915,
+        406,
+        374,
+        40,
+        179,
+        131,
+        807,
+        156,
+        434,
+        198,
+        107,
+        892,
+        976,
+        966,
+        171,
+        34,
+        386,
+        646,
+        164,
+        563,
+        611,
+        536,
+        233,
+        693,
+        162,
+        645,
+        872,
+        803,
+        122,
+        491,
+        850,
+        184,
+        561
+      ]
+    }
+  },
+  "plugin": {
+    "phase": "plugin",
+    "device": "cuda:1",
+    "dtype": "bfloat16",
+    "flag_gems": [
+      "gelu"
+    ],
+    "model": {
+      "layers": 4,
+      "d_model": 128,
+      "heads": "8/2",
+      "vocab": 1024,
+      "ffn": 256,
+      "probs_consumer": "attention entropy regularizer"
+    },
+    "cases": {
+      "forward_b1_s256": 7.6964,
+      "forward_b2_s128": 7.6686,
+      "train_b1_s128": 36.3233,
+      "generate8_b1_s96": 65.2107
+    },
+    "interceptions": 856,
+    "fixed_sample": {
+      "logits_shape": [
+        1,
+        160,
+        1024
+      ],
+      "logits_sum": -195.79934692382812,
+      "entropy": 4.045955181121826,
+      "generated": [
+        644,
+        45,
+        289,
+        561,
+        388,
+        273,
+        988,
+        915,
+        406,
+        374,
+        40,
+        179,
+        131,
+        807,
+        156,
+        434,
+        198,
+        107,
+        892,
+        976,
+        966,
+        171,
+        34,
+        386,
+        646,
+        164,
+        563,
+        611,
+        536,
+        233,
+        693,
+        162,
+        645,
+        872,
+        803,
+        122,
+        491,
+        850,
+        184,
+        561
+      ]
+    }
+  }
+}

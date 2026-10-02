@@ -2,22 +2,23 @@
 
 | 项 | 值 |
 |---|---|
-| 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ torch（CPU） |
-| 目标设备 / 测试日期 | `ascend910`（Ascend910_9382）· `cpu` / 2026-09-30 |
-| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · 四件套 ☑） |
+| 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ torch（CPU/fallback） |
+| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `cpu` / 2026-09-30~10-02 |
+| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · FlagOS E2E ☑ · 四件套 ☑） |
 
 ## 1. 测试范围
 
 | 层级 | 覆盖 | 入口 | 结果 |
 |---|---|---|---|
-| kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×2 profile |
-| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu]` | PASS：21 项（四模式拦截 · 注册=直调逐位 · 6 组 gradcheck · F.sdpa(MATH)） |
-| 应用层 | ☑ | `test/framework_level.py [ascend910\|cpu]` | PASS：8 项（mini-decoder + 概率图消费者双跑） |
-| 黄金回归 | ☑ | `script/gen_golden.py` + `check_accuracy.py` | **175/175** ×3 实现；原生对照 131/131（44 bool 跳过） |
+| kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×3 profile |
+| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：21 项（四模式拦截 · 注册=直调逐位 · 6 组 gradcheck · F.sdpa(MATH)） |
+| 应用层 | ☑ | `test/framework_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：8-9 项（mini-decoder + 概率图消费者双跑） |
+| 黄金回归 | ☑ | `script/gen_golden.py` + `check_accuracy.py` | **175/175** ×4 实现；原生对照 131/131（44 bool 跳过） |
 | 性能门禁 | ☑ | `scripts/perf_run.py --pattern sdpa_math` + `perf_compare.py` | OK：FAIL 0 · WARN 0（triton 0.504ms / 8.524 TFLOPS 入库基线） |
 | 语义证据 | ☑ | `probes/native_semantics.py [ascend910\|cpu]` | 6 节全过（schema / dropout 双规则表 / bool 怪癖 / 冲突边界 / F.sdpa 参数形态 / 注册键） |
 | 跨层一致性 | ☑ | 黄金生成的三重互验（§3） | 参考 vs `F.sdpa(MATH)` vs 原生直调 vs 自洽式，全一致 |
-| 一键 | ☑ | `python3 example.py [ascend910\|cpu]` | 三层全绿 |
+| FlagOS E2E | ☑ | `script/e2e_flagos.py` | PASS：4 层 mini-LLM / 前向 / 反向 / 生成 / 概率图熵正则（§4.1） |
+| 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin]` | 三层全绿 |
 
 ## 2. 环境
 
@@ -25,6 +26,9 @@ Ascend910_9382 · torch 2.10.0+cpu · torch_npu 2.10.0 · triton 3.5.1 ·
 flag_gems 5.3.5 · python 3.11.15 · profile `configs/devices/ascend910.yaml`
 （`scripts/check_env.py` 因缺 `configs/env/ascend910.lock.yaml` 不可用，
 环境以 [reports/development.md](development.md) §1 表为准）。
+P800 复验环境为 torch `2.9.0+cu129` + torch_xmlir
+`XMLIR--bc1b1dc6f-dev+2026032411` + FlagGems `4.2.1rc0`，设备 `cuda:1`
+（详见 development §1.1）。
 
 ## 3. 精度结果
 
@@ -36,6 +40,7 @@ flag_gems 5.3.5 · python 3.11.15 · profile `configs/devices/ascend910.yaml`
 |---|---|---|---|
 | 自研 triton（NPU） | **175/175** | 3.906e-3（bf16） | [reports/accuracy.md](accuracy.md) |
 | 自研 torch（CPU） | **175/175** | 1.953e-3（bf16） | |
+| P800 fast（cuda:1） | **175/175** | 3.906e-3（bf16） | fp16/bf16 走 vendor O/LSE + exact-P；fp32/mask/dropout 回退 |
 | 参考 reference | **175/175** | 0 | 判卷标准本体 |
 | 原生（未注册进程直调） | **131/131** | 9.766e-4（bf16，NPU） | 44 组 bool mask 按规则跳过（§5 #1） |
 | FlagGems | 不适用 | — | 无"返回概率图"的同语义实现；其 SDPA 为融合算法、不产出 P（Should 项已注明原因） |
@@ -53,6 +58,8 @@ flag_gems 5.3.5 · python 3.11.15 · profile `configs/devices/ascend910.yaml`
 | bf16 | 7.81e-3 | 4.88e-4 | 1.22e-4 | 2e-2 | ✓ |
 
 注：`ΔP` 最差 1.22e-4 出现在 bf16 概率图（量化级），远低于 2e-2。
+P800 fast 直测同样 52/52：fp32 回退路径 max `7.15e-7`，fp16
+`4.88e-4`，bf16 `3.91e-3`，均低于容差。
 
 **哨兵**：同输入两次逐位一致（确定性）；输入改动输出必变（敏感）；
 随机 dropout 同种子 fwd/bwd 完全可复现。
@@ -94,13 +101,58 @@ kept 上缩放 2.000（期望 `1/(1-p)`）。
 
 | 实现 | NPU fp16 1k D128 | 基线对比 | 精度代价 |
 |---|---:|---|---|
-| 自研 triton | 0.504-0.528ms | 基线 | 0（同过 175/175） |
-| 自研 A1 包装 | 0.565ms | +0.04ms（autograd.Function） | 0 |
-| 原生 math（同返回 out+P） | 0.697ms | 1.32x 慢于自研 | 0（131/131） |
+| 自研 triton | 0.515-0.561ms | 基线 | 0（同过 175/175） |
+| 自研 A1 包装 | 0.572ms | +0.034ms（autograd.Function） | 0 |
+| 原生 math（同返回 out+P） | 0.695ms | 1.29x 慢于自研 | 0（131/131） |
 | 原生 F.sdpa（融合，**不返回 P**） | 参考值见 [performance.md](performance.md) | 输出契约不同，不可直接判卷 | 不适用 |
 
-门禁：`perf_compare --device ascend910` → **OK，FAIL 0 · WARN 0**。
+门禁：`perf_compare --device ascend910` → **OK，FAIL 0 · WARN 0**
+（triton 0.543ms vs 基线 0.504ms，+7.8%，阈值内）。
 本算子延迟 >100µs，不触发微算子 `bench_dispatch` 附加项。
+
+### 2026-10-01 P800 复验
+
+| 层级 | 结果 |
+|---|---|
+| kernel | 52/52；`p800_fast_level` direct 与 CPU reference 全部对齐 |
+| 黄金 | `--impl p800 --device cuda:1` **175/175**，worst 3.906e-3（bf16 容差内） |
+| A1 | `AutogradCUDA+CUDA` 成对注册；21/21 项通过（含 6 组 fp64 gradcheck） |
+| 应用层 | `flag_gems.only_enable(['gelu'])` 后 9/9；logits / 概率图 / 梯度 diff 均为 0 |
+| perf gate | `ops.sdpa_math.p800` / `.native` 入库；FAIL 0 · WARN 0 |
+
+P800 direct 性能 **1.46-2.21x** native；A1 **1.31-2.17x**。
+复现：
+
+```bash
+python3 example.py p800-kunlunxin
+python3 script/check_accuracy.py --impl p800 --device cuda:1
+python3 script/bench_perf.py --device cuda:1 --register \
+  --json-out reports/perf_p800-kunlunxin.json
+```
+
+### 2026-10-02 FlagOS 端到端复验
+
+入口: [script/e2e_flagos.py](../script/e2e_flagos.py)。原生与 A1 两条链
+均运行在 FlagOS 栈内：`flag_gems.only_enable(['gelu'])` 提供模型 MLP 的
+GELU，目标 `sdpa_math` 由 A1 拦截。模型为 4 层 Llama 风格 mini-LLM
+（D128 · GQA 8/2 · FFN256 · vocab1024），每层直调 private math op，并把
+第二输出 `P` 送入注意力熵正则；覆盖 no-grad forward、CE+entropy
+backward、8 步贪心生成。
+
+| 检查 | 结果 |
+|---|---|
+| A1 拦截 | 856 次 |
+| logits L∞ | **0.015625**（bf16 阈值 0.02 内） |
+| top-1 一致率 | **98.75%**（160 个位置，bf16 语义噪声阈值 ≥98%） |
+| 注意力熵差 | **7.71e-4** |
+| 8 步贪心序列 | **完全一致** |
+| embedding / q0 / head 梯度 L∞ | **1.14e-5 / 3.81e-6 / 2.44e-4** |
+
+原始数据: [e2e_flagos_p800-kunlunxin.json](e2e_flagos_p800-kunlunxin.json)。
+端到端延迟见 [performance.md](performance.md) §3.4。共享机器重复执行：
+forward **1.02-1.09x**、generate **1.06-1.12x**、train **0.89-1.00x**。
+训练收益会被自定义数学 backward 的 `dprobs` 通路部分抵消，这是真实风险
+而非单算子结论。
 
 ## 5. 问题与风险
 
@@ -108,7 +160,7 @@ kept 上缩放 2.000（期望 `1/(1-p)`）。
 |---|---|---|---|
 | 1 | `bool attn_mask` 直调的 0/1 加性怪癖 vs 本实现的 `-inf` 遮蔽 | 44 组黄金在 `--impl native` 下跳过；`F.sdpa` 调用方不受影响 | 有意分歧（[development.md](development.md) §6 #1） |
 | 2 | 只注册 `Autograd*` 时 inference_mode 不命中 | 推理路径绕过自研实现 | 已修（成对注册），有前后对照证据 |
-| 3 | decode/tail 小形状 0.92-0.97x 慢于原生 | 小形状启动占比高 | 接受，已记录 |
+| 3 | NPU decode/tail 融合前 0.92-0.97x 慢于原生 | Ascend 小形状启动占比高；A1 包装另有 ~0.078ms | **已优化**：单 kernel 融合后直调 1.16-1.17x，A1 仍 0.86x；P800 fast 的 A1 小形状为 1.31-1.53x |
 | 4 | `configs/env/ascend910.lock.yaml` 缺失 | `check_env` 无法核对 | 记录在 development §1；黄金/性能数字均注明环境 |
 | 5 | `torch.library` 注册不可撤销 | 同进程测试必须先采原生基线 | bench/test/probe 均已按"先基线后注册"实现 |
 
@@ -117,5 +169,6 @@ kept 上缩放 2.000（期望 `1/(1-p)`）。
 对照 [Must 清单](../../../docs/acceptance.md#levels)：
 精度必测矩阵 ☑（非整倍数 shape、三 dtype、特殊用例、≥2 seed/组合）·
 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 0 FAIL ☑ ·
+FlagOS E2E ☑ ·
 报告四件套 ☑ → **可交付**。Should 项（三方对比中 FlagGems 缺席）已给出
 原因：无同语义（返回概率图）实现。

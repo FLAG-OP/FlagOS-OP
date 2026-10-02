@@ -5,6 +5,7 @@
   python3 script/check_accuracy.py --impl reference --device cpu
   python3 script/check_accuracy.py --impl torch     --device cpu
   python3 script/check_accuracy.py --impl triton    --device npu:0
+  python3 script/check_accuracy.py --impl p800      --device cuda:1
   python3 script/check_accuracy.py --impl native    --device cpu   # 原生对照
 
 注意:
@@ -31,6 +32,7 @@ IMPLS = {
     "reference": ("reference.py", "sdpa_math_reference"),
     "torch": ("kernel/torch_level.py", "sdpa_math_torch"),
     "triton": ("kernel/triton_level.py", "sdpa_math_triton"),
+    "p800": ("kernel/p800_fast_level.py", "sdpa_math_p800_fast"),
 }
 
 
@@ -64,7 +66,7 @@ def _run_case(fn, d, ins, device):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--impl", default="triton",
-                    help="reference | torch | triton | native")
+                    help="reference | torch | triton | p800 | native")
     ap.add_argument("--device", default="npu:0")
     ap.add_argument("--golden", default=str(HERE / "goldendata"))
     ap.add_argument("--max-print", type=int, default=12)

@@ -21,15 +21,18 @@ import torch
 try:  # Package-style import: ops.sdpa_math.register
     from .kernel.torch_level import sdpa_math_torch
     from .kernel.triton_level import PLATFORM, sdpa_math_triton
+    from .kernel.p800_fast_level import sdpa_math_p800_fast
     from .reference import _softmax01, make_dropout_mask, sdpa_math_reference
 except ImportError:  # Standalone import with OP_DIR on sys.path
     from kernel.torch_level import sdpa_math_torch
     from kernel.triton_level import PLATFORM, sdpa_math_triton
+    from kernel.p800_fast_level import sdpa_math_p800_fast
     from reference import _softmax01, make_dropout_mask, sdpa_math_reference
 
 _IMPLS = {
     "triton": sdpa_math_triton,
     "torch": sdpa_math_torch,
+    "p800": sdpa_math_p800_fast,
     "reference": sdpa_math_reference,
 }
 
@@ -198,7 +201,8 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
                       → 两键缺一不可。
     counter:      可选 dict，'n' 计数（op 层拦截验证）。
     impl:         "triton"（自研设备码，默认）| "torch"（ATen 组合）
-                  | "reference"。缺省按环境推断。
+                  | "p800"（vendor O/LSE + exact P）| "reference"。
+                  缺省按环境推断。
     返回 lib 列表，调用方必须保持引用（否则注册被回收）。
     """
     _PAIRS = {

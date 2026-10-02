@@ -195,7 +195,7 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 平台结论与复现命令见
 [ops/sdpa/reports/mlu590.md](../ops/sdpa/reports/mlu590.md)。
 
-### 19. SDPA math 后端的六类语义/注册分化（sdpa_math 实测发现）
+### 19. SDPA math 后端的七类语义/注册/平台分化（sdpa_math 实测发现）
 
 1. **torch_npu 的 `F.sdpa` 从不调用 math 后端**: NPU 上
    `F.sdpa(sdpa_kernel(MATH))` 对本 op 命中 **0 次**（整条走
@@ -223,6 +223,10 @@ N=5120 误差 0.6。原 softmax 样例的测试形状恰好全是整倍数，漏
 6. **`causal` 与 `attn_mask` 互斥**: 同时给（bool/float 皆然）直接
    raise `Explicit attn_mask should not be set when is_causal=True`；
    全 `-inf` 行返回 P=O=0 而非 NaN。
+7. **P800 不能直接移植 Ascend exact-P Triton 双 pass**: 源码级
+   row-stat + P-write 结构会触发 XMLIR pointer-state rewrite 失败；
+   既有 no-P custom schedule 也慢于 vendor efficient attention。生产路径
+   改为 vendor `O/LSE` + `P=exp(scale·QKᵀ-LSE)`，保持双输出契约。
 
 复现: `python3 ops/sdpa_math/probes/native_semantics.py`（6 节证据表）·
 黄金互验: `ops/sdpa_math/script/gen_golden.py`。
