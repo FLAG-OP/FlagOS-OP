@@ -61,13 +61,13 @@ dispatch dump），旧代码零改动。
 |---|---|---|---|
 | reference | `reference.py` | 判卷标准 | `masked_fill` + exp/sum 守卫；`_validate` 集中校验（causal+mask 冲突 / GQA 整除 / K-V 头一致） |
 | torch | `kernel/torch_level.py` | CPU 交付 + 第二判卷人 | `where` 生成 causal bias、`nan_to_num(softmax)` 守卫（与 reference 不同写法） |
-| triton | `kernel/triton_level.py` | NPU 交付 | 两段式：`_probs_kernel`(pass1 行最大 + pass2 归一) → `_pv_kernel`；`_score_block` 两 pass 共用；固定 64×64 tile；dropout 用 ATen 收口。**小形状按 score tile 数（≤16）自动改走单 kernel 融合**（QK→softmax→PV 一趟，见 [performance.md §6](performance.md)） |
+| triton | `kernel/triton_level.py` | NPU 交付 | 两段式：`_probs_kernel`(pass1 行最大 + pass2 归一) → `_pv_kernel`；`_score_block` 两 pass 共用；固定 64×64 tile；dropout 用 ATen 收口。**小形状按 score tile 数（≤56）自动改走单 kernel 融合**（QK→softmax→PV 一趟，见 [performance.md §6/§9](performance.md)） |
 | p800 | `kernel/p800_fast_level.py` | P800 交付 | vendor efficient attention 产出 `O/LSE`；`P=exp(scale·QKᵀ-LSE)` 保留双输出契约；mask/dropout/fp32/direct-autograd 回退 torch |
 
 **Triton 关键决策**:
 1. 必须物化 P（算子契约），故不能用 flash 的重算策略 → 两段式而非单遍；
-   小形状例外：tile 数 ≤16 时单 kernel 融合（P 块只在寄存器里、O 直写）
-   省一次 launch，阈值与实测见 [performance.md §6](performance.md)；
+   小形状例外：tile 数 ≤56 时单 kernel 融合（P 块只在寄存器里、O 直写）
+   省一次 launch，阈值与实测见 [performance.md §6/§9](performance.md)；
 2. `flag_gems.runtime.torch_device_fn.device` 上下文包裹启动（#11）；
 3. 尾块 masked load（#15a），不用 `@triton.autotune`（#15b）；
 4. fp32 走 `input_precision="ieee"`；

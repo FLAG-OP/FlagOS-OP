@@ -7,11 +7,11 @@
     "S": 1024,
     "D": 64,
     "dtype": "float16",
-    "ours_ms": 0.5151,
-    "native_ms": 0.6261,
-    "speedup_vs_native": 1.216,
-    "a1_ms": 0.5554,
-    "a1_vs_native": 1.127
+    "ours_ms": 0.5489,
+    "native_ms": 0.6293,
+    "speedup_vs_native": 1.146,
+    "a1_ms": 0.583,
+    "a1_vs_native": 1.079
   },
   {
     "shape": "prefill_1k_d128",
@@ -21,11 +21,11 @@
     "S": 1024,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 0.5383,
-    "native_ms": 0.6953,
-    "speedup_vs_native": 1.292,
-    "a1_ms": 0.5724,
-    "a1_vs_native": 1.215
+    "ours_ms": 0.5479,
+    "native_ms": 0.6937,
+    "speedup_vs_native": 1.266,
+    "a1_ms": 0.5973,
+    "a1_vs_native": 1.161
   },
   {
     "shape": "prefill_2k_d128",
@@ -35,11 +35,11 @@
     "S": 2048,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 1.3686,
-    "native_ms": 2.7761,
-    "speedup_vs_native": 2.028,
-    "a1_ms": 1.4018,
-    "a1_vs_native": 1.98
+    "ours_ms": 1.3704,
+    "native_ms": 2.7999,
+    "speedup_vs_native": 2.043,
+    "a1_ms": 1.4341,
+    "a1_vs_native": 1.952
   },
   {
     "shape": "gqa_1k_d128",
@@ -49,11 +49,11 @@
     "S": 1024,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 0.8098,
-    "native_ms": 1.3515,
-    "speedup_vs_native": 1.669,
-    "a1_ms": 0.8629,
-    "a1_vs_native": 1.566
+    "ours_ms": 0.8382,
+    "native_ms": 1.4148,
+    "speedup_vs_native": 1.688,
+    "a1_ms": 0.8905,
+    "a1_vs_native": 1.589
   },
   {
     "shape": "decode_d128",
@@ -63,11 +63,11 @@
     "S": 64,
     "D": 128,
     "dtype": "float16",
-    "ours_ms": 0.2172,
-    "native_ms": 0.2547,
-    "speedup_vs_native": 1.172,
-    "a1_ms": 0.2949,
-    "a1_vs_native": 0.864
+    "ours_ms": 0.2427,
+    "native_ms": 0.2703,
+    "speedup_vs_native": 1.114,
+    "a1_ms": 0.3141,
+    "a1_vs_native": 0.86
   },
   {
     "shape": "tail100_d64",
@@ -77,10 +77,10 @@
     "S": 100,
     "D": 64,
     "dtype": "float16",
-    "ours_ms": 0.2186,
-    "native_ms": 0.2533,
-    "speedup_vs_native": 1.159,
-    "a1_ms": 0.2953,
-    "a1_vs_native": 0.858
+    "ours_ms": 0.2456,
+    "native_ms": 0.2683,
+    "speedup_vs_native": 1.093,
+    "a1_ms": 0.3158,
+    "a1_vs_native": 0.85
   }
 ]

@@ -19,17 +19,20 @@ speedup = 原生 math / ours（>1 表示 ours 更快）。数据: [perf_ascend91
 
 | shape | 自研 triton | 原生 math | speedup | 自研 A1 包装 | A1 vs 原生 |
 |---|---:|---:|---:|---:|---:|
-| prefill 1k D64 | 0.515ms | 0.626ms | **1.22x** | 0.555ms | 1.13x |
-| prefill 1k D128 | 0.538ms | 0.695ms | **1.29x** | 0.572ms | 1.21x |
-| prefill 2k D128 | 1.369ms | 2.776ms | **2.03x** | 1.402ms | 1.98x |
-| GQA 1k D128 | 0.810ms | 1.351ms | **1.67x** | 0.863ms | 1.57x |
-| decode D128 | 0.217ms | 0.255ms | **1.17x** | 0.295ms | 0.86x |
-| tail100 D64 | 0.219ms | 0.253ms | **1.16x** | 0.295ms | 0.86x |
+| prefill 1k D64 | 0.549ms | 0.629ms | **1.15x** | 0.583ms | 1.08x |
+| prefill 1k D128 | 0.548ms | 0.694ms | **1.27x** | 0.597ms | 1.16x |
+| prefill 2k D128 | 1.370ms | 2.800ms | **2.04x** | 1.434ms | 1.95x |
+| GQA 1k D128 | 0.838ms | 1.415ms | **1.69x** | 0.891ms | 1.59x |
+| decode D128 | 0.243ms | 0.270ms | **1.11x** | 0.314ms | 0.86x |
+| tail100 D64 | 0.246ms | 0.268ms | **1.09x** | 0.316ms | 0.85x |
 | **精度代价** | 0（175/175） | 0（131/131） | | 0 | |
 
-> decode/tail 为 §6 单 kernel 融合生效后的数字（融合前 0.287/0.285ms、
-> 0.92x/0.97x）；大形状走两段式（§6 阈值），与融合前持平在测量噪声内。
-> A1 列为经 `torch.ops` 注册拦截路径，含 ~0.078ms `autograd.Function` 包装。
+> decode/tail 为 §6 单 kernel 融合 + §9 微优化（跳 contiguous / P+O
+> 合并分配、阈值 56）生效后的数字（融合前 0.287/0.285ms、
+> 0.92x/0.97x）；大形状走两段式（§6/§9 阈值）。2026-10-02 复测，
+> 含环境漂移（门禁 reference 同步 +13.9%，见 §4），绝对值与 10-01 版
+> 不可直接比。A1 列为经 `torch.ops` 注册拦截路径，含 ~0.078ms
+> `autograd.Function` 包装。
 
 参考列——`F.sdpa`（torch_npu 融合注意力，**不返回概率图**，输出契约不同）:
 `prefill 1k D128 0.125ms · 2k 0.228ms · GQA 0.154ms · decode 0.054ms`
@@ -129,14 +132,15 @@ train **0.89-1.00x**。模型中 GEMM/MLP 占比较高，单算子 1.46-2.21x �
 
 | case | 基线 ms | 本次 ms | Δ | 判定 | 附加指标 |
 |---|---:|---:|---:|---|---|
-| ops.sdpa_math.triton | 0.504 | 0.543 | +7.8% | **OK** | TFLOPS=7.909 |
-| ops.sdpa_math.torch | 0.569 | 0.567 | -0.4% | **OK** | TFLOPS=7.578 |
-| ops.sdpa_math.reference | 0.892 | 0.874 | -2.0% | **OK** | TFLOPS=4.916 |
+| ops.sdpa_math.triton | 0.504 | 0.558 | +10.8% | **OK** | TFLOPS=7.690 |
+| ops.sdpa_math.torch | 0.569 | 0.616 | +8.2% | **OK** | TFLOPS=6.977 |
+| ops.sdpa_math.reference | 0.892 | 1.016 | +13.9% | **OK** | TFLOPS=4.228 |
 
 **结论: FAIL 0 · WARN 0 · NEW 0**（`examples/` 提供者与本算子无关的
 `ops.embedding` 加载失败为既有环境问题，不计入本次门禁）。本次为
-2026-10-01 §6 融合改动后的复测：triton +7.8%（门禁阈值 30% 内），
-系 1k 用例两段式路径的进程间波动，未更新基线。
+2026-10-02 §9 微优化 + 融合阈值重定标后的复测：triton +10.8%，但
+**同机 reference 也 +13.9%**（三者同向漂移 → 环境噪声，非代码回退），
+均在门禁阈值 30% 内，未更新基线。
 
 > 说明：`ops.sdpa_math` 的 perf 用例已登记进
 > [`common/perf_registry.py`](../../../common/perf_registry.py)。基线于
@@ -199,8 +203,9 @@ P 往返访存 ~28%、计算效率 ~69%）：
 mask 构造、GQA `K` expansion 与 P 写出调度。掩码/dropout/fp32/直连
 autograd 场景按语义保守回退 `torch_level`。
 
-**与基线的回归情况**：Ascend 门禁 OK（triton +7.8%、torch/reference
-±2% 内，无超阈回退）；P800 门禁 OK（新 fast-path 基线 Δ=0.0%）。
+**与基线的回归情况**：Ascend 门禁 OK（triton +10.8%、同机 reference
++13.9% 同向漂移，见 §4，无超阈回退）；P800 门禁 OK（新 fast-path
+基线 Δ=0.0%）。
 
 ## 6. 单 kernel 融合实验（2026-10-01）
 
@@ -233,7 +238,10 @@ QK→softmax→PV 在一个 kernel 内完成，P 块只在寄存器里存在、�
 | 1024×1024（causal） | 136 | 0.614 | 0.469 | 1.31 |
 | 2048×2048（causal） | 528 | 1.855 | 1.317 | 1.41 |
 
-交叉点在 15~21 tiles → **阈值取 16 tiles**（`_FUSED_MAX_TILES`）。
+交叉点在 15~21 tiles → 当时**阈值取 16 tiles**（`_FUSED_MAX_TILES`，
+latency 口径）。2026-10-02 按 e2e 实测重定标为 **56 tiles**——单次
+同步的 latency 口径在 32-55 tiles 会低估融合（两段式多 1-2 次
+kernel 启动，流水下才摊薄），详见 §9。
 同为 262k 面积的 causal 512²（36 tiles）融合慢 13%、而 causal
 128×2048（3 tiles）融合快 15%——故判据用 tiles 而非 `max(Sq,Skv)`。
 `dropout_p>0` 恒走两段式（掩码须先作用在 P 上，见文件头注）。
@@ -265,4 +273,112 @@ python3 ../../scripts/perf_compare.py --device ascend910      # 门禁（FAIL 0�
 python3 ../../scripts/perf_run.py     --device p800-kunlunxin \
         --pattern ops.sdpa_math --update-baseline             # 优化后基线
 python3 ../../scripts/perf_compare.py --device p800-kunlunxin # 门禁（FAIL 0）
+```
+
+## 8. 分离实验：decode 差距归因（2026-10-02）
+
+**测量陷阱（本次教训，先行记录）**：`register_a1()` 返回的 kernel lib
+列表若不被调用方持有，注册会随 GC 失效——大量早期探针（`step_break`、
+`e2e_bisect`、`host_emis`、`ab_ours`、`lat_ab` 的 aten 段、`e2e_instr`
+等）测的 "ours" 实际回落到 native。作废数据一律不入本报告；有效探针
+均持有 `_LIBS` 并校验注册命中计数（`CTR`）。
+
+**同进程 A/B**（`probes/sameproc_ab.py`，fp16；lat=每调用同步、burst=流水吞吐，
+µs）：
+
+| 形状 | native lat/burst | ours lat/burst | F.sdpa lat/burst |
+|---|---:|---:|---:|
+| decode 1×575 非 causal D64/H8 | 201.1 / 133.8 | 240.1 / 187.6 | 122.6 / 59.4 |
+| prefill 1024² causal D64/H8 | 489.7 / 426.0 | **382.8 / 263.6** | 192.3 / 154.8 |
+
+→ prefill ours 反超 native（-22% lat）；decode ours 落后
++39µs lat / +54µs burst；F.sdpa 天花板差距见 §5（栈级 5.2x）。
+
+**host/device 分离**（`probes/dev_time.py`，decode 1×575，µs）：
+
+| 路径 | 设备段 | host 段 |
+|---|---:|---:|
+| native | 189.2 | 135.4 |
+| ours 直调 | 196.5 | 143.0 |
+| ours 注册 | 250.5 | 190.3 |
+
+→ **设备 kernel 时间与 native 接近**（+7µs）；差距主要在 host 侧。
+host 相位分解（`probes/host_phase.py`，full=143.8µs）：triton launch **83.7** +
+分配 **19.4** + validate 2.0 + `_d1` 1.1 + 选择逻辑 2.9 + dev_ctx 0.7，
+其余 python ~34µs。路径分解（`probes/decode_gap.py`，lat）：注册+grad 256.0 /
+注册 no-grad 234.8 / 直调 216.7 → dispatcher/autograd 包装 ~20-40µs。
+
+**e2e 同进程分段**（`probes/e2e_inproc.py`，kv 1025-1152，每段每调用同步，µs）：
+
+| 段 | native | ours | Δ |
+|---|---:|---:|---:|
+| proj | 81.5 | 78.5 | -3 |
+| cat(KV) | 107.3 | 102.5 | -5 |
+| **attn** | 171.8 | **292.3** | **+120** |
+| entropy(P) | 90.7 | 103.4 | +13 |
+| rest | 64.9 | 69.3 | +4 |
+
+→ 差距集中在 attn 调用本身 ~120µs/call × 512 calls ≈ +50ms，与
+decode_cache 全程差（§9）吻合。布局排除（`probes/layout_ab.py`）：ours
+contiguous 243.1 ≈ transposed 244.6（native 188.0/194.3）→ **布局
+非主因**；entropy 为次要（+13µs/call）。
+
+**结论**：设备时间已接近 native，decode 差距 = host 发射（launch 84µs、
+分配 19µs、python ~35µs，为 triton/本栈发射地板的栈级属性）与注册
+包装 ~40µs；单算子内可压缩空间有限（§5 优化方向）。
+
+## 9. 端到端结果与优化分解（2026-10-02）
+
+**负载**（`probes/e2e_probe.py`）：MiniDecoder 4 层 × D512 × H8，每层消费 P
+（蒸馏式熵正则），fp16 + 注册路径：
+- **prefill**：S=1024 全前向（causal 136 tiles）；
+- **decode_re**：贪心 128 步全量重算，ctx 512→639（causal 36→55 tiles）；
+- **decode_cache**：KV 预填 1024 + 128 步逐 token，kv 1025→1152
+  （非 causal 17→18 tiles）。
+
+**结果**（数次采样中位）：
+
+| 场景 | ours | native | Δ | F.sdpa 参照* |
+|---|---:|---:|---:|---:|
+| prefill | **2.6ms** | 2.9ms | **-10%** | 1.2ms |
+| decode_re | **297ms** | 304ms | **-2%** | 162.6ms |
+| decode_cache | 291ms | 241ms | +21% | 146.9ms |
+
+\* `F.sdpa` 不物化 P，契约不同，仅作天花板参照（§2）。decode_cache
+残余 +21% 的构成见 §8（attn 调用 host/包装开销）。
+
+**本轮三项改动与分解**：
+
+1. **跳 contiguous（`_d1`）**：kernel 按 `stride(-1)` 直寻址 D 维 →
+   只需末维连续，transposed 输入免物化（单次 ~14µs，decode 3 次 ~41µs）。
+2. **P+O 合并分配**：一次 `empty` + 两个 view 代替两次分配（省一次
+   设备启动 ~6µs），并保证 out 连续。
+   - 1+2 效果（`probes/ab_inproc.py` 直调口径，µs）：decode 195.2→**149.5**
+     （**-45.7, -23%**）、prefill 288.2→**223.8**（**-64.4, -22%**）。
+3. **融合阈值 16→56 tiles**（`_FUSED_MAX_TILES`）：
+   - 发现：decode_cache 形状 17-18 tiles 原本**超过阈值 16** → 走
+     两段式错过融合；e2e 强制融合 A/B：decode_cache 331→273ms
+     （**-15%**）、decode_re ~325→~294ms（**-9%**）。
+   - 口径分歧：单次同步的 latency 口径在 32-55 tiles 偏向两段式，
+     而流水（吞吐/e2e 实际）口径偏向融合——两段式多出的 1-2 次
+     launch（~97µs/次）在流水下才摊薄；§6 表为 D128/H16 latency
+     口径，e2e 为 D64/H8 流水口径，**最终以 e2e 实测为准**。
+   - 上界：64 tiles（1×4096）吞吐口径两段式胜（250 vs 222µs）、
+     prefill 136 tiles 两段式胜（0.684 vs 0.522ms）→ **阈值 56**。
+   - 门禁形状（1/3/136 tiles）两侧均不受阈值影响。
+
+**综合效果**：decode_re 325→297ms（**-9%**，反超 native）；
+decode_cache 331→291ms（**-12%**）；prefill 维持反超。
+
+**回归**：`check_accuracy --impl triton` **175/175，worst 3.906e-3
+不变**（融合/两段式两路径都覆盖）；`example.py ascend910` 52/21/8
+全绿；`example.py cpu` 全绿；门禁 FAIL 0（§4）。
+
+**复现**：
+
+```bash
+python3 probes/e2e_probe.py ours|native           # e2e 三场景（ONLY=re|cached 可拆分）
+SDPA_MATH_FUSED=on|off python3 probes/e2e_probe.py ours   # 融合强制 A/B
+python3 probes/sameproc_ab.py                     # 同进程 A/B（§8）
+python3 example.py ascend910 && python3 script/check_accuracy.py --impl triton
 ```

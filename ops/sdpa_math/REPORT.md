@@ -15,7 +15,7 @@
 | 开发级别 | 文件 | 状态 | 备注 |
 |---|---|---|---|
 | torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ☑ | 独立 ATen 组合；CPU 交付 + P800 fallback/第二判卷人 |
-| Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ☑ | 两段式 `_probs_kernel`(pass1/2 共用 `_score_block`) + `_pv_kernel`；小形状（≤16 tiles）单 kernel 融合；dropout 用 ATen 收口 |
+| Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ☑ | 两段式 `_probs_kernel`(pass1/2 共用 `_score_block`) + `_pv_kernel`；小形状（≤56 score tiles，e2e 实测定标见 [§9](reports/performance.md)）单 kernel 融合；dropout 用 ATen 收口 |
 | P800 fast | [kernel/p800_fast_level.py](kernel/p800_fast_level.py) | ☑ | vendor efficient `O/LSE` + `P=exp(scale·QKᵀ-LSE)`；保留双输出契约 |
 | 硬件级 | `kernel/hardware_level/` | — | 未做：CANN/厂商绑定不在本交付范围（torch 级已覆盖 CPU） |
 
