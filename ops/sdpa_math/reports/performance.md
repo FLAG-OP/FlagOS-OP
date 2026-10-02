@@ -101,6 +101,27 @@ vendor kernel 承接 `O` 的 PV 调度，`LSE` 使 `P` 生成免做行 max/sum �
 还额外物化概率图，绝对差距大概率存在；结论需待 A100 private-math
 实测补齐。
 
+### 3.4 FlagOS 端到端参考（2026-10-02）
+
+数据: [e2e_flagos_p800-kunlunxin.json](e2e_flagos_p800-kunlunxin.json)。
+负载为 4 层 mini-LLM（D128 · GQA 8/2 · FFN256 · vocab1024），native 与
+plugin 两条链均使用 FlagGems GELU；`sdpa_math` 为 A1 路径，且概率图 `P`
+被注意力熵正则消费。
+speedup = native / plugin（>1 表示 plugin 更快）。
+
+| workload | native | A1 plugin | speedup |
+|---|---:|---:|---:|
+| forward B1 S256 | 7.841ms | 7.696ms | **1.019x** |
+| forward B2 S128 | 7.885ms | 7.669ms | **1.028x** |
+| train B1 S128（CE + entropy backward） | 36.412ms | 36.323ms | **1.002x** |
+| generate 8 steps B1 S96 | 72.954ms | 65.211ms | **1.119x** |
+
+共享机器重复执行观察：forward **1.02-1.09x**、generate **1.06-1.12x**、
+train **0.89-1.00x**。模型中 GEMM/MLP 占比较高，单算子 1.46-2.21x 被
+稀释；训练收益会被 A1 自定义数学 backward（特别是 `dprobs` 熵正则通路）
+部分或全部抵消。训练场景需要继续优化 backward，不能把单算子加速比
+直接外推。
+
 ## 4. 回归门禁（入库基线）
 
 `python3 scripts/perf_run.py --device ascend910 --pattern sdpa_math --update-baseline`
@@ -131,8 +152,8 @@ python3 scripts/perf_compare.py --device p800-kunlunxin
 
 | case | 入库基线 | 复测 ms | Δ | 附加指标 | 判定 |
 |---|---:|---:|---:|---|---|
-| ops.sdpa_math.p800 | 0.485ms | 0.489ms | +0.9% | TFLOPS=8.779 | **OK** |
-| ops.sdpa_math.native | 1.035ms | 1.039ms | +0.4% | TFLOPS=4.133 | **OK** |
+| ops.sdpa_math.p800 | 0.485ms | 0.494ms | +1.9% | TFLOPS=8.694 | **OK** |
+| ops.sdpa_math.native | 1.035ms | 1.059ms | +2.3% | TFLOPS=4.056 | **OK** |
 
 **结论: FAIL 0 · WARN 0 · NEW 0**。本次基线更新是 P800 exact-P fast path
 的 intentional optimization，不是环境漂移。

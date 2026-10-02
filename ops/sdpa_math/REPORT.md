@@ -35,6 +35,7 @@
 | 语义证据 | `probes/native_semantics.py` | ☑ 6 节全过（两 profile） | [reports/development.md](reports/development.md) |
 | perf 门禁 | `common/perf_registry.py` → `scripts/perf_run.py --pattern sdpa_math` | ☑ 已登记 `ops.sdpa_math` | [reports/performance.md](reports/performance.md) |
 | P800 | `python3 example.py p800-kunlunxin` | ☑ kernel 52 · 黄金 175/175 · A1 21 · FlagGems 应用层 9 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) |
+| FlagOS E2E | `python3 script/e2e_flagos.py --device cuda:1` | ☑ 4 层 mini-LLM · forward/backward/generate · A1 拦截 856 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
 
 ## 关键数字
 
@@ -48,6 +49,7 @@
 | P800 fp16 | direct **1.46-2.21x** native；A1 **1.31-2.17x** | 同为返回 out+P 的公平口径 |
 | P800 no-P 参考 | exact-contract math 比 `F.sdpa` 慢 **1.98-4.46x** | **非同输出契约**：`F.sdpa` 不返回/物化 P，只作融合上限参考 |
 | A100 绝对性能 | 同契约 private-math 未测；非等价 no-P 口径下 P800 vendor efficient 为 A100·FA2 的 **36-53%** | 不能折算成 exact-P 加速比 |
+| FlagOS E2E | mini-LLM forward/generate **1.02-1.12x**；train **0.89-1.00x** | 训练瓶颈在 A1 数学 backward / `dprobs` 通路 |
 | 哨兵 | 确定性 ☑ 敏感 ☑（dropout 随机路径同种子可复现 ☑） | |
 
 ## 结论与遗留
@@ -78,4 +80,5 @@ inference_mode/无 requires_grad 四种模式全部命中，梯度（含 `dprobs
 | native 语义证据 | [probes/native_semantics.py](probes/native_semantics.py) |
 | 性能原始数据 | [reports/perf_ascend910.json](reports/perf_ascend910.json) · [reports/perf_cpu.json](reports/perf_cpu.json) |
 | P800 性能数据 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) · [reports/perf_f_context_p800-kunlunxin.json](reports/perf_f_context_p800-kunlunxin.json) |
+| FlagOS E2E 数据 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
 | 仓库已知问题登记（七类语义/注册/平台分化） | [docs/known-issues.md #19](../../docs/known-issues.md) |

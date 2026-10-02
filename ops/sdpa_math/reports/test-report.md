@@ -3,8 +3,8 @@
 | 项 | 值 |
 |---|---|
 | 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ torch（CPU/fallback） |
-| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `cpu` / 2026-09-30~10-01 |
-| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · 四件套 ☑） |
+| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `cpu` / 2026-09-30~10-02 |
+| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · FlagOS E2E ☑ · 四件套 ☑） |
 
 ## 1. 测试范围
 
@@ -17,6 +17,7 @@
 | 性能门禁 | ☑ | `scripts/perf_run.py --pattern sdpa_math` + `perf_compare.py` | OK：FAIL 0 · WARN 0（triton 0.504ms / 8.524 TFLOPS 入库基线） |
 | 语义证据 | ☑ | `probes/native_semantics.py [ascend910\|cpu]` | 6 节全过（schema / dropout 双规则表 / bool 怪癖 / 冲突边界 / F.sdpa 参数形态 / 注册键） |
 | 跨层一致性 | ☑ | 黄金生成的三重互验（§3） | 参考 vs `F.sdpa(MATH)` vs 原生直调 vs 自洽式，全一致 |
+| FlagOS E2E | ☑ | `script/e2e_flagos.py` | PASS：4 层 mini-LLM / 前向 / 反向 / 生成 / 概率图熵正则（§4.1） |
 | 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin]` | 三层全绿 |
 
 ## 2. 环境
@@ -129,6 +130,30 @@ python3 script/bench_perf.py --device cuda:1 --register \
   --json-out reports/perf_p800-kunlunxin.json
 ```
 
+### 2026-10-02 FlagOS 端到端复验
+
+入口: [script/e2e_flagos.py](../script/e2e_flagos.py)。原生与 A1 两条链
+均运行在 FlagOS 栈内：`flag_gems.only_enable(['gelu'])` 提供模型 MLP 的
+GELU，目标 `sdpa_math` 由 A1 拦截。模型为 4 层 Llama 风格 mini-LLM
+（D128 · GQA 8/2 · FFN256 · vocab1024），每层直调 private math op，并把
+第二输出 `P` 送入注意力熵正则；覆盖 no-grad forward、CE+entropy
+backward、8 步贪心生成。
+
+| 检查 | 结果 |
+|---|---|
+| A1 拦截 | 856 次 |
+| logits L∞ | **0.015625**（bf16 阈值 0.02 内） |
+| top-1 一致率 | **98.75%**（160 个位置，bf16 语义噪声阈值 ≥98%） |
+| 注意力熵差 | **7.71e-4** |
+| 8 步贪心序列 | **完全一致** |
+| embedding / q0 / head 梯度 L∞ | **1.14e-5 / 3.81e-6 / 2.44e-4** |
+
+原始数据: [e2e_flagos_p800-kunlunxin.json](e2e_flagos_p800-kunlunxin.json)。
+端到端延迟见 [performance.md](performance.md) §3.4。共享机器重复执行：
+forward **1.02-1.09x**、generate **1.06-1.12x**、train **0.89-1.00x**。
+训练收益会被自定义数学 backward 的 `dprobs` 通路部分抵消，这是真实风险
+而非单算子结论。
+
 ## 5. 问题与风险
 
 | # | 描述 | 影响 | 状态 |
@@ -144,5 +169,6 @@ python3 script/bench_perf.py --device cuda:1 --register \
 对照 [Must 清单](../../../docs/acceptance.md#levels)：
 精度必测矩阵 ☑（非整倍数 shape、三 dtype、特殊用例、≥2 seed/组合）·
 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 0 FAIL ☑ ·
+FlagOS E2E ☑ ·
 报告四件套 ☑ → **可交付**。Should 项（三方对比中 FlagGems 缺席）已给出
 原因：无同语义（返回概率图）实现。

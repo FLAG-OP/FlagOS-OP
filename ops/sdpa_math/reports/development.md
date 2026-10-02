@@ -93,9 +93,10 @@ dispatch dump），旧代码零改动。
 | kernel 层 | ☑ PASS | 52 组（16 shape × 3 dtype + 掩码/边界/错误路径）×3 profile；最差（NPU）fp32/fp16/bf16 见 reports/accuracy.md §2；哨兵确定性+敏感；dropout 显式一致 + 随机 keep=0.499、×2.000 |
 | 框架层 | ☑ PASS | 21 项：四模式拦截（grad/no_grad/inference_mode/无 requires_grad）、注册=直调逐位、vs 原生 3.6e-7、6 组 fp64 gradcheck、`F.sdpa(MATH)` 拦截 + 输出=参考；拦截计数 3822 |
 | 应用层 | ☑ PASS | 8 项：mini-decoder + 概率图消费者，拦截 21 次，logits L∞ 1.86e-8，top1=1.000，贪心序列 1.000，全权重梯度 L∞ 1.75e-10 |
-| 黄金回归 | ☑ 175/175 | reference / torch(CPU) / triton(NPU) 三实现全过；`--impl native` 131/131（44 组 bool 按 §2 分歧跳过） |
+| 黄金回归 | ☑ 175/175 | reference / torch(CPU) / triton(NPU) / p800(P800) 四实现全过；`--impl native` 131/131（44 组 bool 按 §2 分歧跳过） |
 | perf 门禁 | ☑ FAIL 0 | `perf_run --pattern sdpa_math` + `perf_compare`：triton 0.543ms(+7.8%) / torch 0.567ms / reference 0.874ms（warmup 20 · iters 50，融合改动后复测） |
 | P800 | ☑ PASS | kernel 52/52；黄金 p800 @ cuda:1 175/175（worst 3.906e-3，bf16 容差内）；A1 21/21；FlagGems 应用层 9/9；P800 perf gate FAIL 0 |
+| FlagOS E2E | ☑ PASS | 4 层 mini-LLM + GELU/GQA/熵正则/训练/生成；A1 拦截 856 次，logits L∞ 1.56e-2，贪心序列一致 |
 
 ## 5. 性能
 
@@ -142,6 +143,12 @@ no-P FlashAttention。
 启用 fast path 后，该参考差距收敛为 **1.98-4.46x**。剩余成本来自额外
 QK、GQA `K` expansion、causal mask 构造与全量 `P` 写出。
 
+`script/e2e_flagos.py` 将该路径放进 4 层 mini-LLM 端到端验证：FlagGems
+GELU 负责周边 MLP，A1 负责目标 private math op，`P` 被熵正则消费。推理与
+生成链 **1.02-1.12x**；CE+entropy 训练链 **0.89-1.00x**，说明自定义
+backward 是训练场景的下一个瓶颈。详见
+[reports/e2e_flagos_p800-kunlunxin.json](e2e_flagos_p800-kunlunxin.json)。
+
 ## 6. 已知问题与风险
 
 | # | 描述 | 影响 | 状态 |
@@ -149,11 +156,11 @@ QK、GQA `K` expansion、causal mask 构造与全量 `P` 写出。
 | 1 | `bool attn_mask` **直调**是 0/1 加性怪癖（`probes` §3 实测 0/0 vs `-inf` 遮蔽 0.514） | 只影响绕过 `F.sdpa` 直调 bool mask 的调用方；本实现按 `-inf` 遮蔽（对齐 `F.sdpa`） | 有意分歧，黄金 44 组在 `--impl native` 下跳过并注明 |
 | 2 | 只注册 `Autograd*` → `torch.inference_mode()` 不命中（counter 不增）；反向报 "an autograd kernel was not registered" | 推理/守卫路径绕过自研实现 | **已修**：成对注册（`probes` §6 前后对照） |
 | 3 | 朴素 Python impl 不建图（Triton launch 不产生 grad_fn） | 反向断裂 | **已修**：`autograd.Function` + 数学 backward |
-| 4 | decode/tail 直调经单 kernel 融合后 1.16-1.17x；**A1 包装路径仍 0.86x** | 包装 ~0.078ms 对 0.29ms 级调用占比高，且在 autograd 图节点层 | 接受（[performance.md §6](performance.md)）；直调已反超原生 |
 | 4 | NPU decode/tail 直调经单 kernel 融合后 1.16-1.17x；**A1 包装路径仍 0.86x** | 包装 ~0.078ms 对 0.29ms 级调用占比高，且在 autograd 图节点层 | 接受（[performance.md §6](performance.md)）；P800 fast 的 A1 小形状为 1.31-1.53x |
 | 5 | `dropout_p>0` 的 A1 路径 `out` 走 ATen matmul 而非 fused PV | 仅 dropout 场景，非性能路径 | 接受（`register.py` 已注明） |
 | 6 | `torch.library` 无官方撤销 API（`unhook_a1` 仅删引用） | 同进程注册不可回滚 | 接受：基线须在注册前采集（bench/test 已按此实现） |
 | 7 | P800 源码级 exact-P Triton 双 pass 会触发 XMLIR pointer-state rewrite 失败；已有 no-P custom schedule 也慢于 vendor efficient | 不能直接复用 Ascend Triton kernel | 生产改走 vendor `O/LSE` + exact-P 组合；后续需等/换 XMLIR lowering |
+| 8 | FlagOS E2E 训练链 0.89-1.00x（推理/生成 1.02-1.12x） | A1 自定义数学 backward 与 `dprobs` 熵正则通路抵消部分 forward 收益 | 记录为训练场景后续优化项 |
 
 ## 7. 结论与后续
 
@@ -169,6 +176,8 @@ shape + 三 dtype + 特殊用例）· 哨兵 ☑ · 黄金 100% ☑ · 三层全
 3. `scale` 为 tensor 的慢路径（当前转 python float）；
 4. P800 更进一步：若 XMLIR 支持稳定 exact-P 写出调度，将
    `QK→exp(·-LSE)→P store` 合并为单 kernel，减少 ATen 中间写。
+5. 训练链 backward：针对 CE+`dprobs` 消费方优化数学反传，减少 fp32
+   中间张量与 Python autograd 开销。
 
 ## 附录: 复现命令
 
@@ -186,6 +195,7 @@ python3 script/bench_perf.py --device cuda:1 --register \
   --json-out reports/perf_p800-kunlunxin.json
 python3 script/bench_f_context.py --device cuda:1 \
   --json-out reports/perf_f_context_p800-kunlunxin.json
+python3 script/e2e_flagos.py --device cuda:1 --dtype bfloat16
 cd ../.. && python3 scripts/perf_run.py --device ascend910 --pattern sdpa_math
 python3 scripts/perf_compare.py --device ascend910
 ```

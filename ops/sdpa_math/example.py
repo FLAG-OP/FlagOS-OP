@@ -49,6 +49,9 @@ def main() -> None:
           f"--device {profile.torch_device}   # 原生对照（bool 用例跳过）")
     print(f"  python3 script/bench_perf.py --device {profile.torch_device} "
           f"--register --json-out reports/perf_{profile.name}.json")
+    if profile.vendor == "kunlunxin":
+        print("  python3 script/e2e_flagos.py --device "
+              f"{profile.torch_device} --dtype bfloat16")
     print("  python3 probes/native_semantics.py      # native 语义证据表")
 
 
