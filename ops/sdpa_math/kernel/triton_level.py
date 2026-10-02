@@ -45,15 +45,25 @@ def _blocks(head_dim: int) -> tuple[int, int]:
     return 32, 32
 
 
-# 单 kernel 融合的适用范围（全部实测，见 reports/performance.md §6）:
+def _d1(x: torch.Tensor) -> torch.Tensor:
+    """kernel 用 offs_d 直寻址 D 维（不传 stride_d）→ 只需 stride(-1)==1。
+    满足即直接用原视图（transposed k/v 免拷贝——e2e 形状实测单次
+    contiguous ~14µs，decode 三次共 ~41µs），否则物化。"""
+    return x if x.stride(-1) == 1 else x.contiguous()
+
+
+# 单 kernel 融合的适用范围（全部实测，见 reports/performance.md §6/§9）:
 #   真正的判据是**实际处理的 score tile 数**（causal 决定每行块的截断上界），
-#   而不是原始 Sq×Skv —— 同为 262k 面积: causal 512²(36 tiles)融合慢 13%、
-#   causal 128x2048(3 tiles)融合快 15%。阈值取 16 tiles:
-#     15 tiles 0.98x · 16 tiles 0.97x · 21 tiles 1.07x · 64 tiles 1.16x
-#   收益集中在 tile 少的形状: decode 1 tile 0.74x、1x8192 0.82x
-#   （本栈单次 kernel 启动 ~97µs，两段式多 1-2 次启动）
+#   而不是原始 Sq×Skv。交叉点按 e2e 口径（步内流水，等效吞吐口径）实测:
+#     <=55 tiles 融合快: decode_cache 17-18 tiles 强制融合 -15%;
+#     decode_re causal 36-55 tiles 强制融合 ~9%（304 vs 326ms）;
+#     64+ tiles 两段式快（1x4096 64 tiles 250 vs 222µs; prefill 1024²
+#     136 tiles 0.684 vs 0.522ms）→ 阈值 56 tiles。
+#   单次调用同步的延迟口径在 32-55 tiles 会低估融合（两段式多 1-2 次
+#   kernel 启动，本栈 ~97µs/次，流水下才兑现）→ 阈值以 e2e 实测为准。
+#   门禁形状（1/3/136 tiles）不受阈值影响。
 # 环境变量可强制: SDPA_MATH_FUSED=on/off（默认 auto，仅用于实验与归因）
-_FUSED_MAX_TILES = 16
+_FUSED_MAX_TILES = 56
 
 
 def _use_fused(sq: int, skv: int, head_dim: int, is_causal: bool,
@@ -357,9 +367,9 @@ def sdpa_math_triton(
     if isinstance(sm_scale, torch.Tensor):
         sm_scale = float(sm_scale)
 
-    q = query.contiguous()
-    k = key.contiguous()
-    v = value.contiguous()
+    q = _d1(query)
+    k = _d1(key)
+    v = _d1(value)
 
     m_ptr = fm_ptr = q
     stride_mb = stride_mh = stride_mm = stride_mn = 0
@@ -379,10 +389,14 @@ def sdpa_math_triton(
                             device=query.device))
 
     # causal 尾部的 0 由 _probs_kernel 内补写 → P 一律 empty（省一次
-    # torch.zeros 的独立设备启动，本栈单次启动 ~97µs）
-    probs = torch.empty((B, Hq, Sq, Skv), dtype=query.dtype,
-                        device=query.device)
-    out = torch.empty_like(query)
+    # torch.zeros 的独立设备启动，本栈单次启动 ~97µs）。
+    # P 与 O 合并为一次 empty + 两个 view（省一次分配/启动 ~6µs），
+    # 同时保证 out 连续 → stride(-1)==1（kernel 对 O 直寻址 D 维）
+    n_p = B * Hq * Sq * Skv
+    buf = torch.empty(n_p + B * Hq * Sq * D, dtype=query.dtype,
+                      device=query.device)
+    probs = buf[:n_p].view(B, Hq, Sq, Skv)
+    out = buf[n_p:].view(B, Hq, Sq, D)
 
     BLOCK_M, BLOCK_N = _blocks(D)
     d_pow2 = triton.next_power_of_2(D)
