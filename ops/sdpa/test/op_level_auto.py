@@ -22,8 +22,9 @@ def run(profile):
     import torch
     import torch_npu  # noqa: F401
 
-    from kernel.auto_dispatch import (reset_stats, stats, remove_patch)
-    from register import register_a1
+    from register import register_a1, _load_kernel_mod_mod
+    _ad = _load_kernel_mod_mod("auto_dispatch")
+    reset_stats, stats, remove_patch = _ad.reset_stats, _ad.stats, _ad.remove_patch
 
     dev = profile.torch_device
     F = torch.nn.functional
