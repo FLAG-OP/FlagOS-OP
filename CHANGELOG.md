@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.16.1] - 2026-10-02
+
+### Changed
+- **算子模板范式更新**（对齐 ops/ 实际交付）: 补 `__init__.py` 包化
+  入口、register 平台分发签名（impl/platform + AutogradPrivateUse1
+  注记）、kernel/backends/ 选择器模板、"与 ops/ 对齐"速览节——
+  新算子照模板开发即与 sdpa/embedding 同构
+
 ## [0.16.0] - 2026-10-02
 
 ### Added

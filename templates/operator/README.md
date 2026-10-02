@@ -14,13 +14,20 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 ```
 <你的算子名>/
 ├── README.md            本说明
+├── __init__.py          包化入口（多算子同进程: from ops.<算子名> import ...）
 ├── REPORT.md            算子总体报告（一页看全 + 交付物清单）
 ├── example.py           一键编排（三层一次跑完）+ perf_cases 入口
 ├── reference.py         fp32 语义参考——判卷标准，先写它
-├── register.py          三路线注册（A1/A2/B 三选一）
+├── register.py          三路线注册（A1/A2/B 三选一; A1 含平台分发
+│                        与 dispatch_key→backend 映射）
 ├── kernel/              三级实现
 │   ├── torch_level.py         torch 级（ATen 组合）
-│   ├── triton_level.py        Triton 级（内置 #11/#15 防护）
+│   ├── triton_level.py        Triton 级（内置 #11/#15 防护 + PLATFORM
+│   │                          元数据 + 调用守卫）
+│   ├── backends/              平台 backend（第二平台出现时启用;
+│   │     __init__.py          选择器范式见 sdpa 三平台实证）
+│   ├── auto_dispatch.py       智能路由（可选: 大 shape 截流原生——
+│   │                          sdpa e2e 实证生产链 0.99x 原生）
 │   └── hardware_level/        硬件级（类 C）
 │       ├── kernel.cu              CUDA C++ 骨架（占位 + 要点；P800 ✗ #12）
 │       ├── xtorch_binding.cpp     厂商 C++ 绑定骨架（API 位置与坑已标注）
@@ -79,3 +86,24 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
    `other`/`tl.where` 均救不了——pad 或两阶段（[#15](../../docs/known-issues.md)）
 3. **不要 `@triton.autotune`**: 本栈会选出非法 `num_warps=5`，
    不可复现（#15b）
+
+
+## 与 ops/ 实际交付的对齐（2026-10 范式更新）
+
+模板已同步 ops/ 三个新约定（实证来源标注）:
+
+1. **包化**（`__init__.py`）: 多算子同进程时顶层名 register/kernel
+   互相遮蔽——包态 `from ops.<算子名> import register_a1` 根治;
+   单算子脚本模式不变（实证: sdpa/reports/e2e_mini_llm.md 三缺陷）
+2. **平台分发**（register.py）: `register_a1(dispatch_key, counter,
+   impl, platform)`; torch_npu 栈拦截点 **AutogradPrivateUse1**
+   （PrivateUse1 永不命中——sdpa 开发报告 §3.1 dispatch 证据链）
+3. **backends/ 选择器**: 第二平台出现且平台绑定清单结构性分叉时
+   启用（范式: sdpa 三平台 kernel/backends/）; 单平台保持
+   triton_level.py 顶层实现
+4. **智能路由**（可选 auto_dispatch.py）: 大 shape 截流原生——
+   生产链端到端 0.99x 原生（sdpa e2e 实证）; 须注意 aten 注册内
+   转发原生会无限递归, 用函数层 patch（sdpa 教训）
+
+参考样例: [ops/sdpa](../../ops/sdpa/)（三平台 + 路由 + e2e）·
+[ops/embedding](../../ops/embedding/)（双平台 + 委托模式）。
