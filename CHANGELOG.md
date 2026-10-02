@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.16.0] - 2026-10-02
+
+### Added
+- **算子目录包化**（多算子同进程冲突的根治）: ops/sdpa、ops/embedding
+  加 `__init__.py`（惰性导出 register_a1/kernel 入口），包态导入
+  `from ops.sdpa import register_a1` 与单算子脚本模式兼容并存；
+  ops/test_packaging.py 四项验证全绿（双包导入/双注册同进程/双算子
+  消费数值/旧用法兼容）
+- sdpa register 的模块加载器升级"包态优先"（ops.sdpa.kernel.* 包
+  导入, 文件锚定 fallback）
+
+### Fixed
+- op_level_auto 测试的实例分裂（stats/patch 状态统一到 register
+  锚定实例）
+
 ## [0.15.0] - 2026-09-30
 
 ### Added

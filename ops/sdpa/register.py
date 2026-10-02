@@ -22,14 +22,27 @@ _MOD_CACHE: dict = {}
 
 def _load_kernel_mod_mod(mod_name: str):
     """整模块锚定加载（sys.modules 单例语义——多算子同进程时顶层名
-    被遮蔽的根治; 重复调用返回同一实例, stats/patch 状态才一致）。"""
+    被遮蔽的根治; 重复调用返回同一实例, stats/patch 状态才一致）。
+
+    wt 2026-10-01-fix 包化优先: 包态（ops 可导入）下先走
+    ops.sdpa.kernel.* 包导入——其内部 `from kernel.backends import`
+    等顶层引用经包上下文可解析; 文件路径锚定仅作脚本模式 fallback。
+    # wt <wangt635@ustc.edu.cn>"""
+    import importlib
     import importlib.util
     import sys
     from pathlib import Path
     key = f"sdpa_{mod_name}"
     if key in _MOD_CACHE:
         return _MOD_CACHE[key]
-    path = Path(__file__).resolve().parent / "kernel" / f"{mod_name}.py"
+    here = Path(__file__).resolve().parent
+    try:
+        mod = importlib.import_module(f"ops.sdpa.kernel.{mod_name}")
+        _MOD_CACHE[key] = mod
+        return mod
+    except ImportError:
+        pass
+    path = here / "kernel" / f"{mod_name}.py"
     spec = importlib.util.spec_from_file_location(key, path)
     mod = importlib.util.module_from_spec(spec)
     sys.modules[key] = mod          # 单例注册（防重复 exec）

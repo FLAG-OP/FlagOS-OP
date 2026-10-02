@@ -58,6 +58,11 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 ## 约定
 
 - **目录名 = 算子名**（小写下划线，如 `gelu_and_mul`）
+- **包化导入（多算子同进程必用）**: 目录含 `__init__.py`，
+  `from ops.sdpa import register_a1` / `from ops.embedding import
+  register_a1` 顶层名带包前缀，互不遮蔽（根因与验证见
+  sdpa/reports/e2e_mini_llm.md + ops/test_packaging.py）；
+  单算子脚本模式（sys.path 注入目录）继续兼容
 - 未实现的级别**置空 + 说明**（`kernel/hardware_level/README.md`），
   不留空文件
 - 命名/级别/路线术语遵循 [体系结构](../docs/architecture.md)；
