@@ -38,3 +38,28 @@ def test_run_record_roundtrip(tmp_path, monkeypatch):
     P.save_run_record(rec)
     loaded = P.load_run_records("dev")
     assert len(loaded) == 1 and loaded[0]["metrics"]["latency_ms"] == 0.5
+
+
+def test_clear_run_records_selective(tmp_path, monkeypatch):
+    monkeypatch.setattr(P, "RUN_DIR", tmp_path)
+    keep = tmp_path / "dev" / "keep.json"
+    remove = tmp_path / "dev" / "remove.json"
+    keep.parent.mkdir(parents=True)
+    keep.write_text("{}")
+    remove.write_text("{}")
+
+    P.clear_run_records("dev", ["remove"])
+
+    assert keep.exists()
+    assert not remove.exists()
+
+
+def test_clear_all_run_records(tmp_path, monkeypatch):
+    monkeypatch.setattr(P, "RUN_DIR", tmp_path)
+    path = tmp_path / "dev" / "case.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{}")
+
+    P.clear_run_records("dev")
+
+    assert not path.exists()

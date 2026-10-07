@@ -33,6 +33,13 @@
 
 ## [Unreleased]
 
+### Fixed
+- P800 性能门禁多算子加载时，`ops.sdpa` backend 的裸 `reference`
+  导入可能命中 `sdpa_math.reference` 等同名顶层模块，导致
+  `ops.sdpa.p800.forward` SKIP；改为包态相对导入优先并保留单算子
+  脚本 fallback。`perf_run` 会先清理本次选中用例的旧记录，且任一
+  SKIP 直接返回失败，避免 compare 消费历史 JSON 形成“假绿”
+
 ### Added
 - **sdpa_math 第二平台: p800-kunlunxin**（vendor O/LSE + exact-P + A1）
   - `_profile` / benchmark / framework 消费方接入 P800；A1 使用
