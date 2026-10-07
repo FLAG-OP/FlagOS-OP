@@ -2,15 +2,15 @@
   "schema": 1,
   "device": "cambricon",
   "created_at": "2026-09-18T13:38:47.761604+00:00",
-  "updated_at": "2026-09-23T04:13:26.075528+00:00",
-  "git_commit": null,
-  "git_dirty": null,
+  "updated_at": "2026-09-24T08:06:14.491209+00:00",
+  "git_commit": "13396c997008e2b2b2841c0af843c2b1555ccc91",
+  "git_dirty": true,
   "env_fingerprint": {
-    "torch": "2.12.1+cpu",
+    "torch": "2.11.0+cpu",
     "triton": "3.4.0",
-    "flag_gems": "5.0.2",
+    "flag_gems": "5.3.5",
     "vllm_fl": null,
-    "vllm": "0.25.1"
+    "vllm": null
   },
   "cases": {
     "ops._local_scalar_dense.reference": {
@@ -321,6 +321,42 @@
         "flag_gems": "5.0.2",
         "vllm_fl": null,
         "vllm": "0.25.1"
+      }
+    },
+    "ops.embedding.cambricon.forward": {
+      "metrics": {
+        "latency_ms": 0.059672,
+        "GBps": 142.774
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-09-24T08:05:50.471404+00:00",
+      "git_commit": "13396c997008e2b2b2841c0af843c2b1555ccc91",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.11.0+cpu",
+        "triton": "3.4.0",
+        "flag_gems": "5.3.5",
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.embedding.native.forward": {
+      "metrics": {
+        "latency_ms": 0.045332,
+        "GBps": 187.94
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-09-24T08:06:12.129299+00:00",
+      "git_commit": "13396c997008e2b2b2841c0af843c2b1555ccc91",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.11.0+cpu",
+        "triton": "3.4.0",
+        "flag_gems": "5.3.5",
+        "vllm_fl": null,
+        "vllm": null
       }
     },
     "ops.empty.reference": {

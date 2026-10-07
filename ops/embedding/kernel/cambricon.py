@@ -1,12 +1,12 @@
-"""P800 Kunlunxin embedding backend.
+"""Cambricon MLU590 embedding backend.
 
-The XMLIR stack exposes a highly optimized native row-gather through
-``aten::index_select``.  The production backend deliberately delegates to it:
-experiments in this repository showed that current Triton gathers are tens of
-times slower (see reports/performance.md).  Dense backward delegates to
-``aten::embedding_backward``; ``scale_grad_by_freq=True`` is implemented by
-per-occurrence inverse-frequency scaling because the XPU native backward does
-not implement that mode.
+torch_mlu exposes an optimized native row-gather through ``aten::index_select``
+and a *complete* native ``aten::embedding_backward``: unlike the XPU stack,
+both ``padding_idx`` and ``scale_grad_by_freq=True`` are implemented and match
+the CPU reference exactly (verified for 6 combinations in
+reports/cambricon.md).  The production backend therefore delegates to both
+native paths with no vendor-specific compensation -- the inverse-frequency
+scaling that ``kernel/p800_kunlunxin.py`` needs on XPU is not required here.
 """
 from __future__ import annotations
 
@@ -15,30 +15,30 @@ import importlib.util
 import torch
 
 
-PLATFORM = "p800-kunlunxin"
-SUPPORTED_DEVICE_TYPES = ("cuda",)  # XMLIR presents XPU tensors as CUDA.
-_HAS_KUNLUNXIN_STACK = None
+PLATFORM = "cambricon"
+SUPPORTED_DEVICE_TYPES = ("mlu",)  # torch_mlu presents MLU tensors as mlu.
+_HAS_CAMBRICON_STACK = None
 
 
-def _has_kunlunxin_stack() -> bool:
-    global _HAS_KUNLUNXIN_STACK
-    if _HAS_KUNLUNXIN_STACK is None:
-        if importlib.util.find_spec("torch_xmlir") is None:
-            _HAS_KUNLUNXIN_STACK = False
+def _has_cambricon_stack() -> bool:
+    global _HAS_CAMBRICON_STACK
+    if _HAS_CAMBRICON_STACK is None:
+        if importlib.util.find_spec("torch_mlu") is None:
+            _HAS_CAMBRICON_STACK = False
         else:
             try:
-                import torch_xmlir  # noqa: F401
-                _HAS_KUNLUNXIN_STACK = True
+                import torch_mlu  # noqa: F401
+                _HAS_CAMBRICON_STACK = True
             except Exception:
-                _HAS_KUNLUNXIN_STACK = False
-    return _HAS_KUNLUNXIN_STACK
+                _HAS_CAMBRICON_STACK = False
+    return _HAS_CAMBRICON_STACK
 
 
 def _validate_device_dtype(primary, indices, padding_idx, num_weights):
-    if primary.device.type not in SUPPORTED_DEVICE_TYPES or not _has_kunlunxin_stack():
+    if primary.device.type not in SUPPORTED_DEVICE_TYPES or not _has_cambricon_stack():
         raise RuntimeError(
             f"embedding 是 PLATFORM={PLATFORM!r} 绑定实现，"
-            f"收到 device={primary.device!r} 或缺少 torch_xmlir。"
+            f"收到 device={primary.device!r} 或缺少 torch_mlu。"
         )
     if primary.dtype not in (torch.float32, torch.float16, torch.bfloat16):
         raise ValueError(f"unsupported floating dtype: {primary.dtype}")
@@ -73,7 +73,7 @@ def embedding(
     # Hot path for the common 1D token-id call: one native row gather, no
     # Python reshape/view, and no semantic transform from embedding options.
     if (
-        _has_kunlunxin_stack()
+        _has_cambricon_stack()
         and weight.dim() == 2
         and indices.dim() == 1
         and padding_idx in (-1, None)
@@ -99,13 +99,16 @@ def embedding_backward(
     scale_grad_by_freq: bool = False,
     sparse: bool = False,
 ) -> torch.Tensor:
-    """Dense backward with a P800 fallback for inverse-frequency scaling."""
+    """Dense backward delegating to the complete torch_mlu native kernel."""
     _validate_device_dtype(
         grad_output, indices, padding_idx, num_weights
     )
     if num_weights < 0:
         raise ValueError("num_weights must be non-negative")
     if sparse:
+        # torch_mlu returns a sparse COO tensor for sparse=True instead of
+        # rejecting it; this delivery covers dense backward only, so the
+        # unsupported boundary is raised here (guard test relies on it).
         raise NotImplementedError(
             "sparse embedding backward is outside this delivery"
         )
@@ -113,33 +116,14 @@ def embedding_backward(
             or grad_output.shape[:-1] != indices.shape):
         raise ValueError("grad_output shape must be (*indices, dim)")
 
-    if not scale_grad_by_freq:
-        return torch.ops.aten.embedding_backward(
-            grad_output, indices, num_weights, padding_idx,
-            scale_grad_by_freq=False, sparse=False,
-        )
-
-    flat_indices = indices.reshape(-1)
-    counts = torch.zeros(
-        (num_weights,), device=indices.device, dtype=torch.int64
+    # torch_mlu implements padding_idx and scale_grad_by_freq natively and
+    # matches the CPU reference exactly -- no inverse-frequency compensation
+    # (the XPU-only path in p800_kunlunxin.py) is needed.
+    return torch.ops.aten.embedding_backward(
+        grad_output, indices, num_weights, padding_idx,
+        scale_grad_by_freq=scale_grad_by_freq, sparse=False,
     )
-    valid = flat_indices
-    if padding_idx is not None and padding_idx >= 0:
-        valid = flat_indices[flat_indices != padding_idx]
-    if valid.numel():
-        counts.index_add_(
-            0, valid, torch.ones_like(valid, dtype=torch.int64)
-        )
-    inv_freq = counts.clamp_min(1).reciprocal()
-    scaled = grad_output.float() * inv_freq[flat_indices].view(
-        *indices.shape, 1
-    )
-    native = torch.ops.aten.embedding_backward(
-        scaled.to(grad_output.dtype), indices, num_weights, padding_idx,
-        scale_grad_by_freq=False, sparse=False,
-    )
-    return native.to(grad_output.dtype)
 
 # wt 2026-10-03-fix 注册守卫用能力探测声明 (attr, fn)
 # # wt <wangt635@ustc.edu.cn>
-_DEVICE_PROBE = ("cuda", (lambda: __import__("torch") and torch.cuda.is_available()))
+_DEVICE_PROBE = ("mlu", (lambda: __import__("torch") and torch.mlu.is_available()))
