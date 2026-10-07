@@ -2,7 +2,7 @@
 # （注册前原生基线 vs 注册后 A1 路径），对 logits / 生成序列 / 概率图
 # 消费指标 / 梯度做回归比对，并统计拦截次数。
 #
-# 运行: python3 test/framework_level.py [ascend910|cpu]
+# 运行: python3 test/framework_level.py [ascend910|cpu|p800-kunlunxin]
 #
 # 消费方 A — MiniDecoder: 两层 attention-block + tied embedding 的小解码器，
 #   注意力直调 `torch.ops.aten._scaled_dot_product_attention_math`
@@ -41,6 +41,7 @@ def _decoder(emb, tokens, weights, use_probs=False):
     x = emb[tokens]                      # (B,S,D)
     x = x + (_attn(x, Wq1, Wk1, Wv1) @ Wo1)
     x = x + (_attn(x, Wq2, Wk2, Wv2) @ Wo2)
+    x = torch.nn.functional.gelu(x)      # P800 framework run consumes FlagGems
     logits = (x @ Wout) @ emb.t()        # 输出投影 + tied embedding 头
     probs = None
     if use_probs:
@@ -80,6 +81,15 @@ def run(profile):
 
     dev = profile.torch_device
     results = []
+
+    # P800 framework validation stays inside the FlagOS operator stack. Full
+    # FlagGems enable is non-deterministic on this locked image, so enable the
+    # stable GELU actually consumed above; target sdpa_math still uses A1.
+    if profile.vendor == "kunlunxin":
+        import flag_gems
+        flag_gems.only_enable(include=["gelu"])
+        assert "gelu" in flag_gems.current_work_registrar.include_ops
+        results.append("  [OK] FlagOS stack: flag_gems.only_enable(['gelu'])")
 
     def check(name, cond, extra=""):
         mark = "OK  " if cond else "FAIL"

@@ -6,42 +6,50 @@
 | 项 | 值 |
 |---|---|
 | 算子名称 | `aten::_scaled_dot_product_attention_math`（SDPA **math 后端**，双输出 `(out, attn_probs)`） |
-| 语义 | [reference.py](reference.py)（GQA / causal / bool·float mask / dropout 双规则 / fp32 内部） |
-| 目标设备 / 路线 | `ascend910` + `cpu` / **A1** ☑（aten 拦截，成对注册 `Autograd*` + 纯设备键） |
-| 日期 / 状态 | 2026-09-30 / 定稿 |
+| 语义 | [reference.py](reference.py)（GQA / causal / bool·float mask / dropout 双规则 / fp32 内部；P800 半精度 fast path 有保守回退） |
+| 目标设备 / 路线 | `ascend910` + `p800-kunlunxin` + `cpu` / **A1** ☑（aten 拦截，成对注册 `Autograd*` + 纯设备键） |
+| 日期 / 状态 | 2026-10-01 / 三平台定稿 |
 
 ## 实现矩阵（三级）
 
 | 开发级别 | 文件 | 状态 | 备注 |
 |---|---|---|---|
-| torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ☑ | 独立 ATen 组合（`nan_to_num` softmax 守卫），CPU 交付实现 + 第二判卷人 |
-| Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ☑ | 两段式 `_probs_kernel`(pass1/2 共用 `_score_block`) + `_pv_kernel`；dropout 用 ATen 收口 |
+| torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ☑ | 独立 ATen 组合；CPU 交付 + P800 fallback/第二判卷人 |
+| Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ☑ | 两段式 `_probs_kernel`(pass1/2 共用 `_score_block`) + `_pv_kernel`；小形状（≤56 score tiles，e2e 实测定标见 [§9](reports/performance.md)）单 kernel 融合；dropout 用 ATen 收口 |
+| P800 fast | [kernel/p800_fast_level.py](kernel/p800_fast_level.py) | ☑ | vendor efficient `O/LSE` + `P=exp(scale·QKᵀ-LSE)`；保留双输出契约 |
 | 硬件级 | `kernel/hardware_level/` | — | 未做：CANN/厂商绑定不在本交付范围（torch 级已覆盖 CPU） |
 
-`reference.py` 为第三份独立实现（语义判卷标准），三者逐条对齐并同过黄金。
+`reference.py` 为独立判卷标准；reference / torch / triton / P800 fast
+均过同一 175 组黄金。
 
 ## 验证矩阵（三层）
 
 | 层级 | 入口 | 结果 | 详细报告 |
 |---|---|---|---|
-| 一键三层 | `python3 example.py ascend910` / `cpu` | ☑ 全绿（52+21+8 项） | — |
-| kernel 层 | `test/kernel_level.py` | ☑ 52 组 ×2 profile，哨兵/dropout/错误路径全过 | [reports/accuracy.md](reports/accuracy.md) |
-| 框架层 | `test/op_level.py` | ☑ 21 项：四模式拦截、注册=直调（逐位）、6 组 gradcheck、F.sdpa(MATH) 拦截 | [reports/test-report.md](reports/test-report.md) |
-| 应用层 | `test/framework_level.py` | ☑ 8 项：mini-decoder + 概率图消费者双跑，top1=1.0、贪心序列 1.00 | [reports/test-report.md](reports/test-report.md) |
-| 黄金回归 | `script/gen_golden.py` + `check_accuracy.py` | ☑ **175/175**（reference/torch/triton 三实现）；原生对照 **131/131**（44 bool 跳过） | [reports/accuracy.md](reports/accuracy.md) |
-| 性能 | `script/bench_perf.py`（含 `--register` A1 路径） | ☑ NPU prefill/GQA 1.20-2.05x；CPU 1.05-1.40x | [reports/performance.md](reports/performance.md) |
+| 一键三层 | `python3 example.py ascend910` / `cpu` / `p800-kunlunxin` | ☑ 全绿（52+21+8/9 项） | — |
+| kernel 层 | `test/kernel_level.py` | ☑ 52 组 ×3 profile，哨兵/dropout/错误路径全过 | [reports/accuracy.md](reports/accuracy.md) |
+| 框架层 | `test/op_level.py` | ☑ 22 项：四模式拦截、注册=直调（逐位）、P800 fused backward、6 组 gradcheck、F.sdpa(MATH) 拦截 | [reports/test-report.md](reports/test-report.md) |
+| 应用层 | `test/framework_level.py` | ☑ 8-9 项：mini-decoder + 概率图消费者；P800 在 FlagGems 栈内运行 | [reports/test-report.md](reports/test-report.md) |
+| 黄金回归 | `script/gen_golden.py` + `check_accuracy.py` | ☑ **175/175**（reference/torch/triton/p800 四实现）；原生对照 **131/131**（44 bool 跳过） | [reports/accuracy.md](reports/accuracy.md) |
+| 性能 | `script/bench_perf.py`（含 `--register` A1 路径） | ☑ NPU 直调 1.16-2.03x（6 形状全过）；CPU 1.05-1.40x；P800 1.46-2.21x | [reports/performance.md](reports/performance.md) |
 | 语义证据 | `probes/native_semantics.py` | ☑ 6 节全过（两 profile） | [reports/development.md](reports/development.md) |
 | perf 门禁 | `common/perf_registry.py` → `scripts/perf_run.py --pattern sdpa_math` | ☑ 已登记 `ops.sdpa_math` | [reports/performance.md](reports/performance.md) |
+| P800 | `python3 example.py p800-kunlunxin` | ☑ kernel 52 · 黄金 175/175 · A1 22 · FlagGems 应用层 9 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) |
+| FlagOS E2E | `python3 script/e2e_flagos.py --device cuda:1` | ☑ 4 层 mini-LLM · forward/backward/generate · A1 拦截 856 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
 
 ## 关键数字
 
 | 指标 | 值 | 对照 |
 |---|---|---|
-| 黄金最差 abs | 3.91e-3（triton/bf16）· 1.95e-3（torch/native/bf16） | 容差 bf16=2e-2；fp32 三实现 ≤1.2e-7 |
+| 黄金最差 abs | 3.91e-3（triton 与 P800 fast/bf16）· 1.95e-3（torch/native/bf16） | 容差 bf16=2e-2；fp32 ≤1.2e-7 |
 | 原生一致性 | 131/131 PASS，worst 9.77e-4（NPU） | `--impl native`，bool 用例 44 组按规则跳过 |
 | 梯度 | 6 组 fp64 gradcheck（base/causal/float-mask±grad/gqa/explicit-dropout/dP 消费者） | 数值差分 |
-| 延迟（NPU fp16 vs 原生 math） | 2k D128 **1.316ms / 2.692ms = 2.05x**；1k D128 1.32x；GQA 1.74x；decode 0.92x | 同为"返回 out+概率图"的公平口径 |
-| A1 包装开销 | NPU 1k D64 直调 0.528ms → A1 0.618ms（≈0.09ms autograd.Function 包装） | 仍 1.03x 于原生 |
+| 延迟（NPU fp16 vs 原生 math） | 2k D128 **1.369ms / 2.776ms = 2.03x**；1k D128 1.29x；GQA 1.67x；decode **1.17x**；tail **1.16x** | 同为"返回 out+概率图"的公平口径 |
+| A1 包装开销 | 1k D64 直调 0.515ms → A1 0.555ms；decode 直调 0.217ms → A1 0.295ms（≈0.078ms） | 1k 仍 1.13x 于原生；decode A1 0.86x（小形状包装占比高） |
+| P800 fp16 | direct **1.46-2.21x** native；A1 **1.31-2.17x** | 同为返回 out+P 的公平口径 |
+| P800 no-P 参考 | exact-contract math 比 `F.sdpa` 慢 **1.98-4.46x** | **非同输出契约**：`F.sdpa` 不返回/物化 P，只作融合上限参考 |
+| A100 绝对性能 | 同契约 private-math 未测；非等价 no-P 口径下 P800 vendor efficient 为 A100·FA2 的 **36-53%** | 不能折算成 exact-P 加速比 |
+| FlagOS E2E | forward **1.07x**；train-out **1.45x**；train+probs **1.48x**；generate **1.09x** | fused backward off/on **1.45-1.50x**，覆盖 dO+dP |
 | 哨兵 | 确定性 ☑ 敏感 ☑（dropout 随机路径同种子可复现 ☑） | |
 
 ## 结论与遗留
@@ -54,8 +62,10 @@ inference_mode/无 requires_grad 四种模式全部命中，梯度（含 `dprobs
 1. `bool attn_mask` **直调**语义按 `-inf` 遮蔽实现（对齐 `F.sdpa`），
    与 native 直调的 0/1 加性怪癖有意分歧——44 组黄金在 `--impl native`
    下跳过；走 `F.sdpa` 的消费方行为完全一致。
-2. decode/tail 小形状相对原生略慢（0.92-0.97x）：本算子必须物化
-   `(B,Hq,Sq,Skv)` 概率图，小形状下 kernel 启动占比高。
+2. decode/tail 的 **A1 包装路径** 0.86x（直调经单 kernel 融合已
+   1.16-1.17x 反超）：`autograd.Function` 包装 ~0.078ms 对 0.29ms
+   级调用占比高，属 torch 图节点开销，非 kernel 问题；P800 fast path
+   的 A1 小形状为 1.31-1.53x。
 3. `dropout_p>0` 且走 A1 路径时，`out=(P)@V` 用 ATen matmul 而非
    fused PV（dropout 不是本算子的性能路径，`register.py` 已注明）。
 
@@ -69,4 +79,6 @@ inference_mode/无 requires_grad 四种模式全部命中，梯度（含 `dprobs
 | 性能分册 | [reports/performance.md](reports/performance.md) |
 | native 语义证据 | [probes/native_semantics.py](probes/native_semantics.py) |
 | 性能原始数据 | [reports/perf_ascend910.json](reports/perf_ascend910.json) · [reports/perf_cpu.json](reports/perf_cpu.json) |
-| 仓库已知问题登记（六类语义/注册分化） | [docs/known-issues.md #19](../../docs/known-issues.md) |
+| P800 性能数据 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) · [reports/perf_f_context_p800-kunlunxin.json](reports/perf_f_context_p800-kunlunxin.json) |
+| FlagOS E2E 数据 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
+| 仓库已知问题登记（七类语义/注册/平台分化） | [docs/known-issues.md #19](../../docs/known-issues.md) |

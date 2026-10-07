@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """sdpa_math 一键编排: 三层测试一跑完 + 黄金精度入口提示。
 
-运行: python3 example.py [ascend910|cpu]
+运行: python3 example.py [ascend910|cpu|p800-kunlunxin]
 应用层为轻量消费方（mini-decoder + 概率图消费者，对齐 FlagOS-OP
 softmax-fullstack 先例——Python 层真实计算任务，不依赖 vLLM）。
 """
@@ -43,12 +43,15 @@ def main() -> None:
     print("\n[sdpa_math] 三层全绿。黄金精度与性能:")
     print("  python3 script/gen_golden.py            # CPU 生成（175 组）")
     print(f"  python3 script/check_accuracy.py --impl "
-          f"{'triton' if profile.vendor == 'ascend' else 'torch'} "
+          f"{profile.default_impl} "
           f"--device {profile.torch_device}")
     print(f"  python3 script/check_accuracy.py --impl native "
           f"--device {profile.torch_device}   # 原生对照（bool 用例跳过）")
     print(f"  python3 script/bench_perf.py --device {profile.torch_device} "
           f"--register --json-out reports/perf_{profile.name}.json")
+    if profile.vendor == "kunlunxin":
+        print("  python3 script/e2e_flagos.py --device "
+              f"{profile.torch_device} --dtype bfloat16")
     print("  python3 probes/native_semantics.py      # native 语义证据表")
 
 
@@ -92,9 +95,24 @@ def perf_cases(profile):
     def tflops(ms):
         return {"TFLOPS": flops / (ms / 1000) / 1e12}
 
-    triton = _load_by_path("kernel/triton_level.py", "sdpa_math_triton")
     torch_fn = _load_by_path("kernel/torch_level.py", "sdpa_math_torch")
     ref = _load_by_path("reference.py", "sdpa_math_reference")
+    if profile.vendor == "kunlunxin":
+        import torch
+        p800_fn = _load_by_path(
+            "kernel/p800_fast_level.py", "sdpa_math_p800_fast")
+
+        def native(q, k, v, *args, **kwargs):
+            return torch.ops.aten._scaled_dot_product_attention_math(
+                q, k, v, *args, **kwargs)
+        return [
+            PerfCase("ops.sdpa_math.p800", group="ops", level="kernel",
+                     make_fn=make(p800_fn), derived=tflops, iters=50),
+            PerfCase("ops.sdpa_math.native", group="ops", level="kernel",
+                     make_fn=make(native), derived=tflops, iters=50),
+        ]
+
+    triton = _load_by_path("kernel/triton_level.py", "sdpa_math_triton")
     return [
         PerfCase("ops.sdpa_math.triton", group="ops", level="kernel",
                  make_fn=make(triton), derived=tflops, iters=50),
