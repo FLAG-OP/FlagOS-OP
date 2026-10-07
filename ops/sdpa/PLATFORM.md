@@ -99,7 +99,7 @@ backend 内不允许裸 `from reference import ...` 作为首选路径：一旦�
 算子的顶层 `reference` 已进入 `sys.modules`，该导入会解析到错误模块。
 正确顺序是包态相对导入优先（如 `from ...reference import ...`），仅
 单算子脚本模式 fallback 到顶层 `reference`。该问题已在
-`tests/unit/test_sdpa_backend_import.py` 固化。
+`tests/unit/test_sdpa_backend_import.py` 固化，实测记录见 PR #22。
 
 ## 6. 引用防误用
 
