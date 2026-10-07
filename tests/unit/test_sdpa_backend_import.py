@@ -32,3 +32,4 @@ def test_backend_survives_foreign_top_level_reference(module_name, monkeypatch):
     module = importlib.reload(module)
 
     assert module.sdpa_reference.__module__ == "ops.sdpa.reference"
+    assert callable(module.sdpa_reference)
