@@ -6,6 +6,9 @@ the platform backend is chosen at call time from ``tensor.device.type``.
 - ``mlu``  -> [kernel/cambricon.py](cambricon.py) (Cambricon MLU590, torch_mlu)
 - ``cuda`` -> [kernel/p800_kunlunxin.py](p800_kunlunxin.py) (XMLIR presents
   the Kunlunxin XPU as a CUDA device)
+- ``npu``  -> [kernel/ascend910.py](ascend910.py) (Ascend 910, torch_npu;
+  wt 2026-10-07-fix 第三平台并入 facade——#11 的 backend 接入 #9 的
+  选择器, 保持"单一 import、按设备类型路由"范式)
 
 Tests, benchmark scripts, and the A1 registration in ``register.py`` import
 from this module so a single code path serves both platforms.
@@ -17,20 +20,27 @@ import torch
 try:  # Package-style import: ops.embedding.kernel.platform
     from . import cambricon as _cambricon
     from . import p800_kunlunxin as _p800
+    from . import ascend910 as _ascend
 except ImportError:  # Standalone import with OP_DIR on sys.path
     from kernel import cambricon as _cambricon
     from kernel import p800_kunlunxin as _p800
+    from kernel import ascend910 as _ascend
 
 
-PLATFORM = "multi(cambricon,p800-kunlunxin)"
-SUPPORTED_DEVICE_TYPES = ("mlu", "cuda")
+PLATFORM = "multi(ascend910,cambricon,p800-kunlunxin)"
+SUPPORTED_DEVICE_TYPES = ("mlu", "cuda", "npu")
 
-_BACKENDS = {"mlu": _cambricon, "cuda": _p800}
+_BACKENDS = {"mlu": _cambricon, "cuda": _p800, "npu": _ascend}
 
 # A1 拦截 key 与设备类型对应（实测结论见 reports/cambricon.md §4）:
 # 两个平台都必须注册到各自的 Autograd key，autograd.Function 才能同时
 # 覆盖 grad/no_grad 两种调用（p800=AutogradCUDA，MLU=AutogradPrivateUse1）。
-DISPATCH_KEYS = {"cuda": "AutogradCUDA", "mlu": "AutogradPrivateUse1"}
+# wt 2026-10-07-fix ascend910: torch_npu 的 A1 拦截点同为
+# AutogradPrivateUse1（sdpa 开发报告 §3.1 dispatch 证据链; 与 mlu
+# 同 key, 单机双 NPU+MLU 场景须 profile 显式指定平台）
+# # wt <wangt635@ustc.edu.cn>
+DISPATCH_KEYS = {"cuda": "AutogradCUDA", "mlu": "AutogradPrivateUse1",
+                  "npu": "AutogradPrivateUse1"}
 
 
 def get_backend(device_type: str):
@@ -62,6 +72,8 @@ def synchronize(device: str | torch.device) -> None:
         torch.mlu.synchronize()
     elif device_type == "cuda":
         torch.cuda.synchronize()
+    elif device_type == "npu":
+        torch.npu.synchronize()
     else:
         raise RuntimeError(
             f"没有 {device_type!r} 对应的 synchronize 实现"
