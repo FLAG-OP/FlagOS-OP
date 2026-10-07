@@ -7,13 +7,14 @@ entropy regularizer.  Both native and A1 phases run inside the FlagOS stack:
 FlagGems supplies the surrounding GELU, while the target attention op remains
 aten::_scaled_dot_product_attention_math.
 
-The two phases are run in separate subprocesses because torch.library A1
+The phases are run in separate subprocesses because torch.library A1
 registrations cannot be undone in-process.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,7 @@ def _build_model(device: str, dtype):
         def __init__(self):
             super().__init__()
             self.embedding = nn.Embedding(VOCAB, D_MODEL)
+            self.consume_probs = True
             self.layers = nn.ModuleList()
             for _ in range(N_LAYER):
                 self.layers.append(nn.ModuleDict({
@@ -75,8 +77,9 @@ def _build_model(device: str, dtype):
                 ctx, probs = torch.ops.aten._scaled_dot_product_attention_math(
                     q, k, v, None, 0.0, True, None, enable_gqa=True,
                 )
-                p32 = probs.float().clamp_min(1e-9)
-                entropy = entropy - (p32 * p32.log()).sum(dim=-1).mean()
+                if self.consume_probs:
+                    p32 = probs.float().clamp_min(1e-9)
+                    entropy = entropy - (p32 * p32.log()).sum(dim=-1).mean()
                 x = x + layer["o"](
                     ctx.transpose(1, 2).reshape(batch, seq, D_MODEL))
                 mlp = layer["f2"](F.gelu(layer["f1"](layer["norm2"](x))))
@@ -145,7 +148,8 @@ def _run_phase(args, artifact_dir: Path) -> dict:
     workloads = [
         ("forward_b1_s256", 1, 256),
         ("forward_b2_s128", 2, 128),
-        ("train_b1_s128", 1, 128),
+        ("train_out_b1_s128", 1, 128),
+        ("train_probs_b1_s128", 1, 128),
         ("generate8_b1_s96", 1, 96),
     ]
     result = {
@@ -159,7 +163,7 @@ def _run_phase(args, artifact_dir: Path) -> dict:
             "heads": f"{N_HEAD}/{N_KV_HEAD}",
             "vocab": VOCAB,
             "ffn": FFN,
-            "probs_consumer": "attention entropy regularizer",
+            "probs_consumer": "optional attention entropy regularizer",
         },
         "cases": {},
         "interceptions": 0,
@@ -174,6 +178,7 @@ def _run_phase(args, artifact_dir: Path) -> dict:
                     return model(ids)
             warmup, iters = 10, 30
         elif tag.startswith("train"):
+            model.consume_probs = tag.startswith("train_probs")
             target = torch.randint(
                 0, VOCAB, (batch, seq), generator=generator).to(device)
 
@@ -195,6 +200,7 @@ def _run_phase(args, artifact_dir: Path) -> dict:
             warmup, iters = 3, 10
 
         ms = _bench(call, device, warmup, iters)
+        model.consume_probs = True
         result["cases"][tag] = round(ms, 4)
         print(f"{args.phase:6s} {tag:20s} {ms:9.3f} ms", flush=True)
 
@@ -295,16 +301,20 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="sdpa-math-e2e-") as temporary:
         artifact_dir = Path(temporary)
         results = {}
-        for phase in ("native", "plugin"):
+        for phase in ("native", "plugin", "plugin_fused_off"):
             command = [
                 sys.executable, str(Path(__file__).resolve()),
-                "--phase", phase,
+                "--phase", "plugin" if phase == "plugin_fused_off" else phase,
                 "--device", args.device,
                 "--dtype", args.dtype,
                 "--artifact-dir", str(artifact_dir),
             ]
+            environment = os.environ.copy()
+            if phase == "plugin_fused_off":
+                environment["SDPA_MATH_P800_FUSED_BWD"] = "0"
             process = subprocess.run(
                 command, text=True, capture_output=True, timeout=600,
+                env=environment,
             )
             lines = [line for line in process.stdout.splitlines()
                      if line.startswith("RESULT ")]
@@ -316,6 +326,7 @@ def main() -> int:
                 line for line in process.stdout.splitlines()
                 if not line.startswith("RESULT ")))
             results[phase] = json.loads(lines[-1][len("RESULT "):])
+            results[phase]["phase"] = phase
 
         comparison = _compare(results["native"], results["plugin"], artifact_dir)
         summary = {}
@@ -336,6 +347,16 @@ def main() -> int:
             "native": results["native"],
             "plugin": results["plugin"],
         }
+        report["backward_ab"] = {
+            case: {
+                "fused_off_ms": results["plugin_fused_off"]["cases"][case],
+                "fused_on_ms": results["plugin"]["cases"][case],
+                "speedup_off_over_on": round(
+                    results["plugin_fused_off"]["cases"][case]
+                    / results["plugin"]["cases"][case], 3),
+            }
+            for case in ("train_out_b1_s128", "train_probs_b1_s128")
+        }
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(report, indent=2) + "\n")
 
@@ -347,6 +368,11 @@ def main() -> int:
             print(f"{case:20s} native={row['native_ms']:8.3f}ms "
                   f"plugin={row['plugin_ms']:8.3f}ms "
                   f"speedup={row['speedup_native_over_plugin']:6.2f}x")
+        print("\nP800 fused backward A/B (off/on; >1 means fused is faster):")
+        for case, row in report["backward_ab"].items():
+            print(f"{case:20s} off={row['fused_off_ms']:8.3f}ms "
+                  f"on={row['fused_on_ms']:8.3f}ms "
+                  f"speedup={row['speedup_off_over_on']:6.2f}x")
         print("-" * 88)
         print(json.dumps(comparison, indent=2))
         print(f"saved -> {args.json_out}")

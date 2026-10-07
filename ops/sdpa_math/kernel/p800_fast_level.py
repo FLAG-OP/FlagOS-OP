@@ -97,13 +97,17 @@ def sdpa_math_p800_fast(
     *,
     scale: float | torch.Tensor | None = None,
     enable_gqa: bool = False,
-) -> tuple[torch.Tensor, torch.Tensor]:
+    return_aux: bool = False,
+) -> tuple[torch.Tensor, torch.Tensor] | tuple[
+    torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
+    torch.Tensor, float,
+]:
     """Return ``(output, attn_probs)`` using vendor O/LSE plus exact P.
 
     The fast path intentionally falls back to the fp32 torch composition when
     direct invocation could otherwise create a different autograd graph.  A1
     invokes it inside ``autograd.Function.forward`` (autograd disabled), where
-    the custom mathematical backward remains authoritative.
+    the specialized P800 backward can reuse the returned vendor state.
     """
     _validate(query, key, value, attn_mask, is_causal, enable_gqa)
 
@@ -113,10 +117,11 @@ def sdpa_math_p800_fast(
     )
     if not _fast_eligible(query, key, value, attn_mask, dropout_p, is_causal,
                           dropout_mask, scale) or build_graph_directly:
-        return sdpa_math_torch(
+        result = sdpa_math_torch(
             query, key, value, attn_mask, dropout_p, is_causal, dropout_mask,
             scale=scale, enable_gqa=enable_gqa,
         )
+        return (*result, None, None, None, None) if return_aux else result
 
     actual_scale = (
         scale if scale is not None
@@ -145,4 +150,10 @@ def sdpa_math_p800_fast(
         causal = torch.ones(
             (sq, skv), dtype=torch.bool, device=query.device).tril()
         scores.masked_fill_(~causal, 0)
+    if return_aux:
+        # Private A1 path: keep the vendor state needed by the fused backward.
+        # The two philox tensors are empty for dropout_p=0, but the aten
+        # backward schema still requires them.
+        return (output, scores, logsumexp, result[2], result[3],
+                float(actual_scale))
     return output, scores

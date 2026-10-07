@@ -11,7 +11,7 @@
 | 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 保持；P800 半精度 fast path 见下） |
 | 路线 | **A1** aten 拦截（成对注册 `Autograd*` + 纯设备键），旧业务代码零改动 |
 | 平台 | **ascend910**: 自研 Triton（两段式 probs + PV，小形状单 kernel 融合）；**p800-kunlunxin**: vendor O/LSE + exact-P + A1；**cpu**: ATen 组合（对照/梯度兜底） |
-| 验证 | kernel 52 组 ×3 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 21 项（6 gradcheck）· 应用层 8-9 项 · FlagOS E2E ✅ |
+| 验证 | kernel 52 组 ×3 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 22 项（6 gradcheck + fused backward）· 应用层 8-9 项 · FlagOS E2E ✅ |
 | NPU 性能（fp16，vs 同为"返回 out+P"的原生 math） | prefill1k D64 **1.22x** · 1k D128 **1.29x** · 2k D128 **2.03x** · GQA **1.67x** · decode **1.17x** · tail100 **1.16x** |
 | CPU 性能（fp32，同口径） | 1.05-1.40x（6 形状全过） |
 | P800 性能（fp16，同口径） | direct **1.46-2.21x** native；A1 **1.31-2.17x** |
@@ -124,8 +124,9 @@ flag_gems.only_enable(include=["gelu"])
 端到端入口 `script/e2e_flagos.py` 自建 4 层 Llama 风格 mini-LLM
 （D128 · GQA 8/2 · vocab1024），每层直调本算子并把 `P` 送入注意力熵
 正则，覆盖 forward、backward、8 步贪心生成与 FlagGems GELU。实测
-推理/生成 **1.02-1.12x** native，训练 **0.89-1.00x**（自定义 backward
-会抵消部分 forward 收益）；原始数据见
+推理 forward **1.07x**、仅 CE 训练 **1.45x**、CE+概率图熵正则训练
+**1.48x**，多步生成 **1.09x**；fused backward off/on A/B **1.45-1.50x**。
+原始数据见
 [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json)。
 
 ## 硬约束（本栈已内建）

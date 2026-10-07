@@ -16,6 +16,8 @@
 # wt <wangt635@ustc.edu.cn>
 from __future__ import annotations
 
+import os
+
 import torch
 
 try:  # Package-style import: ops.sdpa_math.register
@@ -45,8 +47,17 @@ def _fwd(impl, ctx, query, key, value, attn_mask, dropout_p, is_causal,
     供 gradcheck/F.sdpa），若 forward 读共享类属性会互相覆盖。
     """
     fn = _IMPLS[impl]
-    out, probs = fn(query, key, value, attn_mask, 0.0, is_causal, None,
-                    scale=scale, enable_gqa=enable_gqa)
+    fast_state = None
+    if impl == "p800":
+        out, probs, lse, philox_seed, philox_offset, fast_scale = fn(
+            query, key, value, attn_mask, 0.0, is_causal, None,
+            scale=scale, enable_gqa=enable_gqa, return_aux=True,
+        )
+        if lse is not None:
+            fast_state = (lse, philox_seed, philox_offset, fast_scale)
+    else:
+        out, probs = fn(query, key, value, attn_mask, 0.0, is_causal, None,
+                        scale=scale, enable_gqa=enable_gqa)
 
     keep = None
     if dropout_p > 0.0:
@@ -66,7 +77,22 @@ def _fwd(impl, ctx, query, key, value, attn_mask, dropout_p, is_causal,
             probs = probs * keep
             out = torch.matmul(probs / (1.0 - dropout_p), vv)
 
-    ctx.save_for_backward(query, key, value)
+    # P800 no-dropout fast path can reuse vendor output/LSE/philox state in a
+    # fused aten backward. Dropout rewrites out above, so it must use the
+    # generic mathematical route.
+    ctx.p800_fast = (
+        fast_state is not None
+        and dropout_p == 0.0
+        and os.environ.get("SDPA_MATH_P800_FUSED_BWD", "1") != "0"
+    )
+    if ctx.p800_fast:
+        lse, philox_seed, philox_offset, fast_scale = fast_state
+        ctx.fast_scale = fast_scale
+        ctx.save_for_backward(
+            query, key, value, out, probs, lse, philox_seed, philox_offset,
+        )
+    else:
+        ctx.save_for_backward(query, key, value)
     ctx.attn_mask = attn_mask
     ctx.keep = keep                 # None 或 0/1 张量（随机路径在此自持）
     ctx.dropout_p = dropout_p
@@ -75,6 +101,60 @@ def _fwd(impl, ctx, query, key, value, attn_mask, dropout_p, is_causal,
     ctx.scale = scale
     ctx.enable_gqa = enable_gqa
     return out, probs
+
+
+def _p800_fast_backward(ctx, dout, dprobs):
+    """P800 fused output backward plus exact probability-map Jacobian.
+
+    The vendor efficient-attention backward covers the ``dout`` path.  The
+    second output contract still requires an explicit ``dprobs`` path; its
+    softmax Jacobian is computed from the already materialized P.  Keeping the
+    two paths split avoids replaying the full output math in Python.
+    """
+    (query, key, value, output, probs, lse, philox_seed,
+     philox_offset) = ctx.saved_tensors
+
+    dq = dk = dv = None
+    if dout is not None:
+        grads = torch.ops.aten._scaled_dot_product_efficient_attention_backward(
+            dout, query, key, value, None, output, lse,
+            philox_seed, philox_offset, 0.0,
+            [True, True, True, False], ctx.is_causal,
+            scale=ctx.fast_scale,
+        )
+        dq, dk, dv = grads[0], grads[1], grads[2]
+
+    if dprobs is None:
+        return (dq, dk, dv, None, None, None, None, None, None)
+
+    # P was materialized by the forward, so dprobs does not require replaying
+    # QK just to reconstruct the probability map.
+    p32 = probs.float()
+    dp = dprobs.float()
+    ds = p32 * (dp - (dp * p32).sum(dim=-1, keepdim=True))
+    ds *= ctx.fast_scale
+
+    _, Hq, _, D = query.shape
+    _, Hkv, _, _ = key.shape
+    gqa = Hq // Hkv
+    q32 = query.float()
+    k32 = key.float()
+    if gqa != 1:
+        k32 = k32.repeat_interleave(gqa, dim=1)
+    dq_probs = torch.matmul(ds, k32)
+    dk_probs = torch.matmul(ds.transpose(-1, -2), q32)
+    if gqa != 1:
+        dk_probs = dk_probs.reshape(
+            key.shape[0], Hkv, gqa, key.shape[2], D).sum(dim=2)
+    if dv is None:
+        dv = torch.zeros_like(value)
+
+    dq = dq_probs if dq is None else dq.float() + dq_probs
+    dk = dk_probs if dk is None else dk.float() + dk_probs
+    return (
+        dq.to(query.dtype), dk.to(key.dtype), dv.to(value.dtype),
+        None, None, None, None, None, None,
+    )
 
 
 class _SDPAMath_A1_Function(torch.autograd.Function):
@@ -102,6 +182,8 @@ class _SDPAMath_A1_Function(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, dout, dprobs):
+        if getattr(ctx, "p800_fast", False):
+            return _p800_fast_backward(ctx, dout, dprobs)
         # 数学梯度（fp32，与 reference 同层）:
         #   S = scale·QKᵀ(+mask);  P0 = softmax(S)
         #   前向: 返回 P = P0⊙a_ret ;  O = (P0⊙a_out)@V

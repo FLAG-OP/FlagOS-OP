@@ -4,33 +4,38 @@
   "comparison": {
     "ok": true,
     "logits_linf": 0.015625,
-    "top1_rate": 0.9875,
-    "entropy_abs": 0.0007710456848144531,
+    "top1_rate": 0.99375,
+    "entropy_abs": 0.0008816719055175781,
     "greedy_sequence_match": true,
-    "embedding_grad": 1.144e-05,
+    "embedding_grad": 1.526e-05,
     "q0_grad": 3.81e-06,
-    "head_grad": 0.00024414
+    "head_grad": 0.00018311
   },
   "performance": {
     "forward_b1_s256": {
-      "native_ms": 7.8412,
-      "plugin_ms": 7.6964,
-      "speedup_native_over_plugin": 1.019
+      "native_ms": 7.6833,
+      "plugin_ms": 7.134,
+      "speedup_native_over_plugin": 1.077
     },
     "forward_b2_s128": {
-      "native_ms": 7.8854,
-      "plugin_ms": 7.6686,
-      "speedup_native_over_plugin": 1.028
+      "native_ms": 7.6588,
+      "plugin_ms": 7.134,
+      "speedup_native_over_plugin": 1.074
     },
-    "train_b1_s128": {
-      "native_ms": 36.4115,
-      "plugin_ms": 36.3233,
-      "speedup_native_over_plugin": 1.002
+    "train_out_b1_s128": {
+      "native_ms": 36.2247,
+      "plugin_ms": 24.9411,
+      "speedup_native_over_plugin": 1.452
+    },
+    "train_probs_b1_s128": {
+      "native_ms": 42.7334,
+      "plugin_ms": 28.7934,
+      "speedup_native_over_plugin": 1.484
     },
     "generate8_b1_s96": {
-      "native_ms": 72.9543,
-      "plugin_ms": 65.2107,
-      "speedup_native_over_plugin": 1.119
+      "native_ms": 66.2014,
+      "plugin_ms": 60.8347,
+      "speedup_native_over_plugin": 1.088
     }
   },
   "native": {
@@ -46,13 +51,14 @@
       "heads": "8/2",
       "vocab": 1024,
       "ffn": 256,
-      "probs_consumer": "attention entropy regularizer"
+      "probs_consumer": "optional attention entropy regularizer"
     },
     "cases": {
-      "forward_b1_s256": 7.8412,
-      "forward_b2_s128": 7.8854,
-      "train_b1_s128": 36.4115,
-      "generate8_b1_s96": 72.9543
+      "forward_b1_s256": 7.6833,
+      "forward_b2_s128": 7.6588,
+      "train_out_b1_s128": 36.2247,
+      "train_probs_b1_s128": 42.7334,
+      "generate8_b1_s96": 66.2014
     },
     "interceptions": 0,
     "fixed_sample": {
@@ -61,49 +67,49 @@
         160,
         1024
       ],
-      "logits_sum": -196.0477294921875,
-      "entropy": 4.045184135437012,
+      "logits_sum": -169.92758178710938,
+      "entropy": 4.044187545776367,
       "generated": [
-        644,
-        45,
-        289,
-        561,
-        388,
-        273,
-        988,
-        915,
-        406,
-        374,
-        40,
-        179,
-        131,
-        807,
-        156,
-        434,
-        198,
-        107,
-        892,
-        976,
-        966,
-        171,
-        34,
-        386,
-        646,
-        164,
-        563,
-        611,
-        536,
-        233,
-        693,
-        162,
-        645,
-        872,
-        803,
+        763,
+        116,
+        894,
+        237,
+        856,
+        558,
+        780,
+        655,
+        465,
+        544,
+        1000,
+        779,
+        492,
+        614,
+        11,
+        44,
         122,
-        491,
-        850,
-        184,
-        561
+        1018,
+        549,
+        796,
+        69,
+        421,
+        111,
+        691,
+        1005,
+        780,
+        453,
+        416,
+        846,
+        1004,
+        776,
+        613,
+        139,
+        311,
+        839,
+        300,
+        177,
+        909,
+        798,
+        685
       ]
     }
   },
@@ -120,65 +126,78 @@
       "heads": "8/2",
       "vocab": 1024,
       "ffn": 256,
-      "probs_consumer": "attention entropy regularizer"
+      "probs_consumer": "optional attention entropy regularizer"
     },
     "cases": {
-      "forward_b1_s256": 7.6964,
-      "forward_b2_s128": 7.6686,
-      "train_b1_s128": 36.3233,
-      "generate8_b1_s96": 65.2107
+      "forward_b1_s256": 7.134,
+      "forward_b2_s128": 7.134,
+      "train_out_b1_s128": 24.9411,
+      "train_probs_b1_s128": 28.7934,
+      "generate8_b1_s96": 60.8347
     },
-    "interceptions": 856,
+    "interceptions": 936,
     "fixed_sample": {
       "logits_shape": [
         1,
         160,
         1024
       ],
-      "logits_sum": -195.79934692382812,
-      "entropy": 4.045955181121826,
+      "logits_sum": -169.93434143066406,
+      "entropy": 4.045069217681885,
       "generated": [
-        644,
-        45,
-        289,
-        561,
-        388,
-        273,
-        988,
-        915,
-        406,
-        374,
-        40,
-        179,
-        131,
-        807,
-        156,
-        434,
-        198,
-        107,
-        892,
-        976,
-        966,
-        171,
-        34,
-        386,
-        646,
-        164,
-        563,
-        611,
-        536,
-        233,
-        693,
-        162,
-        645,
-        872,
-        803,
+        763,
+        116,
+        894,
+        237,
+        856,
+        558,
+        780,
+        655,
+        465,
+        544,
+        1000,
+        779,
+        492,
+        614,
+        11,
+        44,
         122,
-        491,
-        850,
-        184,
-        561
+        1018,
+        549,
+        796,
+        69,
+        421,
+        111,
+        691,
+        1005,
+        780,
+        453,
+        416,
+        846,
+        1004,
+        776,
+        613,
+        139,
+        311,
+        839,
+        300,
+        177,
+        909,
+        798,
+        685
       ]
+    }
+  },
+  "backward_ab": {
+    "train_out_b1_s128": {
+      "fused_off_ms": 37.376,
+      "fused_on_ms": 24.9411,
+      "speedup_off_over_on": 1.499
+    },
+    "train_probs_b1_s128": {
+      "fused_off_ms": 41.7227,
+      "fused_on_ms": 28.7934,
+      "speedup_off_over_on": 1.449
     }
   }
 }

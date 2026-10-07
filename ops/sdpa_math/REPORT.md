@@ -28,13 +28,13 @@
 |---|---|---|---|
 | 一键三层 | `python3 example.py ascend910` / `cpu` / `p800-kunlunxin` | ☑ 全绿（52+21+8/9 项） | — |
 | kernel 层 | `test/kernel_level.py` | ☑ 52 组 ×3 profile，哨兵/dropout/错误路径全过 | [reports/accuracy.md](reports/accuracy.md) |
-| 框架层 | `test/op_level.py` | ☑ 21 项：四模式拦截、注册=直调（逐位）、6 组 gradcheck、F.sdpa(MATH) 拦截 | [reports/test-report.md](reports/test-report.md) |
+| 框架层 | `test/op_level.py` | ☑ 22 项：四模式拦截、注册=直调（逐位）、P800 fused backward、6 组 gradcheck、F.sdpa(MATH) 拦截 | [reports/test-report.md](reports/test-report.md) |
 | 应用层 | `test/framework_level.py` | ☑ 8-9 项：mini-decoder + 概率图消费者；P800 在 FlagGems 栈内运行 | [reports/test-report.md](reports/test-report.md) |
 | 黄金回归 | `script/gen_golden.py` + `check_accuracy.py` | ☑ **175/175**（reference/torch/triton/p800 四实现）；原生对照 **131/131**（44 bool 跳过） | [reports/accuracy.md](reports/accuracy.md) |
 | 性能 | `script/bench_perf.py`（含 `--register` A1 路径） | ☑ NPU 直调 1.16-2.03x（6 形状全过）；CPU 1.05-1.40x；P800 1.46-2.21x | [reports/performance.md](reports/performance.md) |
 | 语义证据 | `probes/native_semantics.py` | ☑ 6 节全过（两 profile） | [reports/development.md](reports/development.md) |
 | perf 门禁 | `common/perf_registry.py` → `scripts/perf_run.py --pattern sdpa_math` | ☑ 已登记 `ops.sdpa_math` | [reports/performance.md](reports/performance.md) |
-| P800 | `python3 example.py p800-kunlunxin` | ☑ kernel 52 · 黄金 175/175 · A1 21 · FlagGems 应用层 9 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) |
+| P800 | `python3 example.py p800-kunlunxin` | ☑ kernel 52 · 黄金 175/175 · A1 22 · FlagGems 应用层 9 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) |
 | FlagOS E2E | `python3 script/e2e_flagos.py --device cuda:1` | ☑ 4 层 mini-LLM · forward/backward/generate · A1 拦截 856 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
 
 ## 关键数字
@@ -49,7 +49,7 @@
 | P800 fp16 | direct **1.46-2.21x** native；A1 **1.31-2.17x** | 同为返回 out+P 的公平口径 |
 | P800 no-P 参考 | exact-contract math 比 `F.sdpa` 慢 **1.98-4.46x** | **非同输出契约**：`F.sdpa` 不返回/物化 P，只作融合上限参考 |
 | A100 绝对性能 | 同契约 private-math 未测；非等价 no-P 口径下 P800 vendor efficient 为 A100·FA2 的 **36-53%** | 不能折算成 exact-P 加速比 |
-| FlagOS E2E | mini-LLM forward/generate **1.02-1.12x**；train **0.89-1.00x** | 训练瓶颈在 A1 数学 backward / `dprobs` 通路 |
+| FlagOS E2E | forward **1.07x**；train-out **1.45x**；train+probs **1.48x**；generate **1.09x** | fused backward off/on **1.45-1.50x**，覆盖 dO+dP |
 | 哨兵 | 确定性 ☑ 敏感 ☑（dropout 随机路径同种子可复现 ☑） | |
 
 ## 结论与遗留

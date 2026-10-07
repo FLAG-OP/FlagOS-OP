@@ -114,16 +114,23 @@ speedup = native / plugin（>1 表示 plugin 更快）。
 
 | workload | native | A1 plugin | speedup |
 |---|---:|---:|---:|
-| forward B1 S256 | 7.841ms | 7.696ms | **1.019x** |
-| forward B2 S128 | 7.885ms | 7.669ms | **1.028x** |
-| train B1 S128（CE + entropy backward） | 36.412ms | 36.323ms | **1.002x** |
-| generate 8 steps B1 S96 | 72.954ms | 65.211ms | **1.119x** |
+| forward B1 S256 | 7.683ms | 7.134ms | **1.077x** |
+| forward B2 S128 | 7.659ms | 7.134ms | **1.074x** |
+| train B1 S128（仅 CE / 不消费 P 梯度） | 36.225ms | 24.941ms | **1.452x** |
+| train B1 S128（CE + entropy backward） | 42.733ms | 28.793ms | **1.484x** |
+| generate 8 steps B1 S96 | 66.201ms | 60.835ms | **1.088x** |
 
-共享机器重复执行观察：forward **1.02-1.09x**、generate **1.06-1.12x**、
-train **0.89-1.00x**。模型中 GEMM/MLP 占比较高，单算子 1.46-2.21x 被
-稀释；训练收益会被 A1 自定义数学 backward（特别是 `dprobs` 熵正则通路）
-部分或全部抵消。训练场景需要继续优化 backward，不能把单算子加速比
-直接外推。
+同一脚本还执行 `SDPA_MATH_P800_FUSED_BWD=off/on` 子进程 A/B：
+
+| training workload | generic A1 backward | fused backward | off/on |
+|---|---:|---:|---:|
+| only CE | 37.376ms | 24.941ms | **1.499x** |
+| CE + probability entropy | 41.723ms | 28.793ms | **1.449x** |
+
+当前 P800 A1 backward 将 vendor efficient backward 用于 `dout`，并用已
+物化的 `P` 单独计算 `dprobs` Jacobian；训练链 **1.45-1.48x** native，
+fused backward 自身比 generic A1 backward 快 **1.45-1.50x**。模型中
+GEMM/MLP 占比较高，单算子 1.46-2.21x 被稀释；多步生成为 **1.09x**。
 
 ## 4. 回归门禁（入库基线）
 
@@ -156,8 +163,8 @@ python3 scripts/perf_compare.py --device p800-kunlunxin
 
 | case | 入库基线 | 复测 ms | Δ | 附加指标 | 判定 |
 |---|---:|---:|---:|---|---|
-| ops.sdpa_math.p800 | 0.485ms | 0.494ms | +1.9% | TFLOPS=8.694 | **OK** |
-| ops.sdpa_math.native | 1.035ms | 1.059ms | +2.3% | TFLOPS=4.056 | **OK** |
+| ops.sdpa_math.p800 | 0.485ms | 0.488ms | +0.6% | TFLOPS=8.804 | **OK** |
+| ops.sdpa_math.native | 1.035ms | 1.027ms | -0.8% | TFLOPS=4.184 | **OK** |
 
 **结论: FAIL 0 · WARN 0 · NEW 0**。本次基线更新是 P800 exact-P fast path
 的 intentional optimization，不是环境漂移。

@@ -80,6 +80,23 @@ def run(profile):
     base_out, base_p = _op(q, k, v, m, 0.0, False, None)
     base_out, base_p = base_out.clone(), base_p.clone()
 
+    # P800 fused backward probe: native gradient is captured before the A1
+    # registration takes over this op.  This no-mask causal GQA case is the
+    # production fast path (unlike the float-mask case above).
+    fast_baseline = None
+    if profile.vendor == "kunlunxin":
+        qf, kf, vf, _ = _mk(1, 8, 2, 96, 64, dev, seed=21,
+                            dtype=torch.float16)
+        f_out, f_p = _op(qf, kf, vf, None, 0.0, True, None, gqa=True)
+        f_do, f_dp = torch.randn_like(f_out), torch.randn_like(f_p)
+        fast_baseline = torch.autograd.grad(
+            (f_out, f_p), (qf, kf, vf), (f_do, f_dp),
+            retain_graph=False,
+        )
+        fast_baseline = tuple(x.detach().clone() for x in fast_baseline)
+        fast_qkv = tuple(x.detach().clone().requires_grad_(True)
+                         for x in (qf, kf, vf))
+
     # ── 1) 注册: profile 键 + CPU 键（gradcheck / F.sdpa 走 torch impl）──
     # 注册返回的 lib 必须持有引用（否则注册被 GC 掉，见 register.py）
     ctr_main: dict = {"n": 0}
@@ -155,6 +172,19 @@ def run(profile):
     e_gp = max((a - b.detach()).abs().max().item() for a, b in zip(gp, ref_gp))
     check("out-消费者梯度 = 参考反传", e_go < 1e-4, f"max={e_go:.2e}")
     check("P-消费者梯度 = 参考反传", e_gp < 1e-4, f"max={e_gp:.2e}")
+
+    if fast_baseline is not None:
+        qf, kf, vf = fast_qkv
+        f_out, f_p = _op(qf, kf, vf, None, 0.0, True, None, gqa=True)
+        got_fast = torch.autograd.grad(
+            (f_out, f_p), (qf, kf, vf), (f_do, f_dp), retain_graph=False,
+        )
+        fast_err = max(
+            (a.float() - b.float()).abs().max().item()
+            for a, b in zip(got_fast, fast_baseline)
+        )
+        check("P800 fused backward = native", fast_err < 0.01,
+              f"max={fast_err:.2e}")
 
     # ── 5) gradcheck (fp64, CPU 键 → torch impl) ──
     def gc(name, make, fn, with_mask_grad=False):

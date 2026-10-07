@@ -11,7 +11,7 @@
 | 层级 | 覆盖 | 入口 | 结果 |
 |---|---|---|---|
 | kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×3 profile |
-| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：21 项（四模式拦截 · 注册=直调逐位 · 6 组 gradcheck · F.sdpa(MATH)） |
+| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：22 项（四模式拦截 · 注册=直调逐位 · P800 fused backward · 6 组 gradcheck · F.sdpa(MATH)） |
 | 应用层 | ☑ | `test/framework_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：8-9 项（mini-decoder + 概率图消费者双跑） |
 | 黄金回归 | ☑ | `script/gen_golden.py` + `check_accuracy.py` | **175/175** ×4 实现；原生对照 131/131（44 bool 跳过） |
 | 性能门禁 | ☑ | `scripts/perf_run.py --pattern sdpa_math` + `perf_compare.py` | OK：FAIL 0 · WARN 0（triton 0.504ms / 8.524 TFLOPS 入库基线） |
@@ -72,7 +72,7 @@ P800 fast 直测同样 52/52：fp32 回退路径 max `7.15e-7`，fp16
 native 怪癖 `O = (P/(1-p))@V`；随机路径 keep 率 0.499（期望 0.5）、
 kept 上缩放 2.000（期望 `1/(1-p)`）。
 
-### 3.3 框架层（21 项）
+### 3.3 框架层（22 项）
 
 | 检查 | 结果 |
 |---|---|
@@ -81,6 +81,7 @@ kept 上缩放 2.000（期望 `1/(1-p)`）。
 | 注册路径 vs 原生基线 | NPU 3.58e-7 / CPU 4.17e-7 |
 | gradcheck（fp64，6 组） | base / causal / float-mask ±grad / gqa / explicit-dropout / **概率图消费者 dP** 全过 |
 | out-消费者 / P-消费者梯度 vs 参考反传 | 4.3e-7 / 7.5e-8（NPU） |
+| P800 fused backward（fp16 causal GQA，dO+dP） | vs native max **3.91e-3** |
 | `F.sdpa(MATH)` 拦截 + 输出=参考 | CPU 键命中，err 2.98e-7 |
 | 错误路径 | causal+mask、GQA 不整除均抛出 native 同款异常 |
 | 拦截总次数 | 3822（gradcheck 逐点调用计入） |
@@ -116,7 +117,7 @@ kept 上缩放 2.000（期望 `1/(1-p)`）。
 |---|---|
 | kernel | 52/52；`p800_fast_level` direct 与 CPU reference 全部对齐 |
 | 黄金 | `--impl p800 --device cuda:1` **175/175**，worst 3.906e-3（bf16 容差内） |
-| A1 | `AutogradCUDA+CUDA` 成对注册；21/21 项通过（含 6 组 fp64 gradcheck） |
+| A1 | `AutogradCUDA+CUDA` 成对注册；22/22 项通过（含 P800 fused backward 与 6 组 fp64 gradcheck） |
 | 应用层 | `flag_gems.only_enable(['gelu'])` 后 9/9；logits / 概率图 / 梯度 diff 均为 0 |
 | perf gate | `ops.sdpa_math.p800` / `.native` 入库；FAIL 0 · WARN 0 |
 
@@ -141,18 +142,17 @@ backward、8 步贪心生成。
 
 | 检查 | 结果 |
 |---|---|
-| A1 拦截 | 856 次 |
+| A1 拦截 | 936 次 |
 | logits L∞ | **0.015625**（bf16 阈值 0.02 内） |
-| top-1 一致率 | **98.75%**（160 个位置，bf16 语义噪声阈值 ≥98%） |
-| 注意力熵差 | **7.71e-4** |
+| top-1 一致率 | **99.38%**（160 个位置，bf16 语义噪声阈值 ≥98%） |
+| 注意力熵差 | **8.82e-4** |
 | 8 步贪心序列 | **完全一致** |
-| embedding / q0 / head 梯度 L∞ | **1.14e-5 / 3.81e-6 / 2.44e-4** |
+| embedding / q0 / head 梯度 L∞ | **1.53e-5 / 3.81e-6 / 1.83e-4** |
 
 原始数据: [e2e_flagos_p800-kunlunxin.json](e2e_flagos_p800-kunlunxin.json)。
-端到端延迟见 [performance.md](performance.md) §3.4。共享机器重复执行：
-forward **1.02-1.09x**、generate **1.06-1.12x**、train **0.89-1.00x**。
-训练收益会被自定义数学 backward 的 `dprobs` 通路部分抵消，这是真实风险
-而非单算子结论。
+端到端延迟见 [performance.md](performance.md) §3.4。训练链分别覆盖
+“仅 CE（不消费 P 梯度）”与“CE+概率图熵正则”两条真实路径：
+**1.45x / 1.48x**；fused backward off/on A/B 为 **1.50x / 1.45x**。
 
 ## 5. 问题与风险
 
