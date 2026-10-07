@@ -77,6 +77,24 @@ A1 − native ≈ **0.0241ms**；A1 与 direct backend 基本同档
 3. Triton gather 正确但慢约 3.5-102x，不作为生产实现；
 4. inverse-frequency fallback 填补 XPU native 缺口，而不是更快路径。
 
+### FLAG-OP/gatherFIX 对照
+
+[FLAG-OP/gatherFIX](https://github.com/FLAG-OP/gatherFIX) 修复的是
+Ascend `torch.gather` 非连续 index 的正确性。为确认它与 embedding
+row lookup 的差异，`script/probe_gatherfix.py` 将其 stride-aware rank-5
+算法特化到 P800 `weight[index]`：
+
+| shape | native embedding | ours/index_select | gatherFIX 特化 |
+|---|---:|---:|---:|
+| 1k×D128 | 0.0386ms | 0.0392ms | 0.4213ms |
+| 16k×D128 | 0.0705ms | 0.0738ms | 3.2452ms |
+| 131k×D128 | 0.2696ms | 0.3595ms | 22.6192ms |
+| 16k×D512 | 0.0636ms | 0.0763ms | 11.3235ms |
+| vocab128k 16k×D128 | 0.0525ms | 0.0535ms | 3.3008ms |
+
+精度为 0 error；性能为 native 的 **10.9-177.9x 延迟**。结论：gatherFIX
+解决的是 Ascend correctness，不改变当前 P800 production 选择。
+
 复现：
 
 ```bash

@@ -94,6 +94,38 @@ Check scale_grad_by_freq == false failed
 结论：XMLIR native row-gather 是当前正确交付选择；Python/Triton 侧重写
 不能带来收益。
 
+### 与 FLAG-OP/gatherFIX 的关系
+
+组织内已有 [FLAG-OP/gatherFIX](https://github.com/FLAG-OP/gatherFIX)。
+它修复的是 **Ascend `torch.gather` 非连续 index 越界**（FlagGems issue
+#5746）：原 kernel 将非连续 index 当作线性平铺读取，修复引入
+stride-aware kernel。
+
+为了避免误用结论，本 PR 将该 stride-aware 算法特化成 P800 embedding
+row lookup 并实测（`script/probe_gatherfix.py`）：
+
+| shape | native embedding | ours/index_select | gatherFIX 特化 |
+|---|---:|---:|---:|
+| 1k×D128 | 0.0386ms | 0.0392ms | 0.4213ms |
+| 16k×D128 | 0.0705ms | 0.0738ms | 3.2452ms |
+| 131k×D128 | 0.2696ms | 0.3595ms | 22.6192ms |
+| 16k×D512 | 0.0636ms | 0.0763ms | 11.3235ms |
+
+结果：正确性 0 error，但该修复是 Ascend correctness fix，不表示 P800
+embedding / `index_select` 的 Triton 性能已达 native。生产路径继续使用
+XMLIR native row gather。
+
+该结论不等价于：
+
+```text
+aten::embedding(dim=0 row lookup)
+aten::index_select
+P800/Kunlunxin Triton gather 性能已达到 native row-gather
+```
+
+本页数字来自当前锁定镜像与组织 gatherFIX 算法的 P800 特化探针；更新版
+FlagGems 仍应按环境升级 runbook 重测。
+
 ## FlagOS 框架测试口径
 
 框架/应用验证运行在 FlagOS 算子栈内：
