@@ -23,11 +23,21 @@ gather，行采集是厂商库强项，**生产委托是两平台一致的工程
 
 | 层级 | 入口 | 结果 |
 |---|---|---|
-| kernel 层 | `EMBEDDING_PROFILE=ascend910 python3 test/kernel_level.py` | ✅ 20 前向 + 6 反向 case，err=0.0（委托原生本征精确） |
-| op 层 | `test/op_level.py` | ✅ 拦截 5 次 · 注册=直调逐位 · dense/scale_freq 梯度 err=0.0 · sparse bwd 守卫 |
-| 应用层 | `test/framework_level.py` | ✅ nn.Embedding+TokenMLP 消费: logits diff=0 · top1=1.0 · 续写一致率 1.0 |
-| 黄金 | `gen_golden.py` + `check_accuracy.py --impl ascend` | ✅ 350 PASS（data 本地生成） |
-| 一键 | `EMBEDDING_PROFILE=ascend910 python3 example.py` | ✅ 三层全绿 |
+| 层 | 命令 | 结果 |
+|---|---|---|
+| kernel 层（ascend910） | `EMBEDDING_PROFILE=ascend910 python3 test/kernel_level.py` | ✅ 20 前向 + 6 反向 case，err=0.0（委托原生本征精确） |
+| op 层（ascend910） | `test/op_level.py` | ✅ 拦截 5 次 · 注册=直调逐位 · dense/scale_freq 梯度 err=0.0 · sparse bwd 守卫 |
+| 应用层（ascend910） | `test/framework_level.py` | ✅ nn.Embedding+TokenMLP 消费: logits diff=0 · top1=1.0 · 续写一致率 1.0 |
+| 黄金（ascend910） | `gen_golden.py` + `check_accuracy.py --impl ascend` | ✅ 350 PASS（data 本地生成） |
+| 一键（ascend910） | `EMBEDDING_PROFILE=ascend910 python3 example.py` | ✅ 三层全绿 |
+| kernel forward（p800） | `test/kernel_level.py` | 20/20，FP32/FP16/BF16 全部 0 error |
+| kernel backward（p800） | 同上 | 6/6；重复 index、padding、`scale_grad_by_freq` 全部 0 error |
+| 黄金（p800） | `script/check_accuracy.py --impl p800` | 174/174，worst=0 |
+| A1 op（p800） | `test/op_level.py` | 拦截 5 次；hooked=direct 逐位；dense/scale/sparse 边界全绿 |
+| 应用层（p800） | `test/framework_level.py`（FlagGems enabled） | `nn.Embedding` + MLP；logits/梯度 0 diff；贪心一致率 1.00 |
+| 性能（p800） | `script/bench_perf.py` | 大 shape native parity；Triton 显著慢 |
+| dispatch（p800） | `script/bench_dispatch.py` | A1 vs native 附加约 0.024ms |
+| gatherFIX 对照（p800） | `script/probe_gatherfix.py` | 正确性 0 error；P800 特化比 native 慢 10.9-177.9x |
 
 ## 性能速览（fp16）
 
