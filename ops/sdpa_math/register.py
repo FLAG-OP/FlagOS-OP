@@ -20,16 +20,29 @@ import os
 
 import torch
 
+# wt 2026-10-07-fix 导入改三层链: 包态优先, 脚本态 fallback, 都失败
+# （如 CI 无 triton）时降级为 torch 级+惰性加载——register_a1(impl=)
+# 按需再取对应实现, 包化扫描（ops-packaging CI 门）不再被 triton
+# 缺失阻断。triton/p800 各自的可用性在注册守卫里再探。
+# # wt <wangt635@ustc.edu.cn>
 try:  # Package-style import: ops.sdpa_math.register
     from .kernel.torch_level import sdpa_math_torch
     from .kernel.triton_level import PLATFORM, sdpa_math_triton
     from .kernel.p800_fast_level import sdpa_math_p800_fast
     from .reference import _softmax01, make_dropout_mask, sdpa_math_reference
 except ImportError:  # Standalone import with OP_DIR on sys.path
-    from kernel.torch_level import sdpa_math_torch
-    from kernel.triton_level import PLATFORM, sdpa_math_triton
-    from kernel.p800_fast_level import sdpa_math_p800_fast
-    from reference import _softmax01, make_dropout_mask, sdpa_math_reference
+    try:
+        from kernel.torch_level import sdpa_math_torch
+        from kernel.triton_level import PLATFORM, sdpa_math_triton
+        from kernel.p800_fast_level import sdpa_math_p800_fast
+        from reference import _softmax01, make_dropout_mask, sdpa_math_reference
+    except ImportError:
+        # 无 triton 环境（CI 包化扫描等）: torch 级兜底, 其余惰性
+        from .kernel.torch_level import sdpa_math_torch  # noqa: F811
+        PLATFORM = "ascend910"
+        sdpa_math_triton = None
+        sdpa_math_p800_fast = None
+        from .reference import _softmax01, make_dropout_mask, sdpa_math_reference  # noqa: F811
 
 _IMPLS = {
     "triton": sdpa_math_triton,
