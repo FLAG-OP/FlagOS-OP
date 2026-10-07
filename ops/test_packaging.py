@@ -60,6 +60,16 @@ print(f"[3] 双算子消费 OK: embedding err={err_e}, sdpa 小S err={err_s:.2e}
 print(f"    sdpa 路由: native={stats['routed_native']} "
       f"triton={stats['routed_triton']}")
 
+# ── 3.5 全算子包态导入扫描（审计回归: __init__.py 逐个可导）──
+import importlib as _il
+_ops_dir = ROOT / "ops"
+for _d in sorted(_ops_dir.iterdir()):
+    if not _d.is_dir() or _d.name.startswith("__"):
+        continue
+    _m = _il.import_module(f"ops.{_d.name}")
+    assert hasattr(_m, "register_a1"), f"ops.{_d.name} 缺 register_a1 导出"
+print(f"[3.5] 全算子包态导入 OK（{sum(1 for _d in _ops_dir.iterdir() if _d.is_dir() and not _d.name.startswith('__'))} 目录）")
+
 # ── 4. 单算子旧用法兼容（脚本模式 sys.path 注入）──
 import subprocess
 r = subprocess.run(

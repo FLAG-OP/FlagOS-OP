@@ -62,6 +62,9 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 ## 约定
 
 - **目录名 = 算子名**（小写下划线，如 `gelu_and_mul`）
+- **交付自查清单**: 见 templates/operator/README「交付自查清单」节
+  （2026-10-07 审计后新增——13 算子曾缺包化入口已补齐，后续算子
+  合并前照单自查，勿再欠账）
 - **包化导入（多算子同进程必用）**: 目录含 `__init__.py`，
   `from ops.sdpa import register_a1` / `from ops.embedding import
   register_a1` / `from ops.sdpa_math import register_a1` 顶层名带包前缀，
