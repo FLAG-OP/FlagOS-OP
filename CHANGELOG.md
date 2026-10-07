@@ -33,6 +33,20 @@
 
 ## [Unreleased]
 
+### Changed
+- **13 个 MLU 算子 register 签名对齐新库约定**（#19）:
+  `_local_scalar_dense` / `clone` / `contiguous` / `copy_` / `detach` /
+  `detach_` / `dropout` / `empty` / `empty_like` / `empty_strided` /
+  `item` / `result_type` / `type_as` 统一支持
+  `counter` 拦截计数与显式 `platform` 参数；单平台 Cambricon 会校验
+  platform/dispatch key；aten 实现导入改为包态相对导入 + 单算子脚本
+  fallback，三个不可 A1 注册的算子保留原有禁用语义
+
+### Fixed
+- 恢复 #20 中被截断的 `docs-and-syntax` 完整脚本：Markdown 链接、
+  Python 语法、YAML、intake manifest 与性能基线结构检查重新生效；
+  保留新增 `ops-packaging` 门
+
 ### Added
 - **sdpa_math 第二平台: p800-kunlunxin**（vendor O/LSE + exact-P + A1）
   - `_profile` / benchmark / framework 消费方接入 P800；A1 使用
