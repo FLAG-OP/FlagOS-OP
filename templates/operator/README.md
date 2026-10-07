@@ -113,8 +113,8 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 > 2026-10-07 全库审计后新增——审计发现 13 算子缺包化入口、多平台
 > 算子缺 PLATFORM/MERGE 文档。后续作者请勿再欠账:
 
-- [ ] 核心八件: README / REPORT /  / reference /
-      register / example / kernel/ / test/
+- [ ] 核心八件: README / REPORT / `__init__.py`（包化入口） /
+      reference / register / example / kernel/ / test/
 - [ ] 三层测试: test/{kernel,op,framework}_level.py 全绿
 - [ ] 性能对照: script/bench_perf.py（native 参照必备）+ reports/ 四件套
 - [ ] 黄金: goldendata/ + script/check_accuracy.py 全过

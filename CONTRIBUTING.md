@@ -16,6 +16,13 @@ python3 run.py --route a1 --level op     # 跑最轻的一格
 - [ ] 从 [templates/operator](templates/operator/) 样板起步，目录放
       [ops/](ops/README.md)（`cp -r templates/operator ops/<算子名>/`）
       并在 ops/README 索引表登记
+- [ ] **包化入口必带**: 目录含 `__init__.py`（模板已带，改名后更新
+      导出）；合并前 `python3 ops/test_packaging.py` 全算子导入扫描
+      绿（多算子同进程冲突的硬门，见 #13/#14 实证）
+- [ ] **交付自查清单**: 按模板 README「交付自查清单」逐项打勾
+      （三层测试/性能对照/黄金/署名等七项）
+- [ ] **多平台时**: 补 PLATFORM.md（绑定清单）+ MERGE.md（七步
+      流程）——范式见 ops/embedding 双份
 - [ ] 补 `goldendata/inputs_spec.yaml` 并生成黄金（含非整倍数维度与
       zeros/large/boundary 特殊用例）
 - [ ] `example.py` 含 `main()` 入口 + 设备 profile 参数（不硬编码设备）
