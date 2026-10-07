@@ -106,4 +106,18 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
    转发原生会无限递归, 用函数层 patch（sdpa 教训）
 
 参考样例: [ops/sdpa](../../ops/sdpa/)（三平台 + 路由 + e2e）·
-[ops/embedding](../../ops/embedding/)（双平台 + 委托模式）。
+[ops/embedding](../../ops/embedding/)（三平台 + 委托模式 + facade）。
+
+## 交付自查清单（合并前逐项打勾）
+
+> 2026-10-07 全库审计后新增——审计发现 13 算子缺包化入口、多平台
+> 算子缺 PLATFORM/MERGE 文档。后续作者请勿再欠账:
+
+- [ ] 核心八件: README / REPORT /  / reference /
+      register / example / kernel/ / test/
+- [ ] 三层测试: test/{kernel,op,framework}_level.py 全绿
+- [ ] 性能对照: script/bench_perf.py（native 参照必备）+ reports/ 四件套
+- [ ] 黄金: goldendata/ + script/check_accuracy.py 全过
+- [ ] 包化回归: `ops/test_packaging.py` 全算子导入扫描通过
+- [ ] 多平台时: PLATFORM.md（绑定清单）+ MERGE.md（七步流程）
+- [ ] 署名: 改动处 `wt-YYYY-MM-DD-fix` + `# wt <邮箱>`，commit 作者一致
