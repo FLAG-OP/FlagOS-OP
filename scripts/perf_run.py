@@ -24,7 +24,8 @@ sys.path.insert(0, str(ROOT))
 
 def main() -> int:
     from common.device import detect_profile, list_profiles, load_profile
-    from common.perf import run_case, save_baseline, save_run_record
+    from common.perf import (clear_run_records, run_case, save_baseline,
+                             save_run_record)
     from common.perf_registry import load_cases
 
     ap = argparse.ArgumentParser(description=__doc__)
@@ -46,6 +47,12 @@ def main() -> int:
         profile = detect_profile()
 
     cases = load_cases(profile, groups=args.group, pattern=args.pattern)
+
+    # A skipped case must leave no stale record behind. Otherwise compare can
+    # silently use a previous successful JSON and turn a real loader failure
+    # into a green gate.
+    if not args._one:
+        clear_run_records(profile.name, [case.case_id for case in cases])
 
     # 内部模式: 单用例执行并落盘（由主进程按用例子进程调用）
     if args._one:
@@ -107,7 +114,7 @@ def main() -> int:
         out = save_baseline_dicts(profile.name, records)
         print(f"[perf-run] 基线已更新: {out}")
         print("[perf-run] 提交基线时请在提交信息说明原因（算子语义变更/环境升级等）")
-    return 0 if records else 1
+    return 0 if records and n_skip == 0 else 1
 
 
 if __name__ == "__main__":

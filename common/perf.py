@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 PERF_DIR = ROOT / "perf" / "baselines"
@@ -163,9 +163,23 @@ def classify_delta(delta: float | None, warn: float, fail: float) -> str:
 def save_run_record(rec: PerfRecord) -> Path:
     d = RUN_DIR / rec.device
     d.mkdir(parents=True, exist_ok=True)
-    p = d / f"{_safe_name(rec.case_id)}.json"
+    p = run_record_path(rec.device, rec.case_id)
     p.write_text(json.dumps(rec.to_dict(), indent=2))
     return p
+
+
+def run_record_path(device: str, case_id: str) -> Path:
+    return RUN_DIR / device / f"{_safe_name(case_id)}.json"
+
+
+def clear_run_records(device: str, case_ids: Optional[Iterable[str]] = None) -> None:
+    """Remove current-run records so compare cannot consume stale values."""
+    if case_ids is None:
+        paths = list((RUN_DIR / device).glob("*.json"))
+    else:
+        paths = [run_record_path(device, case_id) for case_id in case_ids]
+    for path in paths:
+        path.unlink(missing_ok=True)
 
 
 def load_run_records(device: str) -> list[dict]:

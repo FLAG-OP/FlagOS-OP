@@ -23,10 +23,10 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
-try:  # Standalone ops/sdpa execution inserts OP_DIR into sys.path.
+try:  # Package-style import from repository root / multi-operator process.
+    from ...reference import sdpa_reference
+except ImportError:  # Standalone ops/sdpa execution inserts OP_DIR in sys.path.
     from reference import sdpa_reference
-except ModuleNotFoundError:  # Package-style import from repository root.
-    from ops.sdpa.reference import sdpa_reference
 
 
 PLATFORM = "p800-kunlunxin"
