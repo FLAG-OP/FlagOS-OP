@@ -94,6 +94,13 @@ kernel/backends/
 
 合并流程与后续平台扩展仍按 [MERGE.md](MERGE.md) 执行。
 
+多算子同进程/perf registry 会按 provider 顺序加载多个 `reference.py`。
+backend 内不允许裸 `from reference import ...` 作为首选路径：一旦其他
+算子的顶层 `reference` 已进入 `sys.modules`，该导入会解析到错误模块。
+正确顺序是包态相对导入优先（如 `from ...reference import ...`），仅
+单算子脚本模式 fallback 到顶层 `reference`。该问题已在
+`tests/unit/test_sdpa_backend_import.py` 固化。
+
 ## 6. 引用防误用
 
 函数名**有意**保持 `sdpa_triton`（公共 API 稳定）。平台区分靠三层：
