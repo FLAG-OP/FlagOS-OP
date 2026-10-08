@@ -33,6 +33,10 @@
 
 ## [Unreleased]
 
+### Changed
+- sdpa `PLATFORM.md` 补记多算子 perf registry 顺序加载时的顶层
+  `reference` 遮蔽约束；backend 导入回归测试同步覆盖 P800 与 MLU
+
 ### Fixed
 - P800 性能门禁多算子加载时，`ops.sdpa` backend 的裸 `reference`
   导入可能命中 `sdpa_math.reference` 等同名顶层模块，导致
