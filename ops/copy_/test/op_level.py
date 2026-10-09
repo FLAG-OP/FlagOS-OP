@@ -36,13 +36,15 @@ def run(profile):
     copy_reference(idst_ref, isrc)
 
     reg.CALL_COUNT["copy_"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
 
     # 1) 拦截 + 原地返回 + cast
     before = reg.CALL_COUNT["copy_"]
     out = dst.copy_(src)
     assert reg.CALL_COUNT["copy_"] > before, "aten::copy_ 未被拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert out is dst, "copy_ 未返回 self"
     assert out.dtype == torch.float32
     assert torch.equal(out, dst_ref), "拦截后 cast 精度不一致"

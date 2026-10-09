@@ -24,13 +24,15 @@ def run(profile):
     cl_ref = contiguous_reference(cl, memory_format=torch.channels_last)
 
     reg.CALL_COUNT["contiguous"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
 
     # 1) 拦截验证（非连续输入）
     before = reg.CALL_COUNT["contiguous"]
     out = x.contiguous()
     assert reg.CALL_COUNT["contiguous"] > before, "aten::contiguous 未被拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert out.is_contiguous() and torch.equal(out, exp)
 
     # 2) 别名快路径

@@ -24,13 +24,15 @@ def run(profile):
     xi_ref = clone_reference(xi)
 
     reg.CALL_COUNT["clone"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
 
     # 1) 拦截验证
     before = reg.CALL_COUNT["clone"]
     out = x.clone()
     assert reg.CALL_COUNT["clone"] > before, "aten::clone 未被拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert torch.equal(out, exp), "拦截后数值不一致"
     assert out.data_ptr() != x.data_ptr(), "拦截后仍共享存储"
 

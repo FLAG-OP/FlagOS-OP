@@ -24,13 +24,15 @@ def run(profile):
                                     dtype=torch.float32, device=dev))
 
     reg.CALL_COUNT["empty_strided"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
 
     before = reg.CALL_COUNT["empty_strided"]
     out = torch.empty_strided((128, 256), (1, 128), dtype=torch.float32,
                               device=dev)
     assert reg.CALL_COUNT["empty_strided"] > before, "未被拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert _meta(out) == exp, f"元数据变形 {_meta(out)} != {exp}"
 
     # 重叠 stride

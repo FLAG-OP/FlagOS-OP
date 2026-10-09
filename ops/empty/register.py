@@ -8,7 +8,9 @@ from __future__ import annotations
 ROUTE = "自用/实验"
 
 
-def register_a1(dispatch_key: str = "PrivateUse1"):
+def register_a1(dispatch_key: str = "AutogradPrivateUse1",
+                counter: dict | None = None,
+                platform=None):
     raise NotImplementedError(
         "empty 不做 A1 注册：分配原语注册会与 empty_strided 递归，"
         "且全局覆盖 torch.empty 风险高。route=自用/实验。"

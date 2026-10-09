@@ -20,11 +20,13 @@ def run(profile):
     exp_ptr, exp_stride = x.data_ptr(), tuple(x.stride())
 
     reg.CALL_COUNT["detach"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
     before = reg.CALL_COUNT["detach"]
     got = torch.ops.aten.detach.default(x)
     assert reg.CALL_COUNT["detach"] > before, "未拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert got.data_ptr() == exp_ptr and got.stride() == exp_stride
     assert got.requires_grad is False
     return {"ok": True,

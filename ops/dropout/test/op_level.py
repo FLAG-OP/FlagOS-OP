@@ -18,7 +18,8 @@ def run(profile):
     dev = profile.torch_device
 
     reg.CALL_COUNT["dropout"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
 
     # 1) 拦截: F.dropout 命中
@@ -26,6 +27,7 @@ def run(profile):
     before = reg.CALL_COUNT["dropout"]
     _ = F.dropout(x, 0.0, True)
     assert reg.CALL_COUNT["dropout"] > before, "F.dropout 未被拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     after = reg.CALL_COUNT["dropout"]
 
     # 2) 确定性分支
