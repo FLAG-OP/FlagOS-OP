@@ -26,12 +26,14 @@ def run(profile):
     exp_mf = _meta(torch.empty_like(x, memory_format=torch.contiguous_format))
 
     reg.CALL_COUNT["empty_like"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
 
     before = reg.CALL_COUNT["empty_like"]
     out = torch.empty_like(x)
     assert reg.CALL_COUNT["empty_like"] > before, "aten::empty_like 未被拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert _meta(out) == exp_meta, f"元数据变形 {_meta(out)} != {exp_meta}"
     assert out.data_ptr() != x.data_ptr(), "共享存储"
 

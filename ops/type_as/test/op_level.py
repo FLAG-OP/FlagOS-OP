@@ -17,7 +17,8 @@ def run(profile):
 
     dev = profile.torch_device
     reg.CALL_COUNT["type_as"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
 
     # 1) 拦截验证: torch 宿主调用必须命中我们的实现
@@ -27,6 +28,7 @@ def run(profile):
     out = torch.ops.aten.type_as.default(x, other)
     after = reg.CALL_COUNT["type_as"]
     assert after > before, "aten::type_as 未被拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert torch.equal(out, type_as_reference(x, other)), "拦截后精度不一致"
 
     # 1b) 方法式调用同样命中

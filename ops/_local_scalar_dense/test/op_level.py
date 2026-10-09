@@ -21,12 +21,14 @@ def run(profile):
         exp = x.item()
 
     reg.CALL_COUNT["_local_scalar_dense"] = 0
-    lib = reg.register_a1(profile.dispatch_key)
+    _CALLS = {"n": 0}
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
     assert lib is not None
     before = reg.CALL_COUNT["_local_scalar_dense"]
     x = torch.full((1,), 3.5, dtype=torch.float32, device=dev)
     got = torch.ops.aten._local_scalar_dense.default(x)
     assert reg.CALL_COUNT["_local_scalar_dense"] > before, "未拦截"
+    assert _CALLS["n"] > 0, "counter 未记入（op 层拦截）"
     assert got == 3.5, got
     return {"ok": True,
             "registered": "aten::_local_scalar_dense@" + profile.dispatch_key,
