@@ -67,7 +67,8 @@ audit 是一个"什么都不算、但什么都记录"的厂商实现: 数值全�
 真实 kernel 时，任何输出变化都能干净地归因于 kernel 本身。
 
 1. 验证 vendor 路线的注册/选择/调用链路
-2. framework 验证（应用层）测试中拦截真实 vLLM 前向流量
+2. framework 验证（应用消费者层）测试中拦截目标消费者流量；真实 vLLM
+   与 mini consumer 的证据等级按[测试体系](testing.md#framework)标注
 
 委托目标由设备 profile 的 `vendor_delegate` 字段驱动
 （未声明或厂商库缺失时自动退化 reference.torch）。

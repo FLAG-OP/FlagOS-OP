@@ -107,16 +107,13 @@ operators:
     directory: embedding
     group: core
     purpose: 稠密 embedding 前向和 dense backward。
-    key_result: 已在三个当前厂商平台交付；MLU 侧具备逐位覆盖。
+    key_result: 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
     platforms:
-      ascend:
-        profiles: [ascend910]
-        implementation: 厂商 index_select 与 dense_backward 委托
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: 原生 row-gather 与反向补偿
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
         implementation: 原生 index_select 与 embedding_backward 委托
 
   - name: type_as
@@ -127,7 +124,7 @@ operators:
     key_result: 黄金 111/111，结果逐位一致。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: clone
     directory: clone
@@ -137,7 +134,7 @@ operators:
     key_result: 黄金 48/48；op 层测试覆盖包态执行。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: contiguous
     directory: contiguous
@@ -147,7 +144,7 @@ operators:
     key_result: 黄金 114/114；转置路径使用 2D swizzle 调度。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: copy_
     directory: copy_
@@ -157,7 +154,7 @@ operators:
     key_result: 黄金 78/78。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: dropout
     directory: dropout
@@ -167,7 +164,7 @@ operators:
     key_result: 黄金 189/189。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: detach
     directory: detach
@@ -177,7 +174,7 @@ operators:
     key_result: 黄金 36/36。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: detach_
     directory: detach_
@@ -187,7 +184,7 @@ operators:
     key_result: 按设计不可 A1 注册，保持 NotImplementedError。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: empty_like
     directory: empty_like
@@ -197,7 +194,7 @@ operators:
     key_result: 元数据黄金 168/168。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: empty
     directory: empty
@@ -207,7 +204,7 @@ operators:
     key_result: 不注册，避免与 empty_strided 递归；元数据黄金 48/48。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: empty_strided
     directory: empty_strided
@@ -217,7 +214,7 @@ operators:
     key_result: 元数据黄金 30/30。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: result_type
     directory: result_type
@@ -227,7 +224,7 @@ operators:
     key_result: 纯元数据函数；按设计不可 A1 注册。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: item
     directory: item
@@ -237,7 +234,7 @@ operators:
     key_result: 黄金 36/36。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
   - name: _local_scalar_dense
     directory: _local_scalar_dense
@@ -247,7 +244,7 @@ operators:
     key_result: 黄金 36/36。
     platforms:
       cambricon:
-        profiles: [cambricon, mlu590]
+        profiles: [cambricon]
 
 registration_contracts:
   cambricon-foundation:

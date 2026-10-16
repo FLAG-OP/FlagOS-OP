@@ -7,7 +7,7 @@
 | 开发级别 | 厂商 kernel 委托（TMO FA + fused overrideable；非自研 Triton） |
 | 目标设备 | `mlu590` |
 | 测试日期 | 2026-09-23 |
-| 结论 | **通过** |
+| 结论 | **有条件通过**（C1 mini-decoder；真实 vLLM 待具备 runtime 后复验） |
 
 ## 1. 测试范围
 
@@ -15,13 +15,13 @@
 |---|---|---|---|
 | kernel 层（精度/哨兵/性能） | ✅ | `ops/sdpa/test/kernel_level.py mlu590` | PASS（**37/37** + 哨兵 + 1k D128 0.25ms） |
 | 框架层（注册/拦截/梯度） | ✅ | `ops/sdpa/test/op_level.py mlu590` | PASS（A1 拦截 · 注册=直调逐位 · vs 原生 4.88e-4 · 梯度 ≤6.1e-5） |
-| 应用层（消费方双跑） | ✅ | `ops/sdpa/test/framework_level.py mlu590` | PASS（mini-decoder 拦截 28 · logits 1.95e-3 · 续写一致率 1.00） |
+| 应用消费者层（C1 mini-decoder） | ✅ | `ops/sdpa/test/framework_level.py mlu590` | PASS（拦截 28 · logits 1.95e-3 · 续写一致率 1.00；不等同真实 vLLM） |
 | 黄金回归 | ✅ | `script/check_accuracy.py --impl triton --device mlu:0` | PASS（**397/397**，worst 7.81e-3 @ bf16 bool） |
 | 性能三方对照 | ✅ | `script/bench_perf.py --device mlu:0` | OK（fp16 6 形状，**1.00–1.33x** 原生） |
 | 平台守卫（三层） | ✅ | `probes/guard_check.py mlu590` | PASS（元数据 / mlu 路径 / CPU 拒绝 / 注册） |
 | 环境锁定 | ✅ | `scripts/check_env.py --device mlu590` | OK（lock 对齐） |
 | 基础设施单测 | ✅ | `pytest tests/unit -q` | PASS（**20 passed**） |
-| 一键复跑 | ✅ | `python3 example.py mlu590` | 三层全绿 |
+| 一键复跑 | ✅ | `python3 example.py mlu590` | 适用层通过；注册层/mini consumer 通过，真实 vLLM 待复验 |
 
 跨层一致性 / 性能回归门禁（`run.py --consistency` / `perf_compare`）:
 本环境无 vLLM（profile `no_vllm_runtime=true`），应用层以

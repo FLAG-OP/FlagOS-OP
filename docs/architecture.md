@@ -10,7 +10,7 @@
 ## 3×3 验证矩阵
 
 为什么要有这张矩阵？因为一个 kernel 在隔离环境里正确，距离它在
-真实推理里正确工作，中间还隔着几道会各自出错的关口: 注册进了框架
+应用消费者里正确工作，中间还隔着几道会各自出错的关口: 注册进了框架
 却没被策略选中、被选中了却改变了数值语义、数值没变却破坏了端到端
 输出。本库开发过程中这几类问题都真实出现过——厂商 kernel 注册后被
 默认实现绕过、aten 注册被 flag_gems 同名算子覆盖、自研 kernel 数值
@@ -19,7 +19,7 @@
 
 **三条实现路线 × 三层验证层级**（对应[物理栈](index.md)各层），每格独立可跑（`run.py --route X --level Y`）:
 
-| | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
+| | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用消费者层 · framework 验证 |
 |---|---|---|---|
 | **A1** [torch 算子替换](route-a1-aten.md) | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
 | **A2** [FlagOS 融合算子](route-a2-dispatch.md) | Triton kernel 直测 | dispatch 注册+策略切换 | vendor 身份注入 |
@@ -101,9 +101,9 @@ vllm_fl OpManager，FlagGems 同时在两张网里有身份），关系图与实
 单格验证之外，[全链路指南](fullstack-guide.md) 演示同一算子贯穿三层，
 四个可运行范本:
 
-- [b-fullstack](../examples/b-fullstack/)（torch 级）: C++ kernel → vendor 注册 → 真实 vLLM
-- [bmm-fullstack](../examples/bmm-fullstack/)（Triton 级）: Triton BMM → aten 拦截 → 应用层
-- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + 尾块安全（样板同构样例）
+- [b-fullstack](../examples/b-fullstack/)（torch 级）: C++ kernel → vendor 注册 → 应用消费者
+- [bmm-fullstack](../examples/bmm-fullstack/)（Triton 级）: Triton BMM → aten 拦截 → C1 mini-attention
+- [softmax-fullstack](../examples/softmax-fullstack/)（Triton 级）: 流式归约 + 尾块安全 → C1 attention scores
 - [backward-example](../examples/backward-example/)（Triton 级）: autograd fwd+bwd
 
 15 个样例中，开发样例在 3×3 矩阵中的位置与涵盖范围见
@@ -131,7 +131,7 @@ flagos-op-templates/
 ├── tests/
 │   ├── kernel_level/         [kernel 直测层](testing.md#kernel-level) + [一致性](testing.md#consistency)
 │   ├── op_level/             注册/分发/拦截层
-│   └── framework_level/      [真实推理层](testing.md#framework) + [黄金回归](testing.md#golden)
+│   └── framework_level/      [应用消费者层](testing.md#framework) + [黄金回归](testing.md#golden)
 ├── intake/                   [AI 生成算子契约](ai-intake.md)（manifest + 正/负例 case）
 ├── injection/                A1 框架级 sitecustomize 跨进程注入桥
 ├── inputs/                   声明式输入模板（spec.yaml → [gen_inputs](testing.md#inputs)）

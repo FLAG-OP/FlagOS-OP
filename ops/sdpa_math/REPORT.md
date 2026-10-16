@@ -1,5 +1,10 @@
 # 算子总体报告: sdpa_math（`aten::_scaled_dot_product_attention_math`）
 
+> **职责与证据等级**：本页是当前验证矩阵；`README.md` 负责使用入口，
+> `PLATFORM.md` 负责平台绑定，`reports/` 保存带日期的实验和原始数据。
+> 当前为 Ascend910/P800 两个硬件交付，CPU 仅作 ATen 对照。FlagOS E2E 使用
+> mini-LLM harness，不等同于真实 vLLM；真实 vLLM 仍待专门环境复验。
+
 > 定位: 一页看全一个算子——实现矩阵、验证矩阵、关键数字。
 > 分册在 [reports/](reports/)。
 
@@ -48,7 +53,7 @@
 | A1 包装开销 | 1k D64 直调 0.515ms → A1 0.555ms；decode 直调 0.217ms → A1 0.295ms（≈0.078ms） | 1k 仍 1.13x 于原生；decode A1 0.86x（小形状包装占比高） |
 | P800 fp16 | direct **1.46-2.21x** native；A1 **1.31-2.17x** | 同为返回 out+P 的公平口径 |
 | P800 no-P 参考 | exact-contract math 比 `F.sdpa` 慢 **1.98-4.46x** | **非同输出契约**：`F.sdpa` 不返回/物化 P，只作融合上限参考 |
-| A100 绝对性能 | 同契约 private-math 未测；非等价 no-P 口径下 P800 vendor efficient 为 A100·FA2 的 **36-53%** | 不能折算成 exact-P 加速比 |
+| A100 绝对性能（外部参照） | 同契约 private-math 未测；非等价 no-P 口径下 P800 vendor efficient 为 A100·FA2 的 **36-53%** | 论文读数、非同机复测；不能折算成 exact-P 加速比 |
 | FlagOS E2E | forward **1.07x**；train-out **1.45x**；train+probs **1.48x**；generate **1.09x** | fused backward off/on **1.45-1.50x**，覆盖 dO+dP |
 | 哨兵 | 确定性 ☑ 敏感 ☑（dropout 随机路径同种子可复现 ☑） | |
 

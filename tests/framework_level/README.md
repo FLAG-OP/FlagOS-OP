@@ -1,8 +1,10 @@
 # 应用层（framework 验证）测试
 
 验证两件事:
-1. **算子真的被调用**: 自定义实现在真实 vLLM 前向中被选中执行
-2. **端到端不破坏**: 启用后模型输出符合预期
+1. **算子真的被调用**: 自定义实现被应用层消费者选中执行；消费者可能是
+   真实 vLLM 前向，也可能是设备 profile 明确声明的 mini consumer。
+2. **端到端不破坏**: 启用后消费者输出符合预期。mini consumer 结果不能
+   代替真实 vLLM 证据，报告必须标注实际消费者类型。
 
 ## 统一流程（_harness.py 编排）
 
@@ -33,6 +35,8 @@ python3 scripts/compare_golden.py --devices <加速卡profile>,cpu
 - 黄金 = N 次独立运行的快照集合 + 逐位置多数票共识前缀
 - CPU 设备走 HuggingFace transformers 直接推理（最权威语义参考、
   确定性、绕过 vLLM/厂商栈）；GPU/XPU 设备走 vLLM reference 路径
+- 没有 vLLM runtime 的 profile（例如 MLU590）使用 mini-decoder；这只证明
+  应用层消费、注册和数值链路，真实 vLLM 验证须在有 runtime 的环境补跑
 - 保存于 `golden/<device>_golden.json`（含引擎参数指纹、prompts 哈希，应提交入库）
 - A1/B 框架级测试自动比对黄金共识前缀（跨会话回归检测），exact
   断言前缀按黄金实测稳定前缀自适应

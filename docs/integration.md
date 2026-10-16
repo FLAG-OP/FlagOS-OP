@@ -64,7 +64,12 @@ vllm_fl 的 flaggems backend 适配层（`backends/flaggems/impl/`）
 更省事。厂商专有 kernel（依赖特定 SDK）不适合进通用库，走 B——
 但注意 B 与 FlagGems 同在网二，是竞争关系而非互斥。
 
-## 分发开销（P800 实测）
+## 分发开销（P800 实测样本）
+
+以下数字只描述 `p800-kunlunxin`、当前脚本、指定 shape/dtype 和同步协议下
+的一次实测样本。它们用于选择测试路径，不能直接外推到其他设备、shape、dtype
+或关闭同步/启用 CUDA graph 的场景。重新交付时应同时记录 commit、profile、
+shape、dtype、重复次数和分母。
 
 ```bash
 python3 scripts/bench_dispatch.py --route a1   # aten 路径
@@ -72,7 +77,6 @@ python3 scripts/bench_dispatch.py --route a2   # call_op 路径
 ```
 
 | 分发路径 | 实测开销 | 相对占比* | 结论 |
-|---|---|---|---|
 | **A1 aten 注册**（=FlagGems 机制） | **≈3µs** | 6% | C++ dispatcher，可忽略 |
 | **A2 call_op** | **≈17-21µs** | 31-41% | Python 策略层，微 kernel 需注意 |
 | 直调 kernel（baseline） | ~50µs | — | 本栈启动 floor 本身就不低 |
@@ -82,10 +86,11 @@ LLM 推理的主力 kernel（attention/GEMM）耗时 100µs~10ms，A2 的
 20µs 在 100µs 算子上是 20%、在 1ms 算子上仅 2%——越大的算子，
 分发开销越不值得纠结。
 
-三条实用结论:
+三条针对该样本的实用结论:
 
-1. **A1/FlagGems 路径无开销顾虑**（3µs），放心走框架
-2. **A2 的 20µs 只对微小 pointwise 算子有感**——若某个微算子处于
+1. **A1/FlagGems 路径在该样本中开销较低**（约 3µs）；换设备或改变
+   注册/同步方式后应重新测量
+2. **A2 的约 20µs 在该样本中对微小 pointwise 算子更明显**——若某个微算子处于
    热循环且本机 `enforce_eager`（无 CUDA graph 摊薄），可考虑该点
    直调或走 A1，其余照常 dispatch
 3. 一个此前被忽视的事实: 本栈**启动 floor ~50µs** 比两条分发开销都大

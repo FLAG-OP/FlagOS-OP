@@ -1,5 +1,8 @@
 # 算子测试报告: type_as
 
+> **环境口径**：本报告记录 2026-09-18 的历史交付快照（Python 3.10.20、torch 2.7.1、torch_mlu 1.29.2、Triton 3.2.0）。当前复验环境与平台支持范围以 [软硬件环境版本汇总](../../../docs/environments.md)、[算子目录](../../../ops/README.md) 和当前 `REPORT.md` 为准；报告中的 `PrivateUse1` 结果属于兼容性记录，当前 canonical key 为 `AutogradPrivateUse1`。
+
+
 | 项 | 值 |
 |---|---|
 | 算子名称 / 路线 / 级别 | `type_as` / A1 / Triton 级（+ torch 级对照） |
@@ -60,7 +63,7 @@ torch_mlu/triton/flag_gems/numpy/python 全部锁定版本一致）。
 
 ## 6. 结论
 
-对 Must 分级（三层全绿 + 黄金 + 精度/O 回退）**通过**；黄金 111/111，
+对 Must 分级（适用层验证通过（C1 等价 torch API） + 黄金 + 精度/O 回退）**通过**；黄金 111/111，
 精度位级一致，性能满足微算子需求。遗留：真实 vLLM 应用层、连续 cast
 性能优化、非 dense 窄→宽两阶段 kernel（见
 [reports/development.md](development.md) §7）。

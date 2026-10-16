@@ -44,7 +44,7 @@ export VLLM_FL_PLUGIN_MODULES=routes.a2_dispatch.plugin.register_ops
 
 - 正式实现: `routes/a2_dispatch/`
 - 自包含样例: `examples/a2-op/`（gelu_and_mul 全流程）
-- 框架级样例: `examples/a2-framework/`（Triton silu_and_mul 注入真实推理）
+- 框架级样例: `examples/a2-framework/`（Triton silu_and_mul 注入应用消费者；是否为真实 vLLM 以样例报告标注为准）
 
 ## 注意事项
 

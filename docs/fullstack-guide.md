@@ -1,9 +1,9 @@
-# 全链路开发指南: 一个算子从源码到真实推理
+# 全链路开发指南: 一个算子从源码到应用消费者验证
 
 [← 返回文档中心](index.md)
 
 > 这一页把开发一个算子拆成七步：定义语义、实现 kernel、直测、
-> 注册、注入真实推理、跨层一致性、性能与报告。每一步先讲要做什么、
+> 注册、注入应用消费者、跨层一致性、性能与报告。每一步先讲要做什么、
 > 做到什么程度算完成，再按开发级别和路线指向对应的可运行样例。
 > 走完全部步骤，你会得到一个通过三层验证、进入性能基线、
 > 带开发报告的算子。
@@ -27,7 +27,7 @@ flowchart LR
 | 1 | 按开发级别实现 kernel | kernel 可编译/可调用（无注册） |
 | 2 | kernel 层直测 | 精度 ✓ · 哨兵 ✓ · 性能有数字 |
 | 3 | 按路线注册进框架 | 钉选调用命中你的 impl_id |
-| 4 | 注入真实推理 | 调用计数 > 0 · 输出比对通过 |
+| 4 | 注入应用消费者 | 调用计数 > 0 · 输出比对通过；真实 vLLM 需单独标注 |
 | 5 | 跨层一致性 | 直调输出 ↔ dispatch 输出张量级一致 |
 | 6 | 收尾 | perf 基线更新 · 报告生成 |
 
@@ -137,15 +137,16 @@ kernel；直测过了再注册，注册之后出的问题才指向注册环节�
 
 ---
 
-## 第 4 步: 注入真实推理（应用层）
+## 第 4 步: 注入应用消费者（应用层）
 
-前三步都在可控环境里，这一步进入真实的 vLLM 进程模型——最大的
-心智转变是接受"注册代码不在你眼前执行": v1 前向跑在 EngineCore
+前三步都在可控环境里，这一步进入应用消费者的进程模型。若目标是真实
+vLLM，最大的心智转变是接受“注册代码不在你眼前执行”：v1 前向跑在 EngineCore
 子进程里，你在主进程做的任何注册它都看不见，注入必须通过环境变量
 和插件发现机制传递（A1 还要额外过 sitecustomize 桥）。
 
-**抽象动作**: 让 vLLM **子进程**发现你的插件 → 基线/插件双跑同
-prompt 同 seed → 断言"被调用 + 不破坏输出"。
+**抽象动作**: 让目标消费者发现你的插件 → 基线/插件双跑同 prompt、同
+seed → 断言“被调用 + 不破坏输出”。使用真实 vLLM 时，必须确认插件在
+EngineCore 子进程中生效；mini consumer 只能证明其自身调用链。
 
 | 注入机制 | 适用 | 说明 |
 |---|---|---|
@@ -163,8 +164,8 @@ prompt 同 seed → 断言"被调用 + 不破坏输出"。
 | [a2-framework](../examples/a2-framework/) | vendor 身份 + PER_OP |
 | [b-framework](../examples/b-framework/) | audit vendor + 黄金回归 |
 | [b-fullstack](../examples/b-fullstack/) | C++ vendor 全链路第 3 幕 |
-| [bmm-fullstack](../examples/bmm-fullstack/) | mini-attention 显式消费 bmm |
-| [softmax-fullstack](../examples/softmax-fullstack/) | attention scores 消费 softmax |
+| [bmm-fullstack](../examples/bmm-fullstack/) | **C1 mini-attention** 显式消费 bmm |
+| [softmax-fullstack](../examples/softmax-fullstack/) | **C1 attention scores** 消费 softmax |
 
 入口: `python3 run.py --route <X> --level framework --device <profile>`
 
@@ -207,7 +208,8 @@ python3 scripts/gen_report_scaffold.py --op <算子> --route <路线> --device <
 ## 步骤 × 样例覆盖矩阵
 
 ● 完整覆盖 · ◐ 部分/相关 · — 不涉及。找范本时先在此表定位，
-再进对应样例读实现。
+再进对应样例读实现。应用层的 ● 只表示该样例有消费者测试；C1 mini consumer
+和 C2 真实引擎的区别见[测试体系的证据等级](testing.md#framework)。
 
 | 样例 | 0 语义 | 1 实现 | 2 kernel 层 | 3 注册 | 4 应用层 | 5 一致性 | 6 基线/报告 |
 |---|---|---|---|---|---|---|---|

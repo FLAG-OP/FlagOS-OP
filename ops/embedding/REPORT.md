@@ -1,20 +1,31 @@
 # 算子总体报告: embedding（aten::embedding）
 
+> **当前汇总**：本页以下的当前交付为 P800/Kunlunxin 与 Cambricon MLU590。
+> 文件中的 Ascend910 段落是历史实验记录，保留用于追溯，不计入当前平台矩阵。
+> 当前验证以本页的 P800/MLU 表和对应 `reports/*.json` 为准；`README.md` 负责
+> 使用入口，`PLATFORM.md` 负责平台绑定，详细实验保留在 `reports/`。
+
 | 项 | 值 |
 |---|---|
 | 算子名称 | `aten::embedding`（稠密查表 + dense 反向） |
 | 语义 | [reference.py](reference.py)（`weight[index]` 任意 index 形状；padding/scale_grad/sparse 不改前向） |
-| 硬件平台 | **2 个**：p800-kunlunxin（厂商委托）· **ascend910**（本 PR） |
+| 当前硬件平台 | **2 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托） |
 | 路线 | **A1**（aten 拦截） |
-| 日期 / 状态 | 2026-09-30 / 定稿（第二平台） |
+| 日期 / 状态 | 2026-09-24 / 当前两平台交付；Ascend910 记录见下方历史章节 |
+
+## 历史 Ascend910 记录
+
+以下内容保留用于追溯，不能作为当前平台矩阵或当前环境证据。
 
 | 算子 | `aten::embedding` |
 | 范围 | 普通查表 forward + dense backward；`sparse=True` forward 可用，稀疏 backward 不覆盖 |
-| 硬件平台 | **2 个**：Kunlunxin P800（profile `p800-kunlunxin`，`torch_xmlir`）；Cambricon MLU590（profile `cambricon`，`torch_mlu`） |
-| 路线 | A1：P800 = `AutogradCUDA`，MLU = `AutogradPrivateUse1` |
-| 日期 / 状态 | 2026-09-24 / 两平台三层与黄金全绿 |
+| 硬件平台 | **Ascend910**（历史实验，`torch_npu`） |
+| 路线 | A1：`AutogradPrivateUse1` |
+| 日期 / 状态 | 2026-09-30 / 历史记录 |
 
-## 实现矩阵（每平台）
+## 实现矩阵（当前 P800/MLU 与历史 Ascend）
+
+表中的 P800 和 Cambricon 行属于当前交付；Ascend910 行仅用于历史追溯。
 
 | 平台 | 级别 | 文件 | 生产路径 | 状态 |
 |---|---|---|---|---|
@@ -25,7 +36,9 @@ Triton gather 在两平台均慢数十倍（P800 4.6-69x、Ascend 探针见
 reports/performance.md），保留为可复现平台探针——embedding 的本质是
 gather，行采集是厂商库强项，**生产委托是两平台一致的工程结论**。
 
-## 验证矩阵（ascend910 本 PR 实测）
+## 验证矩阵（历史 Ascend 与 P800 复验记录）
+
+本节的 Ascend910 行属于历史实验，P800 行属于当前复验；Cambricon 结果见下方独立矩阵。
 
 | 层级 | 入口 | 结果 |
 |---|---|---|
@@ -42,7 +55,7 @@ gather，行采集是厂商库强项，**生产委托是两平台一致的工程
 | A1 op（p800） | `test/op_level.py` | 拦截 5 次；hooked=direct 逐位；dense/scale/sparse 边界全绿 |
 | 应用层（p800） | `test/framework_level.py`（FlagGems enabled） | `nn.Embedding` + MLP；logits/梯度 0 diff；贪心一致率 1.00 |
 | 性能（p800） | `script/bench_perf.py` | 大 shape native parity；Triton 显著慢 |
-| dispatch（p800） | `script/bench_dispatch.py` | A1 vs native 附加约 0.024ms |
+| dispatch（p800） | `script/bench_dispatch.py` | **作废，待复测**（旧脚本未持有 `torch.library.Library`，测得未注册状态） |
 | gatherFIX 对照（p800） | `script/probe_gatherfix.py` | 正确性 0 error；P800 特化比 native 慢 10.9-177.9x |
 
 | 平台 / 级别 | 文件 | 状态 | 说明 |
@@ -132,7 +145,7 @@ cambricon backward 16k×D128：
 
 ## 结论
 
-第二平台按 MERGE 流程合入: 生产路径与 P800 同构（厂商委托），
+当前两平台按 MERGE 流程合入：生产路径与 P800 同构（厂商委托），
 三层 + 黄金 + 性能全绿，委托实现 err=0.0。Triton 探针数据进一步
 佐证两平台一致的结论——embedding 峰值属厂商库，Triton 价值在
 长尾与可移植（若未来需要自定义 padding 语义/量化查表再启用）。

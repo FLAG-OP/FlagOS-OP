@@ -34,11 +34,11 @@
   单算子脚本态兼容 key。
 - `empty_like` 的实现导入为包态优先、脚本态 fallback，包入口使用
   `from ops.empty_like import register_a1`。
-- 复验见 PR #25：MLU 13/13 三层全绿、unit tests 与真实 vLLM A1 注入通过。
+- PR #25 聚合复验覆盖 MLU 基础算子契约与代表性真实 vLLM A1 注入；本算子目录的应用层仍是等价 torch API，不能据此宣称本算子已由真实 vLLM 单独消费。
 
 ## 结论
 
-三层全绿；因是分配算子，黄金只判定元数据（无数值），哨兵 n/a。
+适用层验证通过（C1 等价 torch API）；因是分配算子，黄金只判定元数据（无数值），哨兵 n/a。
 与 FlagGems 差异：不引入「写 0 dummy kernel」以满足 device code 要求。
 
 ## 交付物

@@ -18,11 +18,28 @@
 | 骨架生成器 | `scripts/gen_report_scaffold.py` | 一键生成半自动报告 |
 | 性能基线 | `scripts/perf_run.py` / `scripts/perf_compare.py` | 报告第 5 章可引用的回归数据（[性能回归追踪](performance-regression.md)） |
 
+当前规范以 `templates/operator/` 为算子目录唯一模板。根目录下两个 `op-*.md`
+模板用于兼容旧报告，不再作为新算子目录的第二套结构。
+
 三类报告各司其职，典型用法是: 开发过程中随手维护**总报告**
 （REPORT.md，一页），数据沉淀进**分册**（reports/，精度和性能各一本，
 脚本可直接生成表格），评审或归档时再写完整的**开发报告**——它叙事
 最全但成本也最高，不必每个算子都写。已填样例见
 [reports/examples](../reports/examples/README.md)。
+
+### 应用证据和状态
+
+报告的应用消费者必须填写以下字段：`consumer_type`、证据等级（C1 mini
+consumer 或 C2 真实引擎）、引擎/版本、profile、commit 和测试日期。C1 只能
+支持目标消费者自身的调用链与输出结论；C2 才能支持指定真实引擎的端到端结论。
+
+状态统一使用：
+
+- `PASS`：声明的范围和证据均已完成；
+- `PARTIAL`：部分层级、平台或消费者已完成；
+- `TODO`：存在占位内容，不能作为交付证据；
+- `VOID`：数据因环境或协议问题作废，必须注明复测条件；
+- `BLOCKED`：依赖环境缺失，明确阻塞原因。
 
 <a id="scaffold"></a>
 ## 一键生成报告骨架

@@ -1,5 +1,8 @@
 # 算子开发报告: contiguous
 
+> **环境口径**：本报告记录 2026-09-18 的历史交付快照（Python 3.10.20、torch 2.7.1、torch_mlu 1.29.2、Triton 3.2.0）。当前复验环境与平台支持范围以 [软硬件环境版本汇总](../../../docs/environments.md)、[算子目录](../../../ops/README.md) 和当前 `REPORT.md` 为准；报告中的 `PrivateUse1` 结果属于兼容性记录，当前 canonical key 为 `AutogradPrivateUse1`。
+
+
 | 项 | 值 |
 |---|---|
 | 算子名称 | `contiguous` |
@@ -87,7 +90,7 @@ bf16/fp16/fp32；纯搬运无算术，位级一致；容差 fp32 1e-5 / fp16,bf1
 
 ## 7. 结论与后续
 
-三层全绿，114/114 黄金，别名语义正确，转置性能经 swiz 修复后接近原生。
+适用层验证通过（C1 等价 torch API），114/114 黄金，别名语义正确，转置性能经 swiz 修复后接近原生。
 后续: 高 rank 分块、channels_last 自研、真实 vLLM 应用层。
 
 ## 附录: 复现命令

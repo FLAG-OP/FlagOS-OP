@@ -34,7 +34,7 @@
   单算子脚本态兼容 key。
 - `contiguous` 的实现导入为包态优先、脚本态 fallback，包入口使用
   `from ops.contiguous import register_a1`。
-- 复验见 PR #25：MLU 13/13 三层全绿、unit tests 与真实 vLLM A1 注入通过。
+- PR #25 聚合复验覆盖 MLU 基础算子契约与代表性真实 vLLM A1 注入；本算子目录的应用层仍是等价 torch API，不能据此宣称本算子已由真实 vLLM 单独消费。
 
 ## 关键数字
 
@@ -46,7 +46,7 @@
 
 ## 结论与遗留
 
-三层全绿、黄金 114/114、别名语义正确。转置性能经 2D swiz 分块修复，
+适用层验证通过（C1 等价 torch API）、黄金 114/114、别名语义正确。转置性能经 2D swiz 分块修复，
 从 21 GB/s 提升到 1762 GB/s（~80x），仍比原生慢 ~20%。
 遗留: rank≥3 分块、channels_last 自研、真实 vLLM 应用层。
 

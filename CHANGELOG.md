@@ -1,36 +1,5 @@
 # Changelog
 
-## [0.16.1] - 2026-10-02
-
-### Changed
-- **算子模板范式更新**（对齐 ops/ 实际交付）: 补 `__init__.py` 包化
-  入口、register 平台分发签名（impl/platform + AutogradPrivateUse1
-  注记）、kernel/backends/ 选择器模板、"与 ops/ 对齐"速览节——
-  新算子照模板开发即与 sdpa/embedding 同构
-
-## [0.16.0] - 2026-10-02
-
-### Added
-- **算子目录包化**（多算子同进程冲突的根治）: ops/sdpa、ops/embedding
-  加 `__init__.py`（惰性导出 register_a1/kernel 入口），包态导入
-  `from ops.sdpa import register_a1` 与单算子脚本模式兼容并存；
-  ops/test_packaging.py 四项验证全绿（双包导入/双注册同进程/双算子
-  消费数值/旧用法兼容）
-- sdpa register 的模块加载器升级"包态优先"（ops.sdpa.kernel.* 包
-  导入, 文件锚定 fallback）
-
-### Fixed
-- op_level_auto 测试的实例分裂（stats/patch 状态统一到 register
-  锚定实例）
-
-## [0.15.0] - 2026-09-30
-
-### Added
-- **embedding 第二平台 ascend910**（kernel/ascend910.py，厂商委托
-  index_select + dense_backward；register/_profile/tests 按
-  dispatch_key 平台分发；三层 + 黄金 350 PASS + Triton 探针数据
-  ——P800"生产委托"结论在 Ascend 复现，Triton gather 慢 18-69x）
-
 ## [Unreleased]
 
 ### Added
@@ -46,13 +15,15 @@
   可按 schema 追加历史版本或新镜像，并用 CI 校验生成页一致
 - 新增 [安装与 FlagGems 配合使用](docs/installation.md)：源码仓库
   `PYTHONPATH` 口径、FlagGems 运行时 / 源码共用方式、A1 注册示例、
-  拦截计数、注册不可撤销与同算子冲突边界、常见 import / 命中问题；
+  拦截计数、注册对象生命周期与进程隔离边界、常见 import / 命中问题；
   根目录新增 `INSTALL.md` 入口；新增 `examples/operator-usage`，用同一条
   连续调用链对比 native、direct kernel、FlagGems + 多算子 A1 混合映射，
   并以子进程隔离 baseline 与注册路径、用 counter 验证命中；CPU CI 增加
   import 与 `--help` smoke test，硬件路径仍按算子 profile 复验
 
 ### Changed
+- 文档统一区分 C0 契约、C1 最小消费者和 C2 真实引擎证据等级；framework
+  层示例需注明 mini consumer 或真实 vLLM，性能数字需带 profile 和测量协议
 - **ops/ 文档契约同步（2026-10-13）**: 13 个 MLU 算子的
   README / REPORT / development / test-report 补记 PR #25 后的
   `counter + platform` 注册契约、canonical `AutogradPrivateUse1` /
@@ -176,6 +147,37 @@
 - `ops/embedding/script/bench_perf.py` 反向分支原为 XPU 专用的
   `if not scale:` 跳过，MLU 上拿不到 `scale_grad_by_freq` 对照——
   改为按平台 try/except 逐个尝试原生 scale，两平台反向表均含 native 对照
+
+## [0.16.1] - 2026-10-02
+
+### Changed
+- **算子模板范式更新**（对齐 ops/ 实际交付）: 补 `__init__.py` 包化
+  入口、register 平台分发签名（impl/platform + AutogradPrivateUse1
+  注记）、kernel/backends/ 选择器模板、"与 ops/ 对齐"速览节——
+  新算子照模板开发即与 sdpa/embedding 同构
+
+## [0.16.0] - 2026-10-02
+
+### Added
+- **算子目录包化**（多算子同进程冲突的根治）: ops/sdpa、ops/embedding
+  加 `__init__.py`（惰性导出 register_a1/kernel 入口），包态导入
+  `from ops.sdpa import register_a1` 与单算子脚本模式兼容并存；
+  ops/test_packaging.py 四项验证全绿（双包导入/双注册同进程/双算子
+  消费数值/旧用法兼容）
+- sdpa register 的模块加载器升级"包态优先"（ops.sdpa.kernel.* 包
+  导入, 文件锚定 fallback）
+
+### Fixed
+- op_level_auto 测试的实例分裂（stats/patch 状态统一到 register
+  锚定实例）
+
+## [0.15.0] - 2026-09-30
+
+### Added
+- **embedding 第二平台 ascend910**（kernel/ascend910.py，厂商委托
+  index_select + dense_backward；register/_profile/tests 按
+  dispatch_key 平台分发；三层 + 黄金 350 PASS + Triton 探针数据
+  ——P800"生产委托"结论在 Ascend 复现，Triton gather 慢 18-69x）
 
 ## [0.13.0] - 2026-09-17
 

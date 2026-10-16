@@ -1,5 +1,9 @@
 # sdpa_math-op: `aten::_scaled_dot_product_attention_math`（SDPA math 后端 + 概率图）
 
+> **文档口径**：README 负责入口和当前结论摘要，`REPORT.md` 负责当前验证矩阵，
+> `PLATFORM.md` 负责不可迁移的平台绑定，`reports/` 保存带日期的实验记录与原始数据。
+> 当前为两个硬件交付（Ascend910、P800）加 CPU ATen 对照；CPU 不计作硬件平台。
+
 按 [FlagOS-OP](https://github.com/FLAG-OP/FlagOS-OP) 算子模板开发，
 复用同一语义参考、黄金数据、三层测试与 A1 注册链。
 
@@ -10,7 +14,7 @@
 | 算子 | `aten::_scaled_dot_product_attention_math`（torch SDPA 的 **math 后端**，`CompositeImplicitAutograd`） |
 | 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 保持；P800 半精度 fast path 见下） |
 | 路线 | **A1** aten 拦截（成对注册 `Autograd*` + 纯设备键），旧业务代码零改动 |
-| 平台 | **ascend910**: 自研 Triton（两段式 probs + PV，小形状单 kernel 融合）；**p800-kunlunxin**: vendor O/LSE + exact-P + A1；**cpu**: ATen 组合（对照/梯度兜底） |
+| 平台 | **硬件交付**：ascend910（自研 Triton）· p800-kunlunxin（vendor O/LSE + exact-P + A1）；**CPU**：ATen 组合（对照/梯度兜底） |
 | 验证 | kernel 52 组 ×3 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 22 项（6 gradcheck + fused backward）· 应用层 8-9 项 · FlagOS E2E ✅ |
 | NPU 性能（fp16，vs 同为"返回 out+P"的原生 math） | prefill1k D64 **1.22x** · 1k D128 **1.29x** · 2k D128 **2.03x** · GQA **1.67x** · decode **1.17x** · tail100 **1.16x** |
 | CPU 性能（fp32，同口径） | 1.05-1.40x（6 形状全过） |

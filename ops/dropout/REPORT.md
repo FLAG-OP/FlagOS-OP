@@ -34,7 +34,7 @@
   单算子脚本态兼容 key。
 - `dropout` 的实现导入为包态优先、脚本态 fallback，包入口使用
   `from ops.dropout import register_a1`。
-- 复验见 PR #25：MLU 13/13 三层全绿、unit tests 与真实 vLLM A1 注入通过。
+- PR #25 聚合复验覆盖 MLU 基础算子契约与代表性真实 vLLM A1 注入；本算子目录的应用层仍是等价 torch API，不能据此宣称本算子已由真实 vLLM 单独消费。
 
 ## 关键数字
 
@@ -47,7 +47,7 @@
 
 ## 结论与遗留
 
-三层全绿、黄金 189/189；确定性分支位级一致、随机分支统计合规、
+适用层验证通过（C1 等价 torch API）、黄金 189/189；确定性分支位级一致、随机分支统计合规、
 `torch.manual_seed` 可控。性能受 Philox RNG 限制，比原生慢 ~5x，
 但与 FlagGems 同级（略快）。遗留: 真实 vLLM 应用层、RNG 向量化调优。
 

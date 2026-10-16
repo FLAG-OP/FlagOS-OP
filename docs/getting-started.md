@@ -2,7 +2,7 @@
 
 [← 返回文档中心](index.md)
 
-> 这一页帮你用 5 分钟跑通第一个验证。如果还不清楚这个库在做什么，
+> 这一页帮你从最小契约验证开始跑通第一个验证。如果还不清楚这个库在做什么，
 > 先读[体系结构](architecture.md)；想完整开发一个算子，跟着
 > [全链路指南](fullstack-guide.md)走。
 > 仓库下载、`PYTHONPATH`、FlagGems 源码 / 运行时配合方式见
@@ -12,23 +12,35 @@
 
 | 需要什么 | 说明 |
 |---|---|
-| FlagOS 生态 | FlagGems / vllm-plugin-FL / vLLM / Triton（版本随共享镜像提供） |
-| 版本核对 | `python3 scripts/check_env.py --device p800-kunlunxin --require-model`；各平台声明见 [软硬件环境版本汇总](environments.md) |
-| 设备 profile | `configs/devices/` 下有你的芯片 YAML（参考实例 p800-kunlunxin；新芯片[4 步接入](device-profiles.md)） |
+| 契约/算子层验证 | Python、PyTorch 和仓库依赖；不需要模型或 vLLM。CPU profile 可作为最小参考路径 |
+| 目标设备验证 | 对应设备 runtime、Triton/厂商依赖和 `configs/devices/` profile；版本以 [软硬件环境版本汇总](environments.md) 为准 |
+| 真实引擎验证 | 在目标 profile 上额外需要 FlagGems、vllm-plugin-FL、vLLM、模型和 Triton；先运行 `check_env.py --require-model` |
+
+profile 是运行配置声明，不等于该平台上的全部算子都已有交付证据；支持范围以
+[算子 / 平台矩阵](operator-catalog.md) 和对应算子报告为准。
 
 ## 5 分钟流程
 
 ```bash
-cd /workspace/flagos-op-templates
+# 以下命令均在 FlagOS-OP 仓库根目录执行
 # 1. 看有哪些设备与矩阵格
 python3 run.py --list
-# 2. 跑最轻的一格（示例用参考 profile，换成你的芯片名即可）
-python3 run.py --route a1 --level op --device p800-kunlunxin
-# 3. 跑一个框架级样例（约 2 分钟，含真实 vLLM 推理）
-python3 examples/a1-framework/example.py
-# 4. 全矩阵（9 格 + consistency，时长视设备而定）
-DEVICE=p800-kunlunxin ./scripts/run_all.sh
+# 2. 最小契约/注册验证（CPU，不需要模型）
+python3 run.py --route a1 --level op --device cpu
+# 3. 目标设备上的算子层验证（将 profile 替换为已存在的名称）
+python3 run.py --route a1 --level op --device <profile>
+# 4. 真实引擎验证前先核对软件栈和模型
+python3 scripts/check_env.py --device <profile> --require-model
+# 5. 目标 profile 的完整矩阵（仅在环境和模型就绪后运行）
+DEVICE=<profile> ./scripts/run_all.sh
 ```
+
+三条路径的边界如下：
+
+- **最小路径**：用于确认仓库可导入、参考实现和注册契约可工作；结果不能代表目标硬件性能。
+- **目标设备路径**：用于确认指定 profile 的 kernel、注册和分发；只报告该 profile 已运行的层级。
+- **真实引擎路径**：使用 `examples/a1-framework/example.py <profile>` 或
+  `run.py --level framework`，报告必须注明真实 vLLM 还是 mini consumer，以及引擎版本。
 
 第 2 步成功时你会看到类似输出（关键是最末的 `PASS`）:
 

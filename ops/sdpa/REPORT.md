@@ -1,5 +1,9 @@
 # 算子总体报告: sdpa（scaled_dot_product_attention）
 
+> **职责与证据等级**：本页是当前验证矩阵和性能摘要；`README.md` 负责入口与使用方式，
+> `PLATFORM.md` 负责平台绑定，`reports/` 是带日期的实验记录/原始数据。Ascend 数字
+> 若标为历史则不替代 P800/MLU 当前结论；外部论文参照与作废数据不属于当前基线。
+
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
@@ -77,7 +81,7 @@ overrideable。与原生常逐位/亚 ulp 一致；FlagGems Triton 慢 10-40x。
 ### FA2 协议下的 A100 论文参照
 
 同 `batch×S=16k`、causal、fp16 协议；A100 为 FlashAttention-2 论文图表
-读数换算，非同机复测。P800 每次读取一个输出元素强制执行完成。
+读数换算，**非同机复测、仅外部参照，不是本仓库性能基线**。P800 每次读取一个输出元素强制执行完成。
 
 | 场景 | P800 ours | A100·FA2 | P800/A100 延时 |
 |---|---:|---:|---:|

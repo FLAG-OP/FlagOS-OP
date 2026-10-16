@@ -11,7 +11,7 @@ FlagOS-OP 是一套自定义算子的开发模板库。写一个算子并不难�
 
 ```
 应用层    vLLM · transformers
-           └ 验证: framework 验证（真实推理）
+           └ 验证: framework 应用消费者验证（真实 vLLM 或 mini consumer，按报告标注）
   ↓
 框架层    PyTorch + FlagOS dispatch
            ├ 验证: op 验证（注册/分发/拦截）

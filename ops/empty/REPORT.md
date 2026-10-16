@@ -20,9 +20,9 @@
 
 | 层级 | 入口 | 结果 |
 |---|---|---|
-| 一键三层 | `python3 example.py cambricon` | ✅ |
+| 一键验证 | `python3 example.py cambricon` | ✅（适用层） |
 | kernel 层 | `test/kernel_level.py` | ✅ 15 项元数据检查 |
-| 框架层 | `test/op_level.py` | ✅ — |
+| 框架层 | `test/op_level.py` | N/A（按设计不注册） |
 | 应用层 | `test/framework_level.py` | ✅ |
 | 黄金 | `script/` | ✅ 48/48（元数据） |
 | 性能 | 采样 | ✅ 0.0107ms @8192² fp32 |
@@ -31,11 +31,11 @@
 
 - `register_a1` 已对齐 `counter` / `platform` 签名。
 - 该算子保持 `NotImplementedError`，不强行做 A1 注册。
-- 复验见 PR #25：MLU 13/13 三层全绿、unit tests 与真实 vLLM A1 注入通过。
+- PR #25 聚合复验覆盖 MLU 基础算子契约与代表性真实 vLLM A1 注入；本算子目录的应用层仍是等价 torch API，不能据此宣称本算子已由真实 vLLM 单独消费。
 
 ## 结论
 
-三层全绿；因是分配算子，黄金只判定元数据（无数值），哨兵 n/a。
+适用层验证通过；因是分配算子，黄金只判定元数据（无数值），注册/框架层为 N/A，哨兵 n/a。
 
 ## 交付物
 

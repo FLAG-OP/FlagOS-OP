@@ -15,7 +15,7 @@
 |---|---|---|---|
 | kernel 层（精度/哨兵/性能） | ☐ | `run.py --level kernel` | |
 | 框架层（注册/钉选/拦截） | ☐ | `run.py --level op` | |
-| 应用层（真实推理） | ☐ | `run.py --level framework` | |
+| 应用消费者层（C1 mini consumer / C2 真实引擎） | ☐ | `run.py --level framework` | 填写消费者类型、引擎版本、profile 和日期 |
 | 跨层一致性 | ☐ | `run.py --consistency` | |
 | 性能回归门禁 | ☐ | `scripts/perf_compare.py` | |
 

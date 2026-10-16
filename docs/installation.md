@@ -157,7 +157,7 @@ FlagOS-OP 的算子通过自己的 `register_a1()` 或平台 facade 接入：
 | `ops/sdpa_math` | private ATen op A1 | FlagGems 通常没有同语义双输出实现 |
 | `ops/sdpa` | 标准 SDPA / 平台 facade | 可能与 FlagGems 或厂商 backend 竞争 |
 | `ops/embedding` | 标准 embedding A1 | 需避免与 FlagGems embedding 冲突 |
-| 基础 ATen 算子族 | MLU A1 | MLU 三层与注册契约复验；真实 vLLM 仅保留统一框架测试证据 |
+| 基础 ATen 算子族 | MLU A1 | MLU 三层与注册契约复验；当前应用证据为 C1 等价 torch API，C2 真实 vLLM 按环境补验 |
 
 正确关系是并列组件：
 
@@ -453,10 +453,12 @@ parent : 载入两边输出，比较精度
 
 ## 8. 注册边界
 
-### 8.1 注册不可撤销
+### 8.1 注册对象生命周期与进程隔离
 
-`torch.library` 注册是进程级操作。`del libs` 只删除 Python 引用，不会
-可靠撤销 dispatcher 注册。
+`torch.library` 注册是进程级操作。当前实现要求保留返回的 `Library` 对象；
+`del libs` 只删除 Python 引用，不能把它当作可靠的注销 API。不同 PyTorch
+版本和注册路径的析构行为可能不同，因此基线、单元测试和 benchmark 都应
+使用独立进程隔离。
 
 因此：
 

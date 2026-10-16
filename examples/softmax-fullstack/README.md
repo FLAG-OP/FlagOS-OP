@@ -30,7 +30,7 @@ softmax-fullstack/
 - **kernel 层**: 流式三遍归约 softmax（max → exp+sum → normalize），
   支持 N > BLOCK_N；精度 15/15 + 哨兵 + 性能
 - **框架层 aten**: `Library("aten","IMPL").impl("_softmax",...)` 拦截 F.softmax
-- **应用层**: attention scores softmax（手写 mini-attention）
+- **应用层**: attention scores softmax（手写 mini-attention mini consumer；不等同真实 vLLM）
 
 ## 运行
 
@@ -43,7 +43,8 @@ python3 examples/softmax-fullstack/example.py
 ```
 精度: 15/15 组合 PASS
 配置: BLOCK_N=2048 固定（autotune 在本栈会选出非法 num_warps=5，#15b，已移除）
-性能: Triton ~0.0x ms vs F.softmax
+性能: Triton 0.060ms vs F.softmax 0.010ms（1024² bf16，短采样 20+100，
+子进程隔离；详见 [性能报告](reports/performance.md)）
 ```
 
 ## kernel 设计要点

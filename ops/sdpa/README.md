@@ -1,5 +1,10 @@
 # sdpa-op: `aten::scaled_dot_product_attention` 多平台实现
 
+> **文档口径**：本 README 是当前入口与结论摘要；`REPORT.md` 汇总当前验证矩阵，
+> `PLATFORM.md` 只记录平台绑定与不可迁移约束，`reports/` 保存带日期的实验记录和
+> 原始数据。标注“历史”的 Ascend 结果不替代当前 P800/MLU 结论，标注“作废/待复测”
+> 的数字不得作为性能基线。
+
 按 [FlagOS-OP](https://github.com/FLAG-OP/FlagOS-OP) 算子模板开发，
 复用同一语义参考、黄金数据、三层测试与 A1 注册链。
 
@@ -14,7 +19,7 @@
 | 公共入口 | `kernel/triton_level.py` facade → `kernel/backends/{ascend910,p800_kunlunxin,mlu590}.py` |
 | 验证 | P800: kernel 37/37 · 黄金 397/397 · A1 拦截/梯度 · mini-decoder ✅；MLU590: kernel 37/37 · 黄金 397/397 · 三层/守卫 ✅；Ascend 历史 265/265 保留 |
 | P800 性能 | 强制读回输出的 fp16 采样相对 Python `F.sdpa` 加速 **1.02-1.14x**；FlagGems 2k/4k 比 ours 慢 5.1-6.6x |
-| MLU 性能 | TMO+fused 相对原生 **1.00-1.33x**；FlagGems 慢 10-40x（仅兜底/对照） |
+| MLU 性能 | TMO+fused 相对原生 **1.00-1.33x**（当前采样）；FlagGems 慢 10-40x（仅兜底/对照） |
 
 平台绑定与坑位见 [PLATFORM.md](PLATFORM.md)，多平台扩展流程见
 [MERGE.md](MERGE.md)。
@@ -127,7 +132,8 @@ SDPA 由本目录 A1 注册接管。
 
 `test/framework_level.py` 构建 Llama 风格 4 层 mini-decoder
 （GQA 8/2、causal），业务代码只调用
-`F.scaled_dot_product_attention`。P800 使用 bf16 规避该随机模型
+`F.scaled_dot_product_attention`。这是轻量 mini harness，属于应用层冒烟证据，
+不是真实 vLLM 引擎验证；真实 vLLM 仍待具备对应环境后复验。P800 使用 bf16 规避该随机模型
 Linear/LayerNorm 的 fp16 溢出；注册后拦截 28 次，logits 与基线
 逐位一致，贪心续写一致率 1.00。
 
@@ -157,8 +163,8 @@ GQA/双 mask/尾块），历史精度、性能与根因分析见
    直调 math private 会拿到未融合分解（0.11-0.55x 原生）。
 2. MLU 上 efficient/flash/cudnn 三个 aten private op 仍 CPU fallback
    失败；可用融合入口是 **fused overrideable** 与 **TMO flash_attention**。
-3. TMO 为 BSHD 布局、bias 形状 `(B,H,Sq,Skv)`；半精度 prefill 再快
-   1.2-1.8x（见 reports/mlu590.md）。
+3. TMO 为 BSHD 布局、bias 形状 `(B,H,Sq,Skv)`；当前半精度 prefill
+   采样为 **1.21-1.33x**（见 reports/mlu590.md）；其他早期/不同协议数字不作当前保证。
 4. math private 直接收 bool 在本栈 err≈0.19，必须转 additive。
 5. FlagGems `_cambricon` attention 精度过黄金但慢 10-40x 且无 autograd。
 6. 全遮蔽行 fused/TMO 返回有限值，需显式恢复 NaN（同 p800 教训）。

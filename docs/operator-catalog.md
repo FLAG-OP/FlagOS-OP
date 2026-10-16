@@ -102,6 +102,10 @@ platforms:
 foundation 算子还需要顶层 `route`，除非每个平台条目单独声明 `route`。
 算子里的 platform 条目表示已交付声明，必须由该算子的测试和报告支撑。
 
+基础算子当前的实测报告以 `cambricon` profile 的 2026-09-18 历史快照为主；
+没有独立 `mlu590` 报告时，不应把 `mlu590` 写入算子条目的 `profiles`。环境锁的
+版本升级或同硬件别名不能替代该 profile 的复验。
+
 跨多个平台家族的算子必须维护：
 
 ```text

@@ -1,5 +1,8 @@
 # 算子测试报告: empty
 
+> **环境口径**：本报告记录 2026-09-18 的历史交付快照（Python 3.10.20、torch 2.7.1、torch_mlu 1.29.2、Triton 3.2.0）。当前复验环境与平台支持范围以 [软硬件环境版本汇总](../../../docs/environments.md)、[算子目录](../../../ops/README.md) 和当前 `REPORT.md` 为准；报告中的 `PrivateUse1` 结果属于兼容性记录，当前 canonical key 为 `AutogradPrivateUse1`。
+
+
 | 项 | 值 |
 |---|---|
 | 算子 / 路线 / 级别 | `empty` / A1 / torch 级（分配/元数据） |
@@ -11,7 +14,7 @@
 | 层级 | 覆盖 | 入口 | 结果 |
 |---|---|---|---|
 | kernel 层（元数据） | ✅ | `test/kernel_level.py` | PASS（15 项） |
-| 框架层（注册/拦截） | ✅ | `test/op_level.py` | — |
+| 框架层（注册/拦截） | N/A | `test/op_level.py` | 按设计不注册 |
 | 注册契约 | ✅ | PR #25 / `register.py` | 签名对齐；仍按设计拒绝 A1 注册 |
 | 应用层 | ✅ | `test/framework_level.py` | PASS |
 | 黄金（元数据） | ✅ | `script/` | 48/48 |
@@ -42,4 +45,4 @@
 
 ## 6. 结论
 
-Must 项（三层全绿、元数据一致、注册/拦截）**通过**。
+适用层 Must 项（元数据一致）**通过**；注册/拦截层按设计为 N/A。

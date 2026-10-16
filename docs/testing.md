@@ -17,7 +17,7 @@
 
 ## 总览
 
-| 路线 \ 验证层级 | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用层 · framework 验证 |
+| 路线 \ 验证层级 | 算子库层 · kernel 直测 | 框架层 · op 注册/分发 | 应用消费者层 · framework 验证 |
 |---|---|---|---|
 | **A1** torch 算子替换 | Triton kernel 直测 | aten 注册+拦截 | aten 恒等计数注入 |
 | **A2** FlagOS 融合算子 | Triton kernel 直测 | dispatch 注册 | vendor 身份注入 |
@@ -28,7 +28,7 @@
 ```mermaid
 flowchart TD
     K["算子库层 · kernel 直测<br/>精度·哨兵·性能"] -->|"注册<br/>(aten impl / OpImpl / vendor)"| O["框架层 · op 注册/分发<br/>注册·分发·拦截"]
-    O -->|"注入<br/>(PLUGIN_MODULES / PER_OP / sitecustomize)"| F["应用层 · framework<br/>真实推理·计数·比对"]
+    O -->|"注入<br/>(PLUGIN_MODULES / PER_OP / sitecustomize)"| F["应用消费者层 · framework<br/>调用计数·输出比对"]
     F --> G["黄金回归<br/>跨会话漂移检测"]
     K -.->|"同算子同输入"| C["跨层一致性<br/>算子库层↔框架层"]
 ```
@@ -38,7 +38,7 @@ flowchart TD
 |---|---|---|---|---|
 | [kernel 层](#kernel-level) | 算子库层 | kernel 本体: 精度/哨兵/性能 | 直测，秒级 | `--level kernel` |
 | op 层 | 框架层 | 注册/分发/拦截正确 | 策略切换验证 | `--level op` |
-| [framework 层](#framework) | 应用层 | 真实推理被调用且不破坏输出 | 基线/插件双跑 | `--level framework` |
+| [framework 层](#framework) | 应用消费者层 | 被测消费者调用且不破坏输出；若使用真实 vLLM 需单独标注 | 基线/插件双跑 | `--level framework` |
 
 <a id="kernel-level"></a>
 ## kernel 层（硬件语言直测）
@@ -86,10 +86,12 @@ flowchart TD
 每次都坏"，测试天然 flaky。
 
 <a id="framework"></a>
-## framework 层（harness 编排）
+## framework 层（应用消费者 harness 编排）
 
-这一层回答两个独立的问题: **真实推理到底用没用上你的算子，用上
-之后输出还对不对**。分开验证是因为失败模式完全不同——"没被调用"
+这一层回答两个独立的问题: **应用消费者到底用没用上你的算子，用上
+之后输出还对不对**。消费者可以是真实 vLLM，也可以是仓库内的
+mini-attention、mini-decoder 或其他最小复现 harness；报告必须写明具体类型。
+分开验证是因为失败模式完全不同——"没被调用"
 是注入链路断了（vLLM v1 前向在子进程，主进程注册不传播，#9）；
 "调用了但输出坏了"是数值语义变了。所以编排成基线/插件双跑: 同一批
 prompt、同一个 seed，唯一变量是你的实现，输出差异就能归因到算子。
@@ -101,6 +103,18 @@ prompt、同一个 seed，唯一变量是你的实现，输出差异就能归因
 
 三条路线注入方式见各自文档（[A1](route-a1-aten.md) /
 [A2](route-a2-dispatch.md) / [B](route-b-vendor.md)）。
+
+### 应用层证据等级
+
+| 证据等级 | 运行对象 | 可以支持的结论 |
+|---|---|---|
+| **C0 契约** | API、参考实现、直接算子调用 | 接口、数值语义或注册契约满足 |
+| **C1 最小消费者** | mini-attention、mini-decoder、专项 consumer | 目标消费者能调用算子并完成局部输出比对 |
+| **C2 真实引擎** | 真实 vLLM/目标推理引擎及其 worker 进程 | 指定引擎、版本和配置下的端到端调用与输出结论 |
+
+“framework 通过”只表示测试脚本通过，不能自动等同于 C2。报告、README
+和交付索引应同时记录 `consumer`、引擎版本、profile、commit 和日期；缺少
+真实引擎时使用“mini consumer 验证”或“真实 vLLM 待验证”等措辞。
 
 一个工程细节值得强调: 调用计数文件必须按 **pid 分片**。tensor
 parallel 拉起的多个 worker 会并发写同一计数文件，实测不加处理的

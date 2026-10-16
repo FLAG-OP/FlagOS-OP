@@ -1,5 +1,10 @@
 # embedding-op: `aten::embedding` P800/Kunlunxin + Cambricon MLU 实现
 
+> **文档口径（当前交付）**：本 README 只描述当前交付入口；当前硬件平台为
+> P800/Kunlunxin 与 Cambricon MLU590。旧的 Ascend910 实验仍保留在报告历史中，
+> 不作为本页的当前平台结论。`REPORT.md` 是当前验证矩阵的汇总，`PLATFORM.md`
+> 只记录不可直接迁移的平台绑定，`reports/` 保存带日期的实验与原始数据。
+
 按 FlagOS-OP 算子模板开发，范围为需求中的**普通稠密 Embedding 查表**：
 
 - forward: 任意 rank indices 的 row gather；
@@ -15,13 +20,13 @@
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::embedding(weight, indices, padding_idx, scale_grad_by_freq, sparse)` |
-| 平台 | p800-kunlunxin（torch_xmlir，呈 CUDA）· **ascend910**（torch_npu，本 PR） |
-| 路线 | A1 `AutogradCUDA` 拦截 |
+| 平台 | p800-kunlunxin（torch_xmlir，呈 CUDA）· Cambricon MLU590（torch_mlu） |
+| 路线 | A1：P800 = `AutogradCUDA`；MLU = `AutogradPrivateUse1` |
 | forward 生产实现 | XMLIR native `aten::index_select` row gather |
 | dense backward | native `aten::embedding_backward` |
 | `scale_grad_by_freq` | per-occurrence inverse-frequency scaling + dense backward |
-| 验证 | kernel 20 forward + 6 backward；黄金 174/174；A1；应用层全绿 |
-| 性能 | 大 shape 与 native embedding 基本持平（0.89-1.00x）；Triton gather 慢 11-102x |
+| 验证 | 两平台 kernel 20 forward + 6 backward；黄金 174/174；A1；C1 应用消费者通过 |
+| 性能 | P800 大 shape 与 native embedding 基本持平；MLU 结果见 [REPORT.md](REPORT.md)；Triton gather 慢 11-102x |
 
 | 平台 | **2 个**：p800-kunlunxin / torch_xmlir；cambricon（MLU590）/ torch_mlu |
 | 路线 | A1 拦截：P800 = `AutogradCUDA`，MLU = `AutogradPrivateUse1` |
@@ -36,7 +41,7 @@
 P800/Kunlunxin：
 
 ```bash
-python3 example.py p800-kunlunxin   # 或 EMBEDDING_PROFILE=ascend910 python3 example.py
+python3 example.py p800-kunlunxin
 
 python3 script/gen_golden.py
 python3 script/check_accuracy.py --impl p800 --device cuda:1

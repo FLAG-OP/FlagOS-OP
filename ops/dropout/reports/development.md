@@ -1,5 +1,8 @@
 # 算子开发报告: dropout
 
+> **环境口径**：本报告记录 2026-09-18 的历史交付快照（Python 3.10.20、torch 2.7.1、torch_mlu 1.29.2、Triton 3.2.0）。当前复验环境与平台支持范围以 [软硬件环境版本汇总](../../../docs/environments.md)、[算子目录](../../../ops/README.md) 和当前 `REPORT.md` 为准；报告中的 `PrivateUse1` 结果属于兼容性记录，当前 canonical key 为 `AutogradPrivateUse1`。
+
+
 | 项 | 值 |
 |---|---|
 | 算子名称 | `dropout` |
@@ -86,7 +89,7 @@ channels_last 直用、非连续回退。**#11** device 上下文；无归约不
 
 ## 7. 结论与后续
 
-三层全绿，189/189 黄金（确定性位级 + 随机统计），RNG 可由
+适用层验证通过（C1 等价 torch API），189/189 黄金（确定性位级 + 随机统计），RNG 可由
 `torch.manual_seed` 控制。性能受 Philox 限制，比原生慢 ~5x，与
 FlagGems 持平。后续: 真实 vLLM 应用层、RNG 向量化/更高 unroll 调优。
 
