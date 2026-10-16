@@ -25,8 +25,8 @@ profile 是运行配置声明，不等于该平台上的全部算子都已有交
 # 以下命令均在 FlagOS-OP 仓库根目录执行
 # 1. 看有哪些设备与矩阵格
 python3 run.py --list
-# 2. 最小契约/注册验证（CPU，不需要模型）
-python3 run.py --route a1 --level op --device cpu
+# 2. C0 契约检查（不加载硬件或模型）
+python3 scripts/intake_validate.py --validate-only
 # 3. 目标设备上的算子层验证（将 profile 替换为已存在的名称）
 python3 run.py --route a1 --level op --device <profile>
 # 4. 真实引擎验证前先核对软件栈和模型
@@ -37,18 +37,22 @@ DEVICE=<profile> ./scripts/run_all.sh
 
 三条路径的边界如下：
 
-- **最小路径**：用于确认仓库可导入、参考实现和注册契约可工作；结果不能代表目标硬件性能。
+- **C0 契约路径**：用于确认 intake manifest、参考实现和仓库目录契约；结果不代表设备注册或性能。
 - **目标设备路径**：用于确认指定 profile 的 kernel、注册和分发；只报告该 profile 已运行的层级。
 - **真实引擎路径**：使用 `examples/a1-framework/example.py <profile>` 或
   `run.py --level framework`，报告必须注明真实 vLLM 还是 mini consumer，以及引擎版本。
 
-第 2 步成功时你会看到类似输出（关键是最末的 `PASS`）:
+第 2 步成功时你会看到类似输出：
 
 ```
-  精度: 9/9 组合 PASS
-  拦截: torch.relu -> Triton kernel
-  CELL RESULT: PASS (5.8s)
+  kernelgen-gelu-example OK
+  kernelgen-gelu-no-device-context OK
+  契约校验: 2 case · 0 错误
 ```
+
+CPU profile 可用于 reference/golden 和 C0 参考检查；当前快速开始不把
+CPU 上的 A1 op 路径作为通用 smoke，因为不同 route 的设备 fallback 行为可能不同。
+目标设备步骤的输出取决于 route、profile 和已接入的测试格，不预设固定的精度组合数量。
 
 如果 FAIL，先看控制台最后一段 traceback——每格测试都会把失败
 原因打印出来，且结果 JSON（`results/`）里留有 `error` 字段可回查。

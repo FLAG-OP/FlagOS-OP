@@ -77,6 +77,7 @@ python3 scripts/bench_dispatch.py --route a2   # call_op 路径
 ```
 
 | 分发路径 | 实测开销 | 相对占比* | 结论 |
+|---|---|---|---|
 | **A1 aten 注册**（=FlagGems 机制） | **≈3µs** | 6% | C++ dispatcher，可忽略 |
 | **A2 call_op** | **≈17-21µs** | 31-41% | Python 策略层，微 kernel 需注意 |
 | 直调 kernel（baseline） | ~50µs | — | 本栈启动 floor 本身就不低 |

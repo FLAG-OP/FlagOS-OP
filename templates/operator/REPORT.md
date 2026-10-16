@@ -24,10 +24,13 @@
 |---|---|---|---|
 | 一键三层 | `python3 example.py <profile>` | | — |
 | kernel 层 | `python3 test/kernel_level.py <profile>`（位置参数） | | [reports/accuracy.md](reports/accuracy.md) |
-| 框架层 | `python3 run.py --route <a1|a2|b> --level op --device <profile>` | | |
-| 应用层 | `python3 run.py --route <a1|a2|b> --level framework --device <profile>` | | |
+| 框架层 | `python3 example.py <profile>`（内部调用 `test/op_level.py`） | | |
+| 应用层 | `python3 example.py <profile>`（内部调用 `test/framework_level.py`） | | |
 | 黄金回归 | `script/gen_golden.py` + `check_accuracy.py` | | [goldendata/](goldendata/README.md) |
 | 性能 | `script/bench_perf.py` / perf 门禁 | | [reports/performance.md](reports/performance.md) |
+
+`run.py` 是中央路线教学矩阵入口，不会自动发现此目录；新算子要进入中央
+矩阵，需显式接入对应 dispatcher/registry。
 
 ## 关键数字
 

@@ -55,11 +55,11 @@ shape 8192×8192 bf16，短采样 20+100，子进程隔离采集:
 
 | # | 描述 | 影响 | 状态 |
 |---|---|---|---|
-| 1 | FlagGems gelu(tanh) 在本栈链接失败 | 无同语义生产基线 | 已记录 #13 |
+| 1 | FlagGems gelu(tanh) 在本栈链接失败 | 无同语义生产基线 | 外部跟踪 [#30](https://github.com/FLAG-OP/FlagOS-OP/issues/30) |
 | 2 | XPU 尾块归约陷阱（本算子 shape 恒为 2 的幂，未触发） | 换非整倍数 shape 需防护 | 模板已内置 pad，#15a |
 
 ## 6. 结论
 
 三层验证全绿、精度三方最优之一、相对分解路径 70x，**可合入**。
-后续方向: FlagGems 修复 #13 后补生产基线对比；关注 #15a 在动态 shape
+后续方向: 外部问题 [#30](https://github.com/FLAG-OP/FlagOS-OP/issues/30) 解决后补生产基线对比；关注 #15a 在动态 shape
 场景的防护是否需要下推到本算子。

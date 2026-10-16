@@ -114,6 +114,10 @@ xtriton 的 XPU libdevice 表中该 fp32 重载映射到占位符符号
 影响: A1（gelu_tanh）与 A2（gelu_and_mul）**没有同语义的 FlagGems
 生产基线**；自研 kernel 用 `1 - 2/(exp(2x)+1)` 手写 tanh 故不受影响。
 
+责任边界：该问题位于算子实现 / FlagGems 与框架集成边界，当前不属于
+FlagOS-OP 的修复范围。本仓库保留复现条件、影响和文档说明；后续跟踪见
+[issue #30](https://github.com/FLAG-OP/FlagOS-OP/issues/30)。
+
 ### 14. XPU Triton 编译错误被 `NameError: sys` 掩盖
 两因叠加: ① xtriton `backends/xpu/compiler.py` 的 `run_cmd()` 使用了
 未 import 的 `sys`；② torch_xmlir 符号改写会重新导入 xpu backend，
