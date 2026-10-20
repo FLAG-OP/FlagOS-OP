@@ -6,7 +6,7 @@
 # - 修改本文件后运行 scripts/build_ops_index.py。
 
 schema: 1
-updated: 2026-10-14
+updated: 2026-10-20
 
 target_scope:
   vendor_family_count: 6
@@ -17,7 +17,7 @@ platform_families:
     display_name: 华为昇腾
     status: partial
     current_profiles: [ascend910]
-    roadmap_note: 当前集中在注意力和 embedding 算子。
+    roadmap_note: 注意力（sdpa/sdpa_math）+ 训练与布局算子族（clone/empty_like/empty_strided/detach/detach_/item/_local_scalar_dense/result_type/type_as）。
   cambricon:
     display_name: 寒武纪
     status: partial
@@ -123,6 +123,9 @@ operators:
     route: A1 · Triton
     key_result: 黄金 111/111，结果逐位一致。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: Triton
       cambricon:
         profiles: [cambricon]
 
@@ -133,6 +136,9 @@ operators:
     route: A1 · Triton
     key_result: 黄金 48/48；op 层测试覆盖包态执行。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: Triton
       cambricon:
         profiles: [cambricon]
 
@@ -173,6 +179,9 @@ operators:
     route: A1 · torch
     key_result: 黄金 36/36。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
       cambricon:
         profiles: [cambricon]
 
@@ -183,6 +192,9 @@ operators:
     route: experimental · torch
     key_result: 按设计不可 A1 注册，保持 NotImplementedError。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
       cambricon:
         profiles: [cambricon]
 
@@ -193,6 +205,9 @@ operators:
     route: A1 · torch
     key_result: 元数据黄金 168/168。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
       cambricon:
         profiles: [cambricon]
 
@@ -213,6 +228,9 @@ operators:
     route: A1 · torch
     key_result: 元数据黄金 30/30。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
       cambricon:
         profiles: [cambricon]
 
@@ -223,6 +241,9 @@ operators:
     route: experimental · torch
     key_result: 纯元数据函数；按设计不可 A1 注册。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
       cambricon:
         profiles: [cambricon]
 
@@ -233,6 +254,9 @@ operators:
     route: A1 · torch
     key_result: 黄金 36/36。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
       cambricon:
         profiles: [cambricon]
 
@@ -243,6 +267,9 @@ operators:
     route: A1 · torch
     key_result: 黄金 36/36。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
       cambricon:
         profiles: [cambricon]
 

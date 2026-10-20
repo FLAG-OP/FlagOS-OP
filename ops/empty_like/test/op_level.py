@@ -17,13 +17,18 @@ def run(profile):
     import torch
 
     import register as reg
+    from reference import empty_like_reference
 
     dev = profile.torch_device
 
-    # 注册前取原生参考元数据
+    # 判卷标准取**语义参考**（设备无关），不用本机原生 empty_like: torch_npu
+    # 原生 preserve_format 对非连续输入退化为连续（见 PLATFORM.md），与文档
+    # 语义不一致；本算子按文档语义实现，故对齐 reference 而非原生。
+    # Dashener2 2026-10-15-fix
     x = torch.randn(256, 128, dtype=torch.float32, device=dev).t()
-    exp_meta = _meta(torch.empty_like(x))
-    exp_mf = _meta(torch.empty_like(x, memory_format=torch.contiguous_format))
+    exp_meta = _meta(empty_like_reference(x))
+    exp_mf = _meta(empty_like_reference(x,
+                                        memory_format=torch.contiguous_format))
 
     reg.CALL_COUNT["empty_like"] = 0
     _CALLS = {"n": 0}

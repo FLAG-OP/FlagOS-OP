@@ -14,6 +14,9 @@ def _sync(dev):
     if isinstance(dev, str) and dev.startswith("mlu"):
         import torch_mlu  # noqa: F401
         torch.mlu.synchronize()
+    elif isinstance(dev, str) and dev.startswith("npu"):
+        import torch_npu  # noqa: F401
+        torch.npu.synchronize()
     elif isinstance(dev, str) and dev.startswith("cuda"):
         torch.cuda.synchronize()
 
@@ -68,10 +71,14 @@ def run(profile):
         (torch.float16, lambda: torch.randn(512, 512, device=dev)[::2, 1::3]),
         (torch.float32,
          lambda: torch.randn(1, 256, device=dev).expand(64, 256)),
-        (torch.float32,
-         lambda: torch.randn(2, 3, 8, 8, device=dev).to(
-             memory_format=torch.channels_last)),
     ]
+    if not str(dev).startswith("npu"):
+        # Ascend torch_npu 不支持 channels_last（设备能力差异，非算子缺陷，
+        # 见 PLATFORM.md）。
+        view_cases.append(
+            (torch.float32,
+             lambda: torch.randn(2, 3, 8, 8, device=dev).to(
+                 memory_format=torch.channels_last)))
     for dt, mk in view_cases:
         x = mk().to(dt)
         got, exp = clone_triton(x), clone_reference(x)

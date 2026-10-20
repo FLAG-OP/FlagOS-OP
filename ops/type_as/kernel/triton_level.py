@@ -1,4 +1,7 @@
-# Triton 级实现: aten::type_as 的 MLU 版本。
+# Triton 级实现: aten::type_as（多平台: cambricon/MLU590 + ascend910）。
+# Dashener2 2026-10-15-fix 接入 ascend910: tile 上限按设备类型自适应
+# （Ascend UB 192KB → 连续 16384 / strided 8192，见 PLATFORM.md）。
+# # Dashener2 <dashen272@outlook.com>
 #
 # 硬约束（本库实测）:
 #   - 启动必须包 torch_device_fn.device 上下文（known-issues #11），
@@ -114,20 +117,32 @@ def _collapse(shape, dstr, sstr):
     return sizes, ds, ss
 
 
-def _block(n):
-    if n >= 65536:
-        return 65536
+# Tile caps (contiguous, strided). Ascend UB 192KB: 连续 cast tile 上限实测
+# 16384，带逐元素索引的 strided 上限 8192（超出触发 BiShengHIR "ub overflow";
+# 见 PLATFORM.md）。GPU/MLU 沿用原上限（MLU NRAM 524288B）。
+_TILE_CAP_NPU = (16384, 8192)
+_TILE_CAP_DEFAULT = (65536, 16384)
+
+
+def _caps(device_type):
+    """(contig_cap, nd_cap) —— 按设备类型取 tile 上限。"""
+    if device_type == "npu":
+        return _TILE_CAP_NPU
+    return _TILE_CAP_DEFAULT
+
+
+def _block(n, cap=65536):
+    if n >= cap:
+        return cap
     return max(1024, triton.next_power_of_2(n))
 
 
-def _block_nd(n, rank):
+def _block_nd(n, rank, cap=16384):
     """Block size for the strided (N-dim) kernels.
 
-    The strided kernels materialise per-element index arrays in NRAM
-    (16-20 B/elem); cap at 16384 so the worst case stays below the
-    524288-byte NRAM limit.
+    The strided kernels materialise per-element index arrays in NRAM/UB;
+    cap keeps the worst case below the device on-chip buffer limit.
     """
-    cap = 16384
     if n >= cap:
         return cap
     return max(1024, triton.next_power_of_2(n))
@@ -173,10 +188,11 @@ def type_as_triton(self: torch.Tensor, other: torch.Tensor) -> torch.Tensor:
     if n == 0:
         return out
 
+    contig_cap, nd_cap = _caps(self.device.type)
     with torch_device_fn.device(self.device):     # ← 硬约束 #11
         if out.stride() == self.stride():
-            _cast_contig[(triton.cdiv(n, _block(n)),)](
-                out, self, n, BLOCK=_block(n))
+            B = _block(n, contig_cap)
+            _cast_contig[(triton.cdiv(n, B),)](out, self, n, BLOCK=B)
             return out
 
         if self.element_size() < out.element_size():
@@ -193,7 +209,7 @@ def type_as_triton(self: torch.Tensor, other: torch.Tensor) -> torch.Tensor:
             return out
 
         r = len(sizes)
-        B = _block_nd(n, r)
+        B = _block_nd(n, r, nd_cap)
         g = (triton.cdiv(n, B),)
         if r == 1:
             _cast_1d[g](out, self, n, ds[0], ss[0], BLOCK=B)

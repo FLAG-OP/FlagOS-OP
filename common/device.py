@@ -7,6 +7,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+# Ascend(torch_npu) 排序陷阱: 镜像默认 TASK_QUEUE_ENABLE=1，torch_npu 把
+# 算子排入 task queue 异步执行，而 triton-ascend 直接在 raw stream 上启动
+# kernel（见 triton/backends/ascend/backend_register.py::get_current_stream）。
+# 两者之间**没有顺序保证**——生产者算子（randn/.to/mul）尚未完成，自研
+# Triton kernel 就读到未初始化输入，表现为非确定性错值/NaN（本库实测：
+# 同一输入两次调用结果不同、有时对有时错）。A1 自研 kernel 依赖输入就绪，
+# 且必须在 torch_npu 初始化之前生效，故在此强制关闭 task queue。
+# 仅在安装了 torch_npu 的机器上生效（find_spec 不导入 torch），不影响
+# MLU/CUDA/CPU 机器。Dashener2 2026-10-15-fix 首现于布局/分配算子 Ascend 移植。
+# # Dashener2 <dashen272@outlook.com>
+if importlib.util.find_spec("torch_npu") is not None:
+    os.environ["TASK_QUEUE_ENABLE"] = "0"
+
 import torch  # noqa: F401  # 必须早于 xpu_compat(→triton) 导入：MLU 栈
 # 要求先 import torch，否则 torch.library 的 triton 命名空间重复注册报错
 import yaml
