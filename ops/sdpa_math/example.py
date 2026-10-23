@@ -111,6 +111,20 @@ def perf_cases(profile):
             PerfCase("ops.sdpa_math.native", group="ops", level="kernel",
                      make_fn=make(native), derived=tflops, iters=50),
         ]
+    if profile.vendor == "thead":
+        import torch
+        thead_fn = _load_by_path(
+            "kernel/thead_fast_level.py", "sdpa_math_thead_fast")
+
+        def native(q, k, v, *args, **kwargs):
+            return torch.ops.aten._scaled_dot_product_attention_math(
+                q, k, v, *args, **kwargs)
+        return [
+            PerfCase("ops.sdpa_math.thead-ppu", group="ops", level="kernel",
+                     make_fn=make(thead_fn), derived=tflops, iters=50),
+            PerfCase("ops.sdpa_math.native", group="ops", level="kernel",
+                     make_fn=make(native), derived=tflops, iters=50),
+        ]
 
     triton = _load_by_path("kernel/triton_level.py", "sdpa_math_triton")
     return [

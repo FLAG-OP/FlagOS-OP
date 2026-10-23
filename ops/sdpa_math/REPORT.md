@@ -2,7 +2,7 @@
 
 > **职责与证据等级**：本页是当前验证矩阵；`README.md` 负责使用入口，
 > `PLATFORM.md` 负责平台绑定，`reports/` 保存带日期的实验和原始数据。
-> 当前为 Ascend910/P800 两个硬件交付，CPU 仅作 ATen 对照。FlagOS E2E 使用
+> 当前为 Ascend910/P800/thead-ppu 三个硬件交付，CPU 仅作 ATen 对照。FlagOS E2E 使用
 > mini-LLM harness，不等同于真实 vLLM；真实 vLLM 仍待专门环境复验。
 
 > 定位: 一页看全一个算子——实现矩阵、验证矩阵、关键数字。
@@ -12,8 +12,8 @@
 |---|---|
 | 算子名称 | `aten::_scaled_dot_product_attention_math`（SDPA **math 后端**，双输出 `(out, attn_probs)`） |
 | 语义 | [reference.py](reference.py)（GQA / causal / bool·float mask / dropout 双规则 / fp32 内部；P800 半精度 fast path 有保守回退） |
-| 目标设备 / 路线 | `ascend910` + `p800-kunlunxin` + `cpu` / **A1** ☑（aten 拦截，成对注册 `Autograd*` + 纯设备键） |
-| 日期 / 状态 | 2026-10-01 定稿 / 2026-10-12 文档复核 |
+| 目标设备 / 路线 | `ascend910` + `p800-kunlunxin` + `thead-ppu` + `cpu` / **A1** ☑（aten 拦截，成对注册 `Autograd*` + 纯设备键） |
+| 日期 / 状态 | 2026-10-01 定稿 / 2026-10-12 文档复核 / 2026-10-24 thead-ppu |
 
 ## 实现矩阵（三级）
 
@@ -22,24 +22,26 @@
 | torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ☑ | 独立 ATen 组合；CPU 交付 + P800 fallback/第二判卷人 |
 | Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ☑ | 两段式 `_probs_kernel`(pass1/2 共用 `_score_block`) + `_pv_kernel`；小形状（≤56 score tiles，e2e 实测定标见 [§9](reports/performance.md)）单 kernel 融合；dropout 用 ATen 收口 |
 | P800 fast | [kernel/p800_fast_level.py](kernel/p800_fast_level.py) | ☑ | vendor efficient `O/LSE` + `P=exp(scale·QKᵀ-LSE)`；保留双输出契约 |
+| thead fast | [kernel/thead_fast_level.py](kernel/thead_fast_level.py) | ☑ | flash(maskless 方阵)/efficient(masked 或非方阵 causal) `O/LSE` + exact-P；efficient LSE 按 32 pad 须切片 |
 | 硬件级 | `kernel/hardware_level/` | — | 未做：CANN/厂商绑定不在本交付范围（torch 级已覆盖 CPU） |
 
-`reference.py` 为独立判卷标准；reference / torch / triton / P800 fast
-均过同一 175 组黄金。
+`reference.py` 为独立判卷标准；reference / torch / triton / P800 fast /
+thead fast 均过同一 175 组黄金。
 
 ## 验证矩阵（三层）
 
 | 层级 | 入口 | 结果 | 详细报告 |
 |---|---|---|---|
-| 一键三层 | `python3 example.py ascend910` / `cpu` / `p800-kunlunxin` | ☑ 全绿（52+21+8/9 项） | — |
-| kernel 层 | `test/kernel_level.py` | ☑ 52 组 ×3 profile，哨兵/dropout/错误路径全过 | [reports/accuracy.md](reports/accuracy.md) |
+| 一键三层 | `python3 example.py ascend910` / `cpu` / `p800-kunlunxin` / `thead-ppu` | ☑ 全绿（52+21+8/9 项） | — |
+| kernel 层 | `test/kernel_level.py` | ☑ 52 组 ×4 profile，哨兵/dropout/错误路径全过 | [reports/accuracy.md](reports/accuracy.md) |
 | 框架层 | `test/op_level.py` | ☑ 22 项：四模式拦截、注册=直调（逐位）、P800 fused backward、6 组 gradcheck、F.sdpa(MATH) 拦截 | [reports/test-report.md](reports/test-report.md) |
 | 应用层 | `test/framework_level.py` | ☑ 8-9 项：mini-decoder + 概率图消费者；P800 在 FlagGems 栈内运行 | [reports/test-report.md](reports/test-report.md) |
-| 黄金回归 | `script/gen_golden.py` + `check_accuracy.py` | ☑ **175/175**（reference/torch/triton/p800 四实现）；原生对照 **131/131**（44 bool 跳过） | [reports/accuracy.md](reports/accuracy.md) |
-| 性能 | `script/bench_perf.py`（含 `--register` A1 路径） | ☑ NPU 直调 1.16-2.03x（6 形状全过）；CPU 1.05-1.40x；P800 1.46-2.21x | [reports/performance.md](reports/performance.md) |
+| 黄金回归 | `script/gen_golden.py` + `check_accuracy.py` | ☑ **175/175**（reference/torch/triton/p800/thead 五实现）；原生对照 **131/131**（44 bool 跳过） | [reports/accuracy.md](reports/accuracy.md) |
+| 性能 | `script/bench_perf.py`（含 `--register` A1 路径） | ☑ NPU 直调 1.16-2.03x（6 形状全过）；CPU 1.05-1.40x；P800 1.46-2.21x；thead 直调 **2.38x** native composite | [reports/performance.md](reports/performance.md) |
 | 语义证据 | `probes/native_semantics.py` | ☑ 6 节全过（两 profile） | [reports/development.md](reports/development.md) |
-| perf 门禁 | `common/perf_registry.py` → `scripts/perf_run.py --pattern sdpa_math` | ☑ 已登记 `ops.sdpa_math` | [reports/performance.md](reports/performance.md) |
+| perf 门禁 | `common/perf_registry.py` → `scripts/perf_run.py --pattern sdpa_math` | ☑ 已登记 `ops.sdpa_math`（含 thead-ppu） | [reports/performance.md](reports/performance.md) |
 | P800 | `python3 example.py p800-kunlunxin` | ☑ kernel 52 · 黄金 175/175 · A1 22 · FlagGems 应用层 9 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) |
+| thead-ppu | `python3 example.py thead-ppu` | ☑ kernel 52 · tail 47 · 黄金 175/175 · A1 21 · framework 8 · perf gate OK | [reports/thead-ppu.md](reports/thead-ppu.md) |
 | FlagOS E2E | `python3 script/e2e_flagos.py --device cuda:1` | ☑ 4 层 mini-LLM · forward/backward/generate · A1 拦截 856 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
 
 ## 关键数字
@@ -52,6 +54,7 @@
 | 延迟（NPU fp16 vs 原生 math） | 2k D128 **1.369ms / 2.776ms = 2.03x**；1k D128 1.29x；GQA 1.67x；decode **1.17x**；tail **1.16x** | 同为"返回 out+概率图"的公平口径 |
 | A1 包装开销 | 1k D64 直调 0.515ms → A1 0.555ms；decode 直调 0.217ms → A1 0.295ms（≈0.078ms） | 1k 仍 1.13x 于原生；decode A1 0.86x（小形状包装占比高） |
 | P800 fp16 | direct **1.46-2.21x** native；A1 **1.31-2.17x** | 同为返回 out+P 的公平口径 |
+| thead-ppu fp16 | direct **2.38x** native composite（0.328ms vs 0.782ms, 13.10 vs 5.49 TFLOPS）；A1 ~1.00x（注册后 native 即本实现） | 同为返回 out+P；native 列为未注册 composite math |
 | P800 no-P 参考 | exact-contract math 比 `F.sdpa` 慢 **1.98-4.46x** | **非同输出契约**：`F.sdpa` 不返回/物化 P，只作融合上限参考 |
 | A100 绝对性能（外部参照） | 同契约 private-math 未测；非等价 no-P 口径下 P800 vendor efficient 为 A100·FA2 的 **36-53%** | 论文读数、非同机复测；不能折算成 exact-P 加速比 |
 | FlagOS E2E | forward **1.07x**；train-out **1.45x**；train+probs **1.48x**；generate **1.09x** | fused backward off/on **1.45-1.50x**，覆盖 dO+dP |

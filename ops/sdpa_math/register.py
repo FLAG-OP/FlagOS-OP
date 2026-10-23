@@ -29,12 +29,14 @@ try:  # Package-style import: ops.sdpa_math.register
     from .kernel.torch_level import sdpa_math_torch
     from .kernel.triton_level import PLATFORM, sdpa_math_triton
     from .kernel.p800_fast_level import sdpa_math_p800_fast
+    from .kernel.thead_fast_level import sdpa_math_thead_fast
     from .reference import _softmax01, make_dropout_mask, sdpa_math_reference
 except ImportError:  # Standalone import with OP_DIR on sys.path
     try:
         from kernel.torch_level import sdpa_math_torch
         from kernel.triton_level import PLATFORM, sdpa_math_triton
         from kernel.p800_fast_level import sdpa_math_p800_fast
+        from kernel.thead_fast_level import sdpa_math_thead_fast
         from reference import _softmax01, make_dropout_mask, sdpa_math_reference
     except ImportError:
         # 无 triton 环境（CI 包化扫描等）: torch 级兜底, 其余惰性
@@ -42,12 +44,14 @@ except ImportError:  # Standalone import with OP_DIR on sys.path
         PLATFORM = "ascend910"
         sdpa_math_triton = None
         sdpa_math_p800_fast = None
+        sdpa_math_thead_fast = None
         from .reference import _softmax01, make_dropout_mask, sdpa_math_reference  # noqa: F811
 
 _IMPLS = {
     "triton": sdpa_math_triton,
     "torch": sdpa_math_torch,
     "p800": sdpa_math_p800_fast,
+    "thead": sdpa_math_thead_fast,
     "reference": sdpa_math_reference,
 }
 

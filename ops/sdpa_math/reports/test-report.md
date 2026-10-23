@@ -2,23 +2,24 @@
 
 | 项 | 值 |
 |---|---|
-| 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ torch（CPU/fallback） |
-| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `cpu` / 2026-09-30~10-02 |
-| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · FlagOS E2E ☑ · 四件套 ☑） |
+| 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ thead fast（thead-ppu）+ torch（CPU/fallback） |
+| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `thead-ppu` · `cpu` / 2026-09-30~10-02 · 2026-10-24 |
+| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · FlagOS E2E ☑ · 四件套 ☑；thead-ppu 缺证：run.py --consistency 锚定依赖 flag_gems） |
 
 ## 1. 测试范围
 
 | 层级 | 覆盖 | 入口 | 结果 |
 |---|---|---|---|
-| kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×3 profile |
-| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：22 项（四模式拦截 · 注册=直调逐位 · P800 fused backward · 6 组 gradcheck · F.sdpa(MATH)） |
-| 应用层 | ☑ | `test/framework_level.py [ascend910\|cpu\|p800-kunlunxin]` | PASS：8-9 项（mini-decoder + 概率图消费者双跑） |
-| 黄金回归 | ☑ | `script/gen_golden.py` + `check_accuracy.py` | **175/175** ×4 实现；原生对照 131/131（44 bool 跳过） |
+| kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×4 profile |
+| thead tail 直测 | ☑ | `test/kernel_level_tail_thead_ppu.py` | PASS：47 组（3072/5000/5120/5000×5001 tails × fp32/bf16/fp16 × seeds 11/22/33 + zeros/large/boundary + 4096 floatmask） |
+| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | PASS：22 项（四模式拦截 · 注册=直调逐位 · P800 fused backward · 6 组 gradcheck · F.sdpa(MATH)） |
+| 应用层 | ☑ | `test/framework_level.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | PASS：8-9 项（mini-decoder + 概率图消费者双跑） |
+| 黄金回归 | ☑ | `script/gen_golden.py` + `check_accuracy.py` | **175/175** ×5 实现（含 thead）；原生对照 131/131（44 bool 跳过） |
 | 性能门禁 | ☑ | `scripts/perf_run.py --pattern sdpa_math` + `perf_compare.py` | OK：FAIL 0 · WARN 0（triton 0.504ms / 8.524 TFLOPS 入库基线） |
 | 语义证据 | ☑ | `probes/native_semantics.py [ascend910\|cpu]` | 6 节全过（schema / dropout 双规则表 / bool 怪癖 / 冲突边界 / F.sdpa 参数形态 / 注册键） |
 | 跨层一致性 | ☑ | 黄金生成的三重互验（§3） | 参考 vs `F.sdpa(MATH)` vs 原生直调 vs 自洽式，全一致 |
 | FlagOS E2E | ☑ | `script/e2e_flagos.py` | PASS：4 层 mini-LLM / 前向 / 反向 / 生成 / 概率图熵正则（§4.1） |
-| 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin]` | 三层全绿 |
+| 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | 三层全绿 |
 
 ## 2. 环境
 
@@ -41,6 +42,7 @@ P800 复验环境为 torch `2.9.0+cu129` + torch_xmlir
 | 自研 triton（NPU） | **175/175** | 3.906e-3（bf16） | [reports/accuracy.md](accuracy.md) |
 | 自研 torch（CPU） | **175/175** | 1.953e-3（bf16） | |
 | P800 fast（cuda:1） | **175/175** | 3.906e-3（bf16） | fp16/bf16 走 vendor O/LSE + exact-P；fp32/mask/dropout 回退 |
+| thead fast（cuda:6） | **175/175** | 1.050e-2（bf16） | maskless flash、masked efficient；LSE pad 切片；fp32 回退 torch |
 | 参考 reference | **175/175** | 0 | 判卷标准本体 |
 | 原生（未注册进程直调） | **131/131** | 9.766e-4（bf16，NPU） | 44 组 bool mask 按规则跳过（§5 #1） |
 | FlagGems | 不适用 | — | 无"返回概率图"的同语义实现；其 SDPA 为融合算法、不产出 P（Should 项已注明原因） |

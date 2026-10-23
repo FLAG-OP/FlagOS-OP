@@ -97,7 +97,7 @@ operators:
     directory: sdpa_math
     group: core
     purpose: 私有 SDPA math 后端，同时返回完整概率图。
-    key_result: 四份实现通过同一组 175 例黄金数据。
+    key_result: 五份实现通过同一组 175 例黄金数据。
     platforms:
       ascend:
         profiles: [ascend910]
@@ -105,6 +105,9 @@ operators:
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: vendor O/LSE 加 exact-P 重建
+      thead:
+        profiles: [thead-ppu]
+        implementation: flash/efficient 分流 O/LSE 加 exact-P 重建
 
   - name: embedding
     directory: embedding

@@ -2,8 +2,8 @@
   "schema": 1,
   "device": "thead-ppu",
   "created_at": "2026-10-23T14:43:09.881772+00:00",
-  "updated_at": "2026-10-23T16:05:30.213346+00:00",
-  "git_commit": "b29a1ac56f5bc8da47ad1b85d036bc39f0fc2c26",
+  "updated_at": "2026-10-23T16:59:43.676330+00:00",
+  "git_commit": "f4f5167d3dd055aa44fbf5bba82521e66405d4b0",
   "git_dirty": true,
   "env_fingerprint": {
     "torch": "2.10.0",
@@ -85,6 +85,24 @@
         "vllm": "0.19.0"
       }
     },
+    "ops.sdpa_math.native": {
+      "metrics": {
+        "latency_ms": 0.782301,
+        "TFLOPS": 5.49
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-10-23T16:59:40.264553+00:00",
+      "git_commit": "f4f5167d3dd055aa44fbf5bba82521e66405d4b0",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
     "ops.sdpa_math.reference": {
       "metrics": {
         "latency_ms": 1.146558,
@@ -94,6 +112,24 @@
       "iters": 50,
       "updated_at": "2026-10-23T15:14:32.285650+00:00",
       "git_commit": "79b1b1aa867bd4dedd90eff69e6e9d717104e1fb",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.sdpa_math.thead-ppu": {
+      "metrics": {
+        "latency_ms": 0.327981,
+        "TFLOPS": 13.095
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-10-23T16:59:33.175500+00:00",
+      "git_commit": "f4f5167d3dd055aa44fbf5bba82521e66405d4b0",
       "git_dirty": true,
       "env_fingerprint": {
         "torch": "2.10.0",
