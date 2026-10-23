@@ -311,3 +311,45 @@ PER_OP 钉选的设计意图**，生态分工见 §8.2。
 - 两个真断层被四阶段验证逐关拦下: 跨芯片方言编译失败、mask 语义浅
 - 详见 [intake_llm/REPORT.md](../intake_llm/REPORT.md)（本地模拟）与
   [REPORT_KG.md](../intake_llm/REPORT_KG.md)（官方 MCP，含调试方法论记录）
+
+## 9. thead-ppu 移植记录（2026-10-23）
+
+第四个交付平台：平头哥 PPU-ZW810E（CUDA 兼容层，torch 2.10.0 /
+triton 3.6.0，profile `thead-ppu`）。完整证据链见
+[thead-ppu.md](thead-ppu.md)，绑定结论见 PLATFORM.md §3c。
+
+### 9.1 路线决策（七步执行摘要）
+
+| 步骤 | 结论 |
+|---|---|
+| a. 分叉判定 | 结构级：新 backend 文件 `kernel/backends/thead_ppu.py` + 三候选路由 |
+| b. 首测 | Triton-on-PPU 可编译运行（tl.dot 64³ 对点 rel≈7e-4，精度 fp16 量级）；efficient/flash overload 均存在、cudnn 报 BAD_PARAM；dispatch key `AutogradCUDA` 6/7 命中（`inference_mode` 零命中同 #19）；bias 16B stride 对齐两条规则钉死 |
+| c. 实现 | fp32→ATen 组合（无 bmm bug、无需 pad）；fp16/bf16→厂商 overload 直调；GQA `repeat_interleave`；bool→additive；全遮蔽行 NaN；可微 mask→A1 数学 backward |
+| d. kernel 直测 | 37/37 + tail 覆盖 37/37（3072/5000/5120 尾块 ×3 seed + zeros/large/boundary） |
+| e. A1 注册 | `AutogradCUDA` 拦截、注册=直调逐位、梯度 vs 原生通过 |
+| f. 三层+一致 | `example.py thead-ppu` 三层全绿；`run.py --consistency` 因 dev 栈无 flag_gems 结构性缺证（非本算子缺陷） |
+| g. 黄金 | 397/397（worst 7.812e-3 bf16） |
+| h. 性能 | 首版 4.07x 倒挂 → 定位两根因收口 → **1.10x 原生**，基线入库 |
+
+### 9.2 首版性能倒挂的两根因（方法论教训）
+
+1. **"照抄 p800 全走 efficient"在 PPU 不成立**。TorchDispatchMode 实证
+   PPU 原生 `F.sdpa` 内部只调 `_scaled_dot_product_flash_attention`；
+   efficient kernel 更慢且输出非连续（D-major，`reshape` 触发整份拷贝）。
+   ——移植时先证明"与原生同 kernel"再定主路径，厂商委托的"厂商"要指名。
+2. **平台选择器每调用 `find_spec` 是隐藏税**。`backends.get_impl()`
+   三候选解析 ~80-100 µs/调用（cProfile 定位），在 0.02 ms 级 kernel
+   面前就是 3-5x。收口：进程级 `_IMPL_CACHE`（栈身份进程内不变），
+   对其他平台同样受益。
+
+### 9.3 移植方法论沉淀
+
+- **schema 逐参数实测**，不按别栈经验猜：PPU efficient 无 `enable_gqa`、
+  flash 无 `attn_mask`、overrideable 是 privateuse1 专用——三条都与
+  "CUDA 栈应该都有"的直觉相反。
+- **报错原文入档**（bias 对齐两种变体、cudnn BAD_PARAM、flash 未知
+  关键字），后来者可直接对号。
+- **平台分化用 parity 口径收口**：bf16 boundary 溢出与原生同行为，
+  判 inf 位置一致 + 有限子集相对精度，而不是拿绝对容差判死自家实现。
+- 探针留档 `probes/thead_*.py` + `probes/out/*.json`，复现命令在
+  thead-ppu.md §7。

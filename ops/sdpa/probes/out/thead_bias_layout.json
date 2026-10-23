@@ -1,0 +1,169 @@
+{
+  "device": "cuda:6",
+  "rule_check": [
+    {
+      "sq": 333,
+      "skv": 333,
+      "dtype": "torch.float32",
+      "head_bytes": 443556,
+      "row_bytes": 1332,
+      "observed": " (strideH)",
+      "predicted": [
+        "(strideH)",
+        "(row)"
+      ]
+    },
+    {
+      "sq": 100,
+      "skv": 100,
+      "dtype": "torch.float16",
+      "head_bytes": 20000,
+      "row_bytes": 200,
+      "observed": "",
+      "predicted": [
+        "(row)"
+      ]
+    },
+    {
+      "sq": 197,
+      "skv": 197,
+      "dtype": "torch.float32",
+      "head_bytes": 155236,
+      "row_bytes": 788,
+      "observed": " (strideH)",
+      "predicted": [
+        "(strideH)",
+        "(row)"
+      ]
+    },
+    {
+      "sq": 1,
+      "skv": 7,
+      "dtype": "torch.float32",
+      "head_bytes": 28,
+      "row_bytes": 28,
+      "observed": " (strideH)",
+      "predicted": [
+        "(strideH)",
+        "(row)"
+      ]
+    },
+    {
+      "sq": 100,
+      "skv": 100,
+      "dtype": "torch.float32",
+      "head_bytes": 40000,
+      "row_bytes": 400,
+      "observed": "OK",
+      "predicted": []
+    },
+    {
+      "sq": 128,
+      "skv": 128,
+      "dtype": "torch.float16",
+      "head_bytes": 32768,
+      "row_bytes": 256,
+      "observed": "OK",
+      "predicted": []
+    },
+    {
+      "sq": 100,
+      "skv": 128,
+      "dtype": "torch.float16",
+      "head_bytes": 25600,
+      "row_bytes": 256,
+      "observed": "OK",
+      "predicted": []
+    },
+    {
+      "sq": 127,
+      "skv": 128,
+      "dtype": "torch.float32",
+      "head_bytes": 65024,
+      "row_bytes": 512,
+      "observed": "OK",
+      "predicted": []
+    },
+    {
+      "sq": 126,
+      "skv": 128,
+      "dtype": "torch.float16",
+      "head_bytes": 32256,
+      "row_bytes": 256,
+      "observed": "OK",
+      "predicted": []
+    }
+  ],
+  "layout": {
+    "S333x333/float32/bool/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 1.2516975402832031e-06,
+      "kv_pad": 1.2516975402832031e-06
+    },
+    "S333x333/float32/float/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 9.98377799987793e-07,
+      "kv_pad": 9.98377799987793e-07
+    },
+    "S333x333/float16/bool/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 0.00048828125,
+      "kv_pad": 0.00048828125
+    },
+    "S333x333/float16/float/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 0.00048828125,
+      "kv_pad": 0.00048828125
+    },
+    "S197x197/float32/bool/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 1.6689300537109375e-06,
+      "kv_pad": 1.6689300537109375e-06
+    },
+    "S197x197/float32/float/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 1.3709068298339844e-06,
+      "kv_pad": 1.3709068298339844e-06
+    },
+    "S100x100/float16/bool/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned",
+      "as_strided": 0.00048828125,
+      "kv_pad": 0.00048828125
+    },
+    "S100x100/float16/float/causal=1": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned",
+      "as_strided": 0.0009765625,
+      "kv_pad": 0.0009765625
+    },
+    "S1x7/float32/bool/causal=0": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 3.2782554626464844e-07,
+      "kv_pad": 3.2782554626464844e-07
+    },
+    "S1x7/float32/float/causal=0": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 3.5762786865234375e-07,
+      "kv_pad": 3.5762786865234375e-07
+    },
+    "S100x100/bfloat16/bool/causal=0": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned",
+      "as_strided": 0.001953125,
+      "kv_pad": 0.001953125
+    },
+    "S100x100/bfloat16/float/causal=0": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned",
+      "as_strided": 0.001953125,
+      "kv_pad": 0.001953125
+    },
+    "S333x333/float32/bool/causal=0": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 1.6689300537109375e-06,
+      "kv_pad": 1.6689300537109375e-06
+    },
+    "S333x333/float32/float/causal=0": {
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "as_strided": 1.2516975402832031e-06,
+      "kv_pad": 1.2516975402832031e-06
+    }
+  }
+}

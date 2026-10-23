@@ -216,6 +216,41 @@ python3 scripts/build_env_index.py --check
 
 备注：本锁对应 FlagGems 4.2 基线；5.0 复测栈使用独立的 `p800-kunlunxin-gems5` profile 与环境锁。选择与运行步骤见 [昆仑芯环境配置](installation.md#kunlunxin)。 flag_gems 与 vllm-plugin-fl 在共享镜像中为本地路径安装 （/env/FlagGems、/env/xvllm-plugin-FL），核对版本即可， 不建议 pip 覆盖安装。硬件快照来自 2026-10-16 的 `xpu-smi -q` 与 `scripts/env_snapshot.py --device p800-kunlunxin`。 `torch_xmlir` 对应发行包名 `xmlir`；`xtorch_ops` 对应发行包名 `XTorch-Ops`。
 
+<a id="thead-ppu"></a>
+### T-Head PPU ZW810E dev 基座（未装 FlagGems）实测版本
+
+| 项 | 声明 |
+|---|---|
+| profile | [`thead-ppu`](../configs/devices/thead-ppu.yaml) |
+| 平台家族 | `thead` |
+| 硬件 | PPU-ZW810E ×16 · 98304 MiB/卡 · 驱动: 1.5.1-1d747a · 固件: 未暴露版本 · 运行时: HGGC 13.0（容器内 PPU-SMI 1.28；主机 1.17） · 监控工具: ppu-smi（主机不响应 ICMP；连通用 /dev/tcp） · 可见设备: 容器 --privileged 16 卡全见（torch.cuda.device_count()=16）；run 脚本 PPUS=6,7 仅为标记 env |
+| 系统 / 内核 | Linux / 5.10.134-17.2.al8.x86_64 |
+| Python | `3.12.3` |
+| 声明采集时间 | 软件栈 2026-10-23 · 硬件快照 2026-10-23 |
+| 环境锁 | [`thead-ppu.lock.yaml`](../configs/env/thead-ppu.lock.yaml) |
+| 基座镜像 | [`thead-ppu-runtime-v1`](base-images.md#thead-ppu-runtime-v1)（版本对齐） |
+
+适用范围：
+
+- ops/sdpa thead backend（kernel/A1）
+- ops/sdpa_math thead backend（kernel/A1）
+- ops/embedding thead backend（kernel/A1）
+
+| 软件包 / 组件 | 锁定版本 |
+|---|---|
+| `torch` | `2.10.0` |
+| `triton` | `3.6.0` |
+| `flagtree` | `0.6.1+ppu3.6` |
+| `vllm` | `0.19.0+cu130` |
+
+证据入口：
+
+- [docs/base-images.md](../docs/base-images.md)：thead-ppu-runtime 登记基座说明（本锁实测实例为 dev 基座，与该条目 registry_reference 同机）
+- [configs/images/catalog.yaml](../configs/images/catalog.yaml)：thead-ppu-runtime-v1 登记条目（sdpa 交付后为 version-aligned + related_profiles [thead-ppu]）
+- [ops/sdpa/reports/thead-ppu.md](../ops/sdpa/reports/thead-ppu.md)：sdpa thead-ppu 移植与验证报告（三层/黄金/perf 基线证据）
+
+备注：本栈无 flag_gems、无 vllm-plugin-fl；A2/framework 级证据计划由 thead-ci 镜像 （harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:v0.24.0-thead-ci，在用实例含 flag_gems 5.3.4 + 插件 0.3.0rc2.post1，vllm 0.24.0+empty、triton pip=3.5.0/import=3.6.0 自相矛盾待独立实例复核）第二 profile/锁补，仿 p800-kunlunxin / p800-kunlunxin-gems5 双 profile 先例。 ⚠️ 基座缺陷：flagtree 0.6.1+ppu3.6 wheel 损坏——pip show 在册但 import ModuleNotFoundError， pip show -f 可见条目仅 dist-info 与 proton 两 bin；torch/triton 不受影响。 卡况（2026-10-23 快照）：4/11 为 100% 占用、5 占 76G，勿用；空闲 6,7,8,9,10,13,14,15（2MiB/0%）。 登记基座干净实例（registry_reference 镜像）无 triton/flagtree——本锁钉的是 dev 基座实测实例； sdpa 交付后 thead-ppu-runtime-v1 已改为 version-aligned + related_profiles: [thead-ppu] （主版本线 python 3.12.3/torch 2.10.0/triton 3.6.0 对齐），锁内 base_images 段同步补关联。 登记基座干净实例组件集与 dev 栈不同（缺 triton/flagtree），未验同镜像实例，不作 validated-in-image 声明。
+
 <a id="not-validated"></a>
 ## 未登记为实测环境
 

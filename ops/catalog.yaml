@@ -30,9 +30,9 @@ platform_families:
     roadmap_note: 覆盖当前 P800 XMLIR 栈；含 FlagGems 5.0 复测 profile。
   thead:
     display_name: 平头哥
-    status: planned
-    current_profiles: []
-    roadmap_note: 首个算子交付时补充 profile 与命名。
+    status: partial
+    current_profiles: [thead-ppu]
+    roadmap_note: 首个算子 sdpa 已交付；embedding/sdpa_math 待接。
   enflame:
     display_name: 燧原 GCU
     status: planned
@@ -78,7 +78,7 @@ operators:
     directory: sdpa
     group: core
     purpose: 标准 scaled-dot-product attention 前向路径。
-    key_result: 三平台黄金覆盖 397/397。
+    key_result: 四平台黄金覆盖 397/397。
     platforms:
       ascend:
         profiles: [ascend910]
@@ -89,6 +89,9 @@ operators:
       cambricon:
         profiles: [mlu590]
         implementation: TMO / fused overrideable 委托
+      thead:
+        profiles: [thead-ppu]
+        implementation: flash/efficient 分流委托
 
   - name: sdpa_math
     directory: sdpa_math

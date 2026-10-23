@@ -1,8 +1,9 @@
 # 平台绑定清单（Platform Binding）
 
-> 当前交付包含三个平台：**ascend910**（Triton 主实现）、
-> **p800-kunlunxin**（厂商 efficient-attention 委托 + fp32 精度补偿）与
-> **mlu590**（Cambricon TMO FA + fused overrideable 委托）。
+> 当前交付包含四个平台：**ascend910**（Triton 主实现）、
+> **p800-kunlunxin**（厂商 efficient-attention 委托 + fp32 精度补偿）、
+> **mlu590**（Cambricon TMO FA + fused overrideable 委托）与
+> **thead-ppu**（平头哥 ZW810E：flash/efficient 分流委托 + fp32 组合）。
 > 本文件记录不可凭直觉搬运的绑定结论；跨平台移植时逐项重验，不要把
 > 单平台实验结果当成普适行为。
 
@@ -68,6 +69,29 @@ FlagGems `5.3.5`、设备 **MLU590-M9 / `mlu:0`**。
 | FlagGems `_cambricon` | 精度 397/397 全过，但比原生慢 10-40x 且无 autograd——仅作兜底/对照 |
 | 性能水位 | **1.00-1.33x** 原生（早期 math-only 为 0.12-0.52x，已废） |
 
+## 3c. thead-ppu 绑定（平头哥 ZW810E，flash/efficient 分流委托）
+
+环境锁定：开发容器 `flagos-ppu-wt-dev`（torch **2.10.0** CUDA 兼容层 /
+triton **3.6.0** / vllm 0.19.0；无 flag_gems、无 vllm-plugin-fl），
+16 卡均为 **PPU-ZW810E**，用卡 **6,7**（避 4/5/11）。profile 显式
+`--device thead-ppu`（`auto_detect.enabled=false`），测试设备默认
+`cuda:6`，`SDPA_TEST_DEVICE` 可覆盖。
+
+| 绑定项 | 结论 |
+|---|---|
+| 设备表现 | PPU 经 CUDA 兼容层直曝 `device.type="cuda"`；守卫要求设备名含 `PPU`（triton `PPUDriver` 为二路证据，见 `probes/thead_triton_dot_smoke.py`）。`get_impl("cuda")` 三候选路由：`torch_xmlir`→p800、PPU 栈→thead_ppu、否则报错 |
+| 注册 key | **`AutogradCUDA`**。实测（`probes/thead_reg_probe.py`，每 key 独立进程）：`AutogradCUDA` 6/7 探针命中（唯一零命中是 `inference_mode`，同 known-issues #19 的 CUDA 栈现象）；纯 `CUDA` 7/7 全命中但反传出现"未注册 Autograd kernel"警告——故选 `AutogradCUDA`。注意 `configs/devices/thead-ppu.yaml` 的 `dispatch_key` 字段写的是 `CUDA`（P0 首测时的保守值），`ops/sdpa/_profile.py` 以 `_is_ppu_stack()` 检测覆盖为 `AutogradCUDA`，以本表为准 |
+| GQA | efficient/flash schema **均无 `enable_gqa`**（8 参数实测）→ `repeat_interleave` 扩 KV |
+| 主实现（maskless） | 直调 `aten::_scaled_dot_product_flash_attention`。`TorchDispatchMode` 实证 PPU 原生 `F.sdpa` 内部恰好只调这一个 overload——直调即与原生同 kernel；flash schema **无 attn_mask**（传入报 `Unknown keyword argument 'attn_mask'`） |
+| 主实现（带 mask） | efficient 委托 `aten::_scaled_dot_product_efficient_attention`；bool mask 转 additive `-inf` bias；全遮蔽行输出端 `masked_fill` 恢复 NaN |
+| bias 16B stride 对齐 | efficient kernel 强制要求。报错原文两种：`(stride(1)*elem)%16!=0` → `attn_bias is not correctly aligned (strideH)`；`(stride(2)*elem)%16!=0` → `attn_bias is not correctly aligned`（无后缀）。修复（`_aligned_bias`，探针里叫 kv_pad）：把 bias 复制进按列 pad 到 16B 步长的缓冲再 `as_strided` 回原逻辑形状（K-stride 保持 1）。**生效范围：fp32/fp16 已验证等价（`probes/thead_bias_layout.json` 9/9）；bf16 未单独验证（未收口）——黄金集 bf16 masked 案例走连续 bias，不触发非对齐 stride** |
+| fp32 路径 | 委托精度本身很好（非 extreme 3e-7～5e-6），但 scale=8 饱和（黄金 extreme 口径）abs 2.79e-3 超 1e-5 判卷线 → **fp32 走 ATen 组合**（`sdpa_reference` 设备端）。PPU **无** p800 的 XMLIR bmm JIT 缺陷：S∈(320,640] 设备组合 vs CPU 参考 ≤5.7e-7，**无需 768 pad** |
+| bf16 boundary | V≈dtype_max/2 × 长序列时厂商 kernel 中间量溢出为 inf（随 Sq 增大阈值下降）——**原生 `F.sdpa` 同样溢出**，属平台分化而非实现缺陷。tail 测试判定口径：与原生 `inf` 位置 parity + 有限子集 rel<5e-3（黄金 extreme 同款相对容差） |
+| cudnn / overrideable | `_scaled_dot_product_cudnn_attention` 直调报 `CUDNN_BACKEND_TENSOR_DESCRIPTOR: ... ACDNN_STATUS_BAD_PARAM`；`_scaled_dot_product_fused_attention_overrideable` 报 `NotImplementedError`（该入口是 privateuse1 专用）——均不选 |
+| triton 备选 | triton 3.6.0 在 PPU 可编译执行（target cuda arch=80, PPUDriver），但 `tl.dot` 精度掉到 fp16 量级（64³ 点积 rel≈7e-4；ieee K=128 abs 1.03e-4），仍超黄金 fp32 1e-5 → 仅记备选，不接生产 |
+| 性能 | 首版全量走 efficient + `get_impl` 每调用 `find_spec` 解析 → **4.07× 倒挂**（0.426 ms vs 原生 0.105 ms）。收口两步：① maskless 分流 flash；② `backends.get_impl` 加进程级解析缓存（cProfile 实测 find_spec/importlib ~80-100 µs/调用）。最终 perf_run 台账 **0.114 ms vs 原生 0.104 ms（1.10×，37.7 TFLOPS）**，六形状 bench 0.63-0.99×（见 `reports/performance.md`） |
+| 跨层一致性缺证 | 仓库级 `run.py --consistency` 锚定 gelu_and_mul（A2 路由），硬依赖 `flag_gems` + `vllm_fl`——dev 容器二者均无（`ModuleNotFoundError: flag_gems`），属**结构性缺证**而非 sdpa/thead 缺陷。sdpa 的"直调↔dispatch 张量级一致"由 `test/op_level.py` 第 3 步逐位断言覆盖（`bitwise_vs_direct=True`） |
+
 ## 4. 平台专属数字（不可跨平台引用）
 
 - ascend910 性能与根因分解见 `reports/performance.md`、
@@ -81,6 +105,10 @@ FlagGems `5.3.5`、设备 **MLU590-M9 / `mlu:0`**。
 - mlu590 性能与路径选择见 `reports/mlu590.md`、
   `reports/perf_fp16_mlu590.json`（TMO+fused 后 **1.00-1.33x** 原生；
   FlagGems 慢 10-40x，仅兜底）。
+- thead-ppu 性能与倒挂收口见 `reports/thead-ppu.md`、
+  `reports/performance.md`、`reports/perf_fp16_thead-ppu.json`
+  （maskless flash 分流 + `get_impl` 解析缓存后 **1.10x** 原生，
+  六形状 0.63-0.99x；FlagGems 对比因 dev 栈缺失记缺证）。
 
 ## 5. 多平台结构（已落地）
 
@@ -90,6 +118,7 @@ kernel/backends/
   ascend910.py                  # 原 Triton 主体，旧功能零改动
   p800_kunlunxin.py             # Kunlunxin 厂商委托 + fp32 补偿
   mlu590.py                     # Cambricon TMO FA + fused overrideable
+  thead_ppu.py                  # 平头哥 flash(maskless)/efficient(masked) 分流委托
 ```
 
 合并流程与后续平台扩展仍按 [MERGE.md](MERGE.md) 执行。
@@ -108,12 +137,13 @@ backend 内不允许裸 `from reference import ...` 作为首选路径：一旦�
 | 层 | 机制 |
 |---|---|
 | facade 元数据 | `kernel.triton_level.PLATFORM = "multi(...)"`、`SUPPORTED_DEVICE_TYPES=("npu","cuda","mlu")` |
-| backend 元数据 | `kernel.backends.ascend910.PLATFORM` / `...p800_kunlunxin.PLATFORM` / `...mlu590.PLATFORM` |
-| 调用守卫 | backend 只接受本设备且 P800 要求 XMLIR、MLU 要求 torch_mlu；误配立即 `RuntimeError` 并指向本文件 |
+| backend 元数据 | `kernel.backends.ascend910.PLATFORM` / `...p800_kunlunxin.PLATFORM` / `...mlu590.PLATFORM` / `...thead_ppu.PLATFORM` |
+| 调用守卫 | backend 只接受本设备且 P800 要求 XMLIR、MLU 要求 torch_mlu、thead 要求设备名含 `PPU`；误配立即 `RuntimeError` 并指向本文件 |
 
 ```bash
 # 每个平台各跑一次
 python3 probes/guard_check.py ascend910
 python3 probes/guard_check.py p800-kunlunxin
 python3 probes/guard_check.py mlu590
+python3 probes/guard_check.py thead-ppu
 ```

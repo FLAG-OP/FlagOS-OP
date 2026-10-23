@@ -1,0 +1,12 @@
+{
+  "device": "cuda:6",
+  "gpu_name": "PPU-ZW810E",
+  "triton": "3.6.0",
+  "torch": "2.10.0",
+  "err_abs": 0.025159835815429688,
+  "ref_scale": 33.01704025268555,
+  "err_rel": 0.0007620257788971025,
+  "note": "fp32 输入 tl.dot 实测精度≈fp16 量级(rel~1e-3)，故 fp32 路径不走 triton",
+  "ok": true,
+  "timestamp": "2026-10-23T14:53:57.158348+00:00"
+}

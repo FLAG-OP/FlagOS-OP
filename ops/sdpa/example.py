@@ -46,10 +46,21 @@ def main() -> None:
           f"--json-out reports/perf_fp16_{profile.name}.json")
 
 
+def _platform_tag(profile) -> str:
+    """perf case id 平台标签。
+
+    p800-kunlunxin 映射成历史标签 "p800"，保证入库基线
+    ops.sdpa.p800.forward 不改名；其余平台直接用 profile 名
+    （thead-ppu → ops.sdpa.thead-ppu.forward，与 embedding 先例一致）。
+    """
+    return {"p800-kunlunxin": "p800"}.get(profile.name, profile.name)
+
+
 def perf_cases(profile):
-    """Register the P800 production path in the repository perf gate."""
-    if profile.name != "p800-kunlunxin":
+    """Register the platform production path in the repository perf gate."""
+    if profile.name not in ("p800-kunlunxin", "thead-ppu"):
         return []
+    prefix = f"ops.sdpa.{_platform_tag(profile)}"
 
     from common.perf import PerfCase
 
@@ -73,7 +84,8 @@ def perf_cases(profile):
             )
 
             def call():
-                # XMLIR guard: force kernel completion on every iteration.
+                # 厂商委托 kernel 异步提交: 每次迭代读回一个元素强制完成
+                # （known-issues #17.5 只测 launch 会得到物理不可能结果）。
                 return fn(
                     q, k, v, None, 0.0, True, None, False
                 ).reshape(-1)[0].item()
@@ -96,7 +108,7 @@ def perf_cases(profile):
 
     return [
         PerfCase(
-            "ops.sdpa.p800.forward",
+            f"{prefix}.forward",
             group="ops", level="kernel",
             make_fn=make(sdpa_triton), derived=tflops,
         ),
