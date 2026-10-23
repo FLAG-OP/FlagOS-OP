@@ -110,13 +110,16 @@ operators:
     directory: embedding
     group: core
     purpose: 稠密 embedding 前向和 dense backward。
-    key_result: 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
+    key_result: 已在三个当前厂商平台交付；MLU/PPU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
     platforms:
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: 原生 row-gather 与反向补偿
       cambricon:
         profiles: [cambricon]
+        implementation: 原生 index_select 与 embedding_backward 委托
+      thead:
+        profiles: [thead-ppu]
         implementation: 原生 index_select 与 embedding_backward 委托
 
   - name: type_as

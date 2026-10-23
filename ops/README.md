@@ -38,7 +38,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 | 华为昇腾（`ascend`） | 部分交付 | 2 | `ascend910` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
 | 昆仑芯（`kunlunxin`） | 部分交付 | 3 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
-| 平头哥（`thead`） | 部分交付 | 1 | `thead-ppu` |
+| 平头哥（`thead`） | 部分交付 | 2 | `thead-ppu` |
 | 燧原 GCU（`enflame`） | 规划中 | 0 | 计划覆盖：GCU300 / GCU400 / GCU410 |
 | 壁仞（`biren`） | 规划中 | 0 | 待首个交付算子确定 |
 
@@ -50,7 +50,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 |---|---|---|---|
 | [sdpa](sdpa/) | 标准 scaled-dot-product attention 前向路径。 | 华为昇腾（ascend910） · 昆仑芯（p800-kunlunxin） · 寒武纪（mlu590） · 平头哥（thead-ppu） | 四平台黄金覆盖 397/397。 |
 | [sdpa_math](sdpa_math/) | 私有 SDPA math 后端，同时返回完整概率图。 | 华为昇腾（ascend910） · 昆仑芯（p800-kunlunxin） | 四份实现通过同一组 175 例黄金数据。 |
-| [embedding](embedding/) | 稠密 embedding 前向和 dense backward。 | 昆仑芯（p800-kunlunxin） · 寒武纪（cambricon） | 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。 |
+| [embedding](embedding/) | 稠密 embedding 前向和 dense backward。 | 昆仑芯（p800-kunlunxin） · 寒武纪（cambricon） · 平头哥（thead-ppu） | 已在三个当前厂商平台交付；MLU/PPU 侧具备逐位覆盖，Ascend 结果保留为历史实验。 |
 
 ## 基础 ATen 算子
 

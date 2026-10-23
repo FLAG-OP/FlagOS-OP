@@ -1,9 +1,10 @@
-# embedding-op: `aten::embedding` P800/Kunlunxin + Cambricon MLU 实现
+# embedding-op: `aten::embedding` P800/Kunlunxin + Cambricon MLU + T-head PPU 实现
 
 > **文档口径（当前交付）**：本 README 只描述当前交付入口；当前硬件平台为
-> P800/Kunlunxin 与 Cambricon MLU590。旧的 Ascend910 实验仍保留在报告历史中，
-> 不作为本页的当前平台结论。`REPORT.md` 是当前验证矩阵的汇总，`PLATFORM.md`
-> 只记录不可直接迁移的平台绑定，`reports/` 保存带日期的实验与原始数据。
+> P800/Kunlunxin、Cambricon MLU590 与 T-head PPU ZW810E。旧的 Ascend910
+> 实验仍保留在报告历史中，不作为本页的当前平台结论。`REPORT.md` 是当前
+> 验证矩阵的汇总，`PLATFORM.md` 只记录不可直接迁移的平台绑定，`reports/`
+> 保存带日期的实验与原始数据。
 
 按 FlagOS-OP 算子模板开发，范围为需求中的**普通稠密 Embedding 查表**：
 
@@ -20,21 +21,21 @@
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::embedding(weight, indices, padding_idx, scale_grad_by_freq, sparse)` |
-| 平台 | p800-kunlunxin（torch_xmlir，呈 CUDA）· Cambricon MLU590（torch_mlu） |
-| 路线 | A1：P800 = `AutogradCUDA`；MLU = `AutogradPrivateUse1` |
-| forward 生产实现 | XMLIR native `aten::index_select` row gather |
-| dense backward | native `aten::embedding_backward` |
-| `scale_grad_by_freq` | per-occurrence inverse-frequency scaling + dense backward |
-| 验证 | 两平台 kernel 20 forward + 6 backward；黄金 174/174；A1；C1 应用消费者通过 |
-| 性能 | P800 大 shape 与 native embedding 基本持平；MLU 结果见 [REPORT.md](REPORT.md)；Triton gather 慢 11-102x |
+| 平台 | p800-kunlunxin（torch_xmlir，呈 CUDA）· Cambricon MLU590（torch_mlu）· thead-ppu PPU-ZW810E（CUDA 兼容层，呈 CUDA） |
+| 路线 | A1：P800/PPU = `AutogradCUDA`；MLU = `AutogradPrivateUse1` |
+| forward 生产实现 | XMLIR/PPU/MLU native `aten::index_select` row gather |
+| dense backward | native `aten::embedding_backward`（XPU 缺 scale 补偿；MLU/PPU 原生完整） |
+| `scale_grad_by_freq` | per-occurrence inverse-frequency scaling（XPU）+ dense backward；MLU/PPU 原生直通 |
+| 验证 | 三平台 kernel 20 forward + 6 backward；黄金 174/174；A1；C1 应用消费者通过 |
+| 性能 | P800/PPU 大 shape 与 native embedding 基本持平（0.76-1.00x）；MLU 结果见 [REPORT.md](REPORT.md)；Triton gather 慢 11-171x |
 
-| 平台 | **2 个**：p800-kunlunxin / torch_xmlir；cambricon（MLU590）/ torch_mlu |
-| 路线 | A1 拦截：P800 = `AutogradCUDA`，MLU = `AutogradPrivateUse1` |
-| forward 生产实现 | 两平台均委托 native `aten::index_select` row gather |
-| dense backward | native `aten::embedding_backward`（MLU 原生完整；XPU 缺分支见下） |
-| `scale_grad_by_freq` | P800：per-occurrence inverse-frequency 补偿；MLU：原生实现直接委托 |
-| 验证 | 两平台 kernel 20 forward + 6 backward；黄金 174/174 逐位；A1；应用层全绿 |
-| 性能 | P800 大 shape 0.89-1.00x native；MLU 0.65-1.12x native；Triton gather 慢一个量级 |
+| 平台 | **3 个**：p800-kunlunxin / torch_xmlir；cambricon（MLU590）/ torch_mlu；thead-ppu（PPU ZW810E）/ CUDA 兼容层 |
+| 路线 | A1 拦截：P800/PPU = `AutogradCUDA`，MLU = `AutogradPrivateUse1` |
+| forward 生产实现 | 三平台均委托 native `aten::index_select` row gather |
+| dense backward | native `aten::embedding_backward`（MLU/PPU 原生完整；XPU 缺分支见下） |
+| `scale_grad_by_freq` | P800：per-occurrence inverse-frequency 补偿；MLU/PPU：原生实现直接委托 |
+| 验证 | 三平台 kernel 20 forward + 6 backward；黄金 174/174 逐位；A1；应用层全绿 |
+| 性能 | P800 大 shape 0.89-1.00x native；MLU 0.65-1.12x native；PPU 0.76-0.95x native；Triton gather 慢一个量级 |
 
 ## 快速开始
 
@@ -66,7 +67,23 @@ python3 script/bench_dispatch.py --device mlu:0 \
   --json-out reports/dispatch_cambricon.json
 ```
 
-平台接入细节见 [reports/cambricon.md](reports/cambricon.md)。
+T-head PPU ZW810E（测试卡 `cuda:6`，`ppu-smi` 确认 6/7 空闲）：
+
+```bash
+python3 example.py thead-ppu
+python3 test/kernel_level_tail_thead_ppu.py thead-ppu
+
+python3 script/check_accuracy.py --impl thead-ppu --device cuda:6
+python3 script/bench_perf.py --device cuda:6 --dtype float16 \
+  --json-out reports/perf_fp16_thead-ppu.json
+python3 scripts/perf_run.py --device thead-ppu --pattern ops.embedding
+python3 scripts/perf_compare.py --device thead-ppu
+python3 script/bench_dispatch.py --device cuda:6 \
+  --json-out reports/dispatch_thead-ppu.json
+```
+
+平台接入细节见 [reports/cambricon.md](reports/cambricon.md)、
+[reports/thead-ppu.md](reports/thead-ppu.md)。
 
 ## 实现策略
 
@@ -199,5 +216,7 @@ flag_gems.only_enable(include=["gelu"])  # 消费方 surrounding op 走 FlagGems
 - 不覆盖稀疏 / fused optimizer；
 - weight 仅支持 FP32 / FP16 / BF16；
 - indices 支持 int64 / int32；
-- CPU profile 仅用于 reference，生产 backend 绑定 XMLIR/CUDA（P800）与
-  torch_mlu（cambricon），由 [kernel/platform.py](kernel/platform.py) 按设备路由。
+- CPU profile 仅用于 reference，生产 backend 绑定 XMLIR/CUDA（P800）、
+  torch_mlu（cambricon）与 CUDA 兼容层（thead-ppu），由
+  [kernel/platform.py](kernel/platform.py) 按设备路由（cuda 双候选按
+  栈身份探测）。

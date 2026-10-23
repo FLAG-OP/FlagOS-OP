@@ -17,10 +17,29 @@ class LocalProfile:
                 f"dev={self.torch_device} key={self.dispatch_key}]")
 
 
+def _is_ppu_stack() -> bool:
+    """PPU 栈识别（本地 shim 用; configs auto_detect 不可靠, 见 thead-ppu.yaml）。"""
+    try:
+        from triton.runtime import driver
+        if "PPU" in type(driver.active).__name__:
+            return True
+    except Exception:
+        pass
+    try:
+        import torch
+        return torch.cuda.is_available() and any(
+            "PPU" in torch.cuda.get_device_name(i)
+            for i in range(torch.cuda.device_count())
+        )
+    except Exception:
+        return False
+
+
 def load_profile(name: str | None = None) -> LocalProfile:
     name = name or os.environ.get("EMBEDDING_PROFILE")
     if name is None:
-        # 与 sdpa/_profile.py 同序: torch_mlu 优先，再 torch_xmlir，最后 cpu。
+        # 与 sdpa/_profile.py 同序: torch_mlu 优先，再 torch_xmlir，
+        # 再 PPU 栈（thead）/ torch_npu，最后 cpu。
         try:
             import torch_mlu  # noqa: F401
             name = "cambricon"
@@ -29,11 +48,14 @@ def load_profile(name: str | None = None) -> LocalProfile:
                 import torch_xmlir  # noqa: F401
                 name = "p800-kunlunxin"
             except ImportError:
-                try:
-                    import torch_npu  # noqa: F401
-                    name = "ascend910"
-                except ImportError:
-                    name = "cpu"
+                if _is_ppu_stack():
+                    name = "thead-ppu"
+                else:
+                    try:
+                        import torch_npu  # noqa: F401
+                        name = "ascend910"
+                    except ImportError:
+                        name = "cpu"
     if name in ("p800-kunlunxin", "p800", "kunlunxin"):
         return LocalProfile(
             name="p800-kunlunxin",
@@ -64,9 +86,20 @@ def load_profile(name: str | None = None) -> LocalProfile:
             # Cambricon A1: 注册到 Autograd key（见上注）
             dispatch_key="AutogradPrivateUse1",
         )
+    if name in ("thead-ppu", "thead", "ppu", "thead-ppu-zw810e"):
+        # probes/thead_first_probe.py 实测（2026-10-23, 卡6）:
+        #   AutogradCUDA 命中 grad/no_grad/aten 直调 6/7 探针（唯一零命中
+        #   是 inference_mode, 同 known-issues #19 的 Autograd* 键通病）;
+        #   CUDA 键 7/7 全命中。与 p800/T1-sdpa 先例一致选 AutogradCUDA。
+        return LocalProfile(
+            name="thead-ppu",
+            vendor="thead",
+            torch_device=os.environ.get("EMBEDDING_TEST_DEVICE", "cuda:6"),
+            dispatch_key="AutogradCUDA",
+        )
     if name == "cpu":
         return LocalProfile("cpu", "cpu", "cpu", "CPU")
     raise ValueError(
         f"unknown embedding profile: {name}"
-        "（内置 p800-kunlunxin / ascend910 / cambricon / cpu）"
+        "（内置 p800-kunlunxin / ascend910 / cambricon / thead-ppu / cpu）"
     )

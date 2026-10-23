@@ -1,8 +1,8 @@
 # 多平台合并流程（MERGE）— embedding
 
 > 新平台实现合入本目录的固定流程。范式实证：ascend910（PR#11）→
-> cambricon（PR#9 rebase 合入）。核心原则：**黄金/测试/注册链复用，
-> 只写 kernel 本体**。
+> cambricon（PR#9 rebase 合入）→ thead-ppu（T2, PPU ZW810E）。核心原则：
+> **黄金/测试/注册链复用，只写 kernel 本体**。
 
 ## 七步流程
 
@@ -31,7 +31,7 @@
 - rebase 后必须：本机全链回归 + `ops/test_packaging.py`（多算子
   同进程）双绿才可合并
 
-## 验证矩阵终态（三平台）
+## 验证矩阵终态（四平台）
 
 | 层 | 命令 | 结果 |
 |---|---|---|
@@ -39,4 +39,12 @@
 | op（ascend910） | `test/op_level.py` | 拦截 5 次·逐位·梯度 err=0.0 |
 | kernel/op/应用（p800） | 同上 | 20/20+6/6 err=0；A1 拦截 5 次 |
 | kernel/op/应用（cambricon） | `EMBEDDING_PROFILE=cambricon ...` | 见 reports/cambricon.md |
+| kernel/tail/op/应用（thead-ppu） | `example.py thead-ppu` + `test/kernel_level_tail_thead_ppu.py thead-ppu` | 20/20+6/6+37/37 err=0；黄金 174/174；A1 拦截 5 次；见 reports/thead-ppu.md |
 | 包化共存 | `python3 ops/test_packaging.py` | 16 算子导入+双注册+消费 全绿 |
+
+## cuda 双候选路由（XMLIR / PPU）
+
+p800 与 thead-ppu 同为 device.type=="cuda" + AutogradCUDA——
+`kernel/platform.py::_cuda_impl` 与 `register.py::_cuda_backend` 按栈
+身份路由（torch_xmlir 优先, 再 PPU 设备名），进程级缓存。新平台若同样
+伪装 CUDA，扩展该探测链而非改 `_BACKENDS` 静态表。

@@ -4,8 +4,8 @@
 
 | 项 | 值 |
 |---|---|
-| 日期 | 2026-09-24 |
-| 设备 | p800-kunlunxin / `cuda:1`（§2）；cambricon MLU590 / `mlu:0`（§3） |
+| 日期 | 2026-09-24（thead-ppu 补测 2026-10-23） |
+| 设备 | p800-kunlunxin / `cuda:1`（§2）；cambricon MLU590 / `mlu:0`（§3）；thead-ppu PPU-ZW810E / `cuda:6`（§5） |
 | dtype | FP16 |
 | 计时口径 | 每次读取一个输出元素，强制 XMLIR kernel 完成 |
 | operator benchmark | `script/bench_perf.py` |
@@ -176,4 +176,69 @@ MLU_VISIBLE_DEVICES=7 python3 scripts/perf_run.py --device cambricon --pattern o
 MLU_VISIBLE_DEVICES=7 python3 scripts/perf_compare.py --device cambricon
 MLU_VISIBLE_DEVICES=7 python3 script/bench_dispatch.py --device mlu:0 \
   --json-out reports/dispatch_cambricon.json
+```
+
+## 5. thead-ppu（PPU ZW810E）
+
+数据：[perf_fp16_thead-ppu.json](perf_fp16_thead-ppu.json)、
+[dispatch_thead-ppu.json](dispatch_thead-ppu.json)（warmup=5，iters=20，
+每次读回一个输出元素强制完成；speedup = native/ours，**>1 表示 ours 更快**）。
+
+### Forward（fp16）
+
+| shape | ours | native | ours/native |
+|---|---:|---:|---:|
+| 1k×D128 | 0.0286ms | 0.0239ms | 0.833x |
+| 16k×D128 | 0.0359ms | 0.0307ms | 0.855x |
+| 131k×D128 | 0.1033ms | 0.0982ms | 0.951x |
+| 16k×D512 | 0.0359ms | 0.0307ms | 0.855x |
+| vocab128k 16k×D128 | 0.0360ms | 0.0275ms | 0.764x |
+
+### Backward（16k×D128，fp16）
+
+| mode | ours | native | ours/native |
+|---|---:|---:|---:|
+| dense | 0.1669ms | 0.1597ms | 0.957x |
+| scale_grad_by_freq | 0.1842ms | 0.1771ms | 0.962x |
+
+### 仓库 perf gate
+
+```text
+ops.embedding.thead-ppu.forward   0.033ms · 254.97 GB/s
+ops.embedding.native.forward      0.030ms · 286.90 GB/s
+perf_compare: FAIL 0 · WARN 0（基线 thead-ppu.json 共 6 条, 含 T1 sdpa 4 条）
+```
+
+### A1 dispatch overhead（独立子进程）
+
+| mode | median | p20 | p80 |
+|---|---:|---:|---:|
+| native `aten::embedding` | 0.0281ms | 0.0278ms | 0.0283ms |
+| direct backend | 0.0315ms | 0.0312ms | 0.0318ms |
+| A1 `F.embedding` | 0.0441ms | 0.0432ms | 0.0448ms |
+
+A1 − native ≈ **+0.016ms**、A1 − direct ≈ **+0.013ms**——比 MLU 的
++0.059ms 更低（PPU 栈 autograd 往返更便宜）。
+
+thead-ppu 分析：
+
+1. 三平台同为「原生 gather 委托」，ours/native 0.76-0.95x 与 p800
+   （0.89-1.00x）/cambricon（0.65-1.12x）同带宽——差距是 ours 侧
+   Python wrapper + 完成守卫，不是 kernel 慢；
+2. gather 逐位（err=0）故无精度-性能权衡；
+3. Triton gather 列缺证（dev 栈无 flag_gems，见 thead-ppu.md §6），
+   两先例平台已有慢 11-171x 的结论，不影响生产选择；
+4. `scale_grad_by_freq` 走原生分支代价 +10%（0.1669→0.1842ms），与
+   MLU 的 +11% 同量级（P800 手写补偿 +47%）；
+5. A1 路径 +0.016ms 是本算子在该栈上可量化的分发成本，三平台最低。
+
+复现：
+
+```bash
+python3 script/bench_perf.py --device cuda:6 --dtype float16 \
+  --json-out reports/perf_fp16_thead-ppu.json
+python3 scripts/perf_run.py --device thead-ppu --pattern ops.embedding
+python3 scripts/perf_compare.py --device thead-ppu
+python3 script/bench_dispatch.py --device cuda:6 \
+  --json-out reports/dispatch_thead-ppu.json
 ```
