@@ -6,7 +6,7 @@
 # - 修改本文件后运行 scripts/build_ops_index.py。
 
 schema: 1
-updated: 2026-10-14
+updated: 2026-10-23
 
 target_scope:
   vendor_family_count: 6
@@ -74,6 +74,18 @@ operator_groups:
     description: 覆盖单元素 tensor 转 Python 标量的路径，包括公开 item API 底层的私有 ATen 原语。
 
 operators:
+  # tyf-2026-10-23-fix
+  # tyf <tyanfeng@mail.ustc.edu.cn>
+  - name: matmul
+    directory: matmul
+    group: core
+    purpose: A1 向量、矩阵、批量广播乘法及左右输入一阶反向。
+    key_result: PARTIAL：P800 黄金 144/144、三级含 C1 消费者通过；性能门禁仍有 4 FAIL / 4 WARN，未完成最终验收。
+    platforms:
+      kunlunxin:
+        profiles: [p800-kunlunxin]
+        implementation: 自研 Triton dot，动态 K 规避 BF16 K=1 编译问题
+
   - name: sdpa
     directory: sdpa
     group: core

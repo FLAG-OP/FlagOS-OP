@@ -1,0 +1,37 @@
+{
+  "device": "p800-kunlunxin",
+  "shape": [
+    63,
+    127,
+    65
+  ],
+  "dtype": "float32",
+  "warmup": 20,
+  "iters": 100,
+  "completion_guard": "reshape(-1)[0].item() per call",
+  "isolation": "one process per implementation",
+  "rows": [
+    {
+      "mode": "native",
+      "median_ms": 0.044249,
+      "p20_ms": 0.043349,
+      "p80_ms": 0.047399,
+      "relative_error": 0.0
+    },
+    {
+      "mode": "direct",
+      "median_ms": 0.098758,
+      "p20_ms": 0.096548,
+      "p80_ms": 0.105967,
+      "relative_error": 0.0007483130381369427
+    },
+    {
+      "mode": "a1",
+      "median_ms": 0.128068,
+      "p20_ms": 0.125447,
+      "p80_ms": 0.133968,
+      "relative_error": 0.0007483130381369427
+    }
+  ],
+  "a1_minus_direct_ms": 0.02931
+}

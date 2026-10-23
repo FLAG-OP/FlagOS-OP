@@ -53,6 +53,10 @@ def main() -> int:
             got = md.version(dist)
         except md.PackageNotFoundError:
             got = "(未安装)"
+        # tyf-2026-10-23-fix: unreadable vendor metadata can yield None.
+        # tyf <tyanfeng@mail.ustc.edu.cn>
+        if not got:
+            got = "(版本元数据缺失或不可读)"
         ok = got == want
         n_bad += not ok
         print(f"{pkg:10s} {want:24s} {got:24s} {'✓' if ok else '✗'}")

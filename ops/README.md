@@ -29,7 +29,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 ## 平台覆盖口径
 
-目标范围是 **6 个厂商平台家族**。当前登记 **16 个算子**：**3 个核心多平台算子**、**13 个基础 ATen 算子**。
+目标范围是 **6 个厂商平台家族**。当前登记 **17 个算子**：**4 个核心多平台算子**、**13 个基础 ATen 算子**。
 这是一个增量交付子集，不是完整平台矩阵。`planned` 只表示目标范围，
 不表示支持完成；只有进入算子条目并带有测试与报告的平台才计为已交付。
 
@@ -37,7 +37,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 |---|---|---:|---|
 | 华为昇腾（`ascend`） | 部分交付 | 2 | `ascend910` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
-| 昆仑芯（`kunlunxin`） | 部分交付 | 3 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
+| 昆仑芯（`kunlunxin`） | 部分交付 | 4 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
 | 平头哥（`thead`） | 规划中 | 0 | 待首个交付算子确定 |
 | 燧原 GCU（`enflame`） | 规划中 | 0 | 计划覆盖：GCU300 / GCU400 / GCU410 |
 | 壁仞（`biren`） | 规划中 | 0 | 待首个交付算子确定 |
@@ -48,6 +48,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 算子 | 作用 | 平台 | 关键结论 |
 |---|---|---|---|
+| [matmul](matmul/) | A1 向量、矩阵、批量广播乘法及左右输入一阶反向。 | 昆仑芯（p800-kunlunxin） | PARTIAL：P800 黄金 144/144、三级含 C1 消费者通过；性能门禁仍有 4 FAIL / 4 WARN，未完成最终验收。 |
 | [sdpa](sdpa/) | 标准 scaled-dot-product attention 前向路径。 | 华为昇腾（ascend910） · 昆仑芯（p800-kunlunxin） · 寒武纪（mlu590） | 三平台黄金覆盖 397/397。 |
 | [sdpa_math](sdpa_math/) | 私有 SDPA math 后端，同时返回完整概率图。 | 华为昇腾（ascend910） · 昆仑芯（p800-kunlunxin） | 四份实现通过同一组 175 例黄金数据。 |
 | [embedding](embedding/) | 稠密 embedding 前向和 dense backward。 | 昆仑芯（p800-kunlunxin） · 寒武纪（cambricon） | 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。 |

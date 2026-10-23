@@ -22,6 +22,7 @@ PROVIDERS = [
     ("ops.sdpa", ROOT / "ops/sdpa/example.py"),
     ("ops.sdpa_math", ROOT / "ops/sdpa_math/example.py"),
     ("ops.embedding", ROOT / "ops/embedding/example.py"),
+    ("ops.matmul", ROOT / "ops/matmul/example.py"),
     ("ops.type_as", ROOT / "ops/type_as/example.py"),
     ("ops.clone", ROOT / "ops/clone/example.py"),
     ("ops.contiguous", ROOT / "ops/contiguous/example.py"),

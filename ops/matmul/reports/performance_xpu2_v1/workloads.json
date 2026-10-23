@@ -1,0 +1,557 @@
+[
+  {
+    "case": {
+      "name": "matrix_tail",
+      "a_shape": [
+        63,
+        127
+      ],
+      "b_shape": [
+        127,
+        65
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20260929
+  },
+  {
+    "case": {
+      "name": "matrix_tail",
+      "a_shape": [
+        63,
+        127
+      ],
+      "b_shape": [
+        127,
+        65
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20260932
+  },
+  {
+    "case": {
+      "name": "matrix_tail",
+      "a_shape": [
+        63,
+        127
+      ],
+      "b_shape": [
+        127,
+        65
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20260935
+  },
+  {
+    "case": {
+      "name": "matrix_regular",
+      "a_shape": [
+        128,
+        256
+      ],
+      "b_shape": [
+        256,
+        192
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20260938
+  },
+  {
+    "case": {
+      "name": "matrix_regular",
+      "a_shape": [
+        128,
+        256
+      ],
+      "b_shape": [
+        256,
+        192
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20260941
+  },
+  {
+    "case": {
+      "name": "matrix_regular",
+      "a_shape": [
+        128,
+        256
+      ],
+      "b_shape": [
+        256,
+        192
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20260944
+  },
+  {
+    "case": {
+      "name": "batch_tail",
+      "a_shape": [
+        2,
+        33,
+        65
+      ],
+      "b_shape": [
+        2,
+        65,
+        47
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20260947
+  },
+  {
+    "case": {
+      "name": "batch_tail",
+      "a_shape": [
+        2,
+        33,
+        65
+      ],
+      "b_shape": [
+        2,
+        65,
+        47
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20260950
+  },
+  {
+    "case": {
+      "name": "batch_tail",
+      "a_shape": [
+        2,
+        33,
+        65
+      ],
+      "b_shape": [
+        2,
+        65,
+        47
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20260953
+  },
+  {
+    "case": {
+      "name": "batch_broadcast",
+      "a_shape": [
+        2,
+        1,
+        33,
+        65
+      ],
+      "b_shape": [
+        1,
+        3,
+        65,
+        47
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20260956
+  },
+  {
+    "case": {
+      "name": "batch_broadcast",
+      "a_shape": [
+        2,
+        1,
+        33,
+        65
+      ],
+      "b_shape": [
+        1,
+        3,
+        65,
+        47
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20260959
+  },
+  {
+    "case": {
+      "name": "batch_broadcast",
+      "a_shape": [
+        2,
+        1,
+        33,
+        65
+      ],
+      "b_shape": [
+        1,
+        3,
+        65,
+        47
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20260962
+  },
+  {
+    "case": {
+      "name": "dot",
+      "a_shape": [
+        67
+      ],
+      "b_shape": [
+        67
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20260965
+  },
+  {
+    "case": {
+      "name": "dot",
+      "a_shape": [
+        67
+      ],
+      "b_shape": [
+        67
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20260968
+  },
+  {
+    "case": {
+      "name": "dot",
+      "a_shape": [
+        67
+      ],
+      "b_shape": [
+        67
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20260971
+  },
+  {
+    "case": {
+      "name": "matrix_vector",
+      "a_shape": [
+        37,
+        65
+      ],
+      "b_shape": [
+        65
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20260974
+  },
+  {
+    "case": {
+      "name": "matrix_vector",
+      "a_shape": [
+        37,
+        65
+      ],
+      "b_shape": [
+        65
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20260977
+  },
+  {
+    "case": {
+      "name": "matrix_vector",
+      "a_shape": [
+        37,
+        65
+      ],
+      "b_shape": [
+        65
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20260980
+  },
+  {
+    "case": {
+      "name": "vector_matrix",
+      "a_shape": [
+        65
+      ],
+      "b_shape": [
+        65,
+        29
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20260983
+  },
+  {
+    "case": {
+      "name": "vector_matrix",
+      "a_shape": [
+        65
+      ],
+      "b_shape": [
+        65,
+        29
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20260986
+  },
+  {
+    "case": {
+      "name": "vector_matrix",
+      "a_shape": [
+        65
+      ],
+      "b_shape": [
+        65,
+        29
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20260989
+  },
+  {
+    "case": {
+      "name": "noncontiguous",
+      "a_shape": [
+        65,
+        37
+      ],
+      "b_shape": [
+        37,
+        29
+      ],
+      "layout_a": "transpose"
+    },
+    "dtype": "float32",
+    "seed": 20260992
+  },
+  {
+    "case": {
+      "name": "noncontiguous",
+      "a_shape": [
+        65,
+        37
+      ],
+      "b_shape": [
+        37,
+        29
+      ],
+      "layout_a": "transpose"
+    },
+    "dtype": "float16",
+    "seed": 20260995
+  },
+  {
+    "case": {
+      "name": "noncontiguous",
+      "a_shape": [
+        65,
+        37
+      ],
+      "b_shape": [
+        37,
+        29
+      ],
+      "layout_a": "transpose"
+    },
+    "dtype": "bfloat16",
+    "seed": 20260998
+  },
+  {
+    "case": {
+      "name": "zero_input",
+      "a_shape": [
+        7,
+        17
+      ],
+      "b_shape": [
+        17,
+        9
+      ],
+      "special": "zeros_a"
+    },
+    "dtype": "float32",
+    "seed": 20261037
+  },
+  {
+    "case": {
+      "name": "zero_input",
+      "a_shape": [
+        7,
+        17
+      ],
+      "b_shape": [
+        17,
+        9
+      ],
+      "special": "zeros_a"
+    },
+    "dtype": "float16",
+    "seed": 20261040
+  },
+  {
+    "case": {
+      "name": "zero_input",
+      "a_shape": [
+        7,
+        17
+      ],
+      "b_shape": [
+        17,
+        9
+      ],
+      "special": "zeros_a"
+    },
+    "dtype": "bfloat16",
+    "seed": 20261043
+  },
+  {
+    "case": {
+      "name": "large_input",
+      "a_shape": [
+        16,
+        127
+      ],
+      "b_shape": [
+        127,
+        11
+      ],
+      "scale": 16.0
+    },
+    "dtype": "float32",
+    "seed": 20261046
+  },
+  {
+    "case": {
+      "name": "large_input",
+      "a_shape": [
+        16,
+        127
+      ],
+      "b_shape": [
+        127,
+        11
+      ],
+      "scale": 16.0
+    },
+    "dtype": "float16",
+    "seed": 20261049
+  },
+  {
+    "case": {
+      "name": "large_input",
+      "a_shape": [
+        16,
+        127
+      ],
+      "b_shape": [
+        127,
+        11
+      ],
+      "scale": 16.0
+    },
+    "dtype": "bfloat16",
+    "seed": 20261052
+  },
+  {
+    "case": {
+      "name": "matrix_tiny",
+      "a_shape": [
+        2,
+        2
+      ],
+      "b_shape": [
+        2,
+        2
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20261055
+  },
+  {
+    "case": {
+      "name": "matrix_tiny",
+      "a_shape": [
+        2,
+        2
+      ],
+      "b_shape": [
+        2,
+        2
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20261058
+  },
+  {
+    "case": {
+      "name": "matrix_tiny",
+      "a_shape": [
+        2,
+        2
+      ],
+      "b_shape": [
+        2,
+        2
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20261061
+  },
+  {
+    "case": {
+      "name": "rank_one",
+      "a_shape": [
+        37,
+        1
+      ],
+      "b_shape": [
+        1,
+        65
+      ]
+    },
+    "dtype": "float32",
+    "seed": 20261064
+  },
+  {
+    "case": {
+      "name": "rank_one",
+      "a_shape": [
+        37,
+        1
+      ],
+      "b_shape": [
+        1,
+        65
+      ]
+    },
+    "dtype": "float16",
+    "seed": 20261067
+  },
+  {
+    "case": {
+      "name": "rank_one",
+      "a_shape": [
+        37,
+        1
+      ],
+      "b_shape": [
+        1,
+        65
+      ]
+    },
+    "dtype": "bfloat16",
+    "seed": 20261070
+  }
+]
