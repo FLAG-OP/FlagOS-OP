@@ -129,8 +129,14 @@ FlagGems 三方对比：dev 容器无 flag_gems（任务书口径"缺一写原�
    两种：`(stride(1)*elem)%16!=0` → `attn_bias is not correctly aligned
    (strideH)`；`(stride(2)*elem)%16!=0` → 无后缀
    `attn_bias is not correctly aligned`。修复（列 pad 16B + as_strided）
-   **fp32/fp16 已验证等价（9/9）；bf16 未单独验证（未收口）**——黄金
-   bf16 masked 案例走连续 bias，不触发非对齐 stride。
+   **fp32/fp16 已验证等价（9/9）；bf16 2026-10-24 已补验（T4
+   `probes/out/thead_bf16_bias_pad.json`）：实测生产 `_aligned_bias` 在 bf16
+   非对齐 stride（333/197/1×7/8×333，bool/float mask、causal 0/1 共 11
+   组）上 vs 连续 kv_pad 布局直算逐位一致（互差 0）、vs CPU fp32 参考
+   bf16 1e-2 abs 黄金口径内全过；两种报错原文在 bf16 均复现。黄金集
+   bf16 masked 案例（全 basic S128）走连续 bias 确实不触发非对齐 stride，
+   生产 facade 回归 24/24 无回退（worst 7.8125e-3 与交付时历史 worst
+   持平）——遗留收口。**
 3. efficient schema **无 `enable_gqa`** → GQA 用 `repeat_interleave`。
 4. fp32 委托非 extreme 误差 3e-7～5e-6，但 scale=8 饱和 abs 2.79e-3
    超 1e-5 → fp32 走 ATen 组合；**PPU 无 XMLIR bmm JIT 缺陷**
@@ -168,6 +174,7 @@ python3 script/bench_perf.py --device cuda:6 \
 python3 probes/guard_check.py thead-ppu
 python3 probes/thead_eff_probe.py        # 委托全矩阵（效率/精度/schema）
 python3 probes/thead_bias_layout.py      # bias 对齐规则 + kv_pad 规避
+python3 probes/thead_bf16_bias_pad.py    # T4 补验: bf16 非对齐 _aligned_bias 等价 + 黄金 masked 子集回归
 python3 probes/thead_reg_probe.py AutogradCUDA   # dispatch key 命中
 python3 probes/thead_flash_probe.py      # flash/efficient/native 计时
 python3 probes/thead_triton_dot_smoke.py # tl.dot 编译+对点（备选记录）
@@ -180,7 +187,12 @@ python3 scripts/perf_compare.py --device thead-ppu
 
 可合入。遗留（不阻断本次交付）：
 
-- bf16 非对齐 stride 的 `kv_pad` 未单独验证（§6.2）；
+- ~~bf16 非对齐 stride 的 `kv_pad` 未单独验证（§6.2）~~
+  **2026-10-24 已补验收口（T4）**：`kv_pad` 即 efficient 委托路径的
+  attn_bias 16B 对齐修复 `_aligned_bias`（T1 b29a1ac message 原话
+  "bf16 非对齐 kv_pad 未单独验证"）。bf16 补验+黄金 masked 子集回归见
+  §6#2 与 `probes/out/thead_bf16_bias_pad.json`；黄金 bf16 masked 形状口径
+  （basic S128 连续 bias）不触发该分支的论证也已落证;
 - `inference_mode` 下 AutogradCUDA 零命中（known-issues #19 同款，
   推理方需 `no_grad` 或纯 `CUDA` key 注册方案）；
 - FlagGems 三方性能对比缺证（P3，thead-ci 第二 profile）；

@@ -117,7 +117,8 @@ Ascend 三层验证、黄金 265/265、性能对标与根因分析保持有效�
 [reports/performance.md](reports/performance.md)、
 [reports/perf_analysis.md](reports/perf_analysis.md)。
 thead-ppu 为第四个交付平台：flash/efficient 分流后 1.10x 原生，
-遗留（bf16 非对齐 kv_pad、inference_mode 零命中、FlagGems 缺证）见
+遗留（bf16 非对齐 kv_pad 2026-10-24 T4 已补验收口、inference_mode
+零命中、FlagGems 缺证）见
 [reports/thead-ppu.md](reports/thead-ppu.md) §8。
 
 ## 交付物清单
