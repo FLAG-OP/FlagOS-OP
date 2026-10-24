@@ -43,7 +43,7 @@ def run(profile):
     out_native = F.scaled_dot_product_attention(q, k, v, is_causal=True)
 
     direct_grad_check = "not-applicable"
-    if profile.vendor in ("kunlunxin", "cambricon"):
+    if profile.vendor in ("kunlunxin", "cambricon", "thead"):
         # 厂商/Triton 直调路径平台分化回归: q/k/v 需按需走 A1 数学 backward；
         # 可微 float mask 厂商路径不支持，应回退 A1 数学 backward。
         qd, kd, vd = _make(torch.float16, dev, requires_grad=True)

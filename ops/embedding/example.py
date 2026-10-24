@@ -61,7 +61,9 @@ def _platform_tag(profile) -> str:
     """perf case id / check_accuracy --impl 的平台标签。
 
     p800-kunlunxin 映射成历史标签 "p800"，保证入库基线
-    ops.embedding.p800.forward 不改名；其余平台直接用 profile 名。
+    ops.embedding.p800.forward 不改名；其余平台直接用 profile 名
+    （thead-ppu → ops.embedding.thead-ppu.forward, 与 sdpa T1 先例同款;
+    check_accuracy IMPLS 同时收 thead / thead-ppu 两别名）。
     """
     name = getattr(profile, "name", "p800-kunlunxin")
     return {"p800-kunlunxin": "p800"}.get(name, name)

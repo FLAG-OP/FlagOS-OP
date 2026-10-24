@@ -1,0 +1,78 @@
+{
+  "device": "cuda:6",
+  "dtype": "float16",
+  "completion_guard": "reshape(-1)[0].item()",
+  "forward": [
+    {
+      "shape": "small_1k_d128",
+      "num_weights": 4096,
+      "num_indices": 1024,
+      "dim": 128,
+      "dtype": "float16",
+      "ours_ms": 0.0286,
+      "native_ms": 0.0239,
+      "triton_ms": null,
+      "speedup_vs_native": 0.833
+    },
+    {
+      "shape": "prefill_16k_d128",
+      "num_weights": 4096,
+      "num_indices": 16384,
+      "dim": 128,
+      "dtype": "float16",
+      "ours_ms": 0.0359,
+      "native_ms": 0.0307,
+      "triton_ms": null,
+      "speedup_vs_native": 0.855
+    },
+    {
+      "shape": "long_131k_d128",
+      "num_weights": 4096,
+      "num_indices": 131072,
+      "dim": 128,
+      "dtype": "float16",
+      "ours_ms": 0.1033,
+      "native_ms": 0.0982,
+      "triton_ms": null,
+      "speedup_vs_native": 0.951
+    },
+    {
+      "shape": "wide_16k_d512",
+      "num_weights": 4096,
+      "num_indices": 16384,
+      "dim": 512,
+      "dtype": "float16",
+      "ours_ms": 0.0359,
+      "native_ms": 0.0307,
+      "triton_ms": null,
+      "speedup_vs_native": 0.855
+    },
+    {
+      "shape": "vocab128k_16k_d128",
+      "num_weights": 128256,
+      "num_indices": 16384,
+      "dim": 128,
+      "dtype": "float16",
+      "ours_ms": 0.036,
+      "native_ms": 0.0275,
+      "triton_ms": null,
+      "speedup_vs_native": 0.764
+    }
+  ],
+  "backward": [
+    {
+      "shape": "bwd_16k_d128",
+      "scale_grad_by_freq": false,
+      "ours_ms": 0.1669,
+      "native_ms": 0.1597,
+      "speedup_vs_native": 0.957
+    },
+    {
+      "shape": "bwd_16k_d128",
+      "scale_grad_by_freq": true,
+      "ours_ms": 0.1842,
+      "native_ms": 0.1771,
+      "speedup_vs_native": 0.962
+    }
+  ]
+}

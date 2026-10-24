@@ -14,6 +14,8 @@ def __getattr__(name: str):
         return _pkg_import("kernel.triton_level").sdpa_math_triton
     if name == "sdpa_math_p800":
         return _pkg_import("kernel.p800_fast_level").sdpa_math_p800_fast
+    if name == "sdpa_math_thead":
+        return _pkg_import("kernel.thead_fast_level").sdpa_math_thead_fast
     if name == "sdpa_math_torch":
         return _pkg_import("kernel.torch_level").sdpa_math_torch
     if name == "reference":
@@ -25,5 +27,5 @@ def __getattr__(name: str):
 
 __all__ = [
     "register_a1", "sdpa_math_triton", "sdpa_math_p800",
-    "sdpa_math_torch", "reference", "PLATFORM",
+    "sdpa_math_thead", "sdpa_math_torch", "reference", "PLATFORM",
 ]

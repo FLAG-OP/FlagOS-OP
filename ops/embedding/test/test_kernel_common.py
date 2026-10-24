@@ -17,6 +17,9 @@ def _load_backend(profile):
     except ImportError:
         importlib.import_module("test_kernel_common")  # 重入自身保护
         raise
-    key = "ascend910" if getattr(profile, "name", "").startswith("ascend") \
-        else "p800-kunlunxin"
+    # profile 名与 register._BACKENDS 键一致（p800-kunlunxin /
+    # cambricon / thead-ppu / ascend910）；历史默认 p800-kunlunxin。
+    key = getattr(profile, "name", "p800-kunlunxin")
+    if key.startswith("ascend"):
+        key = "ascend910"
     return _BACKENDS[key]

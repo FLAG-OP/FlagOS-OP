@@ -19,6 +19,8 @@ IMPLS = {
     "torch": ("kernel/torch_level.py", "embedding_torch"),
     "p800": ("kernel/p800_kunlunxin.py", "embedding"),
     "cambricon": ("kernel/cambricon.py", "embedding"),
+    "thead": ("kernel/thead_ppu.py", "embedding"),
+    "thead-ppu": ("kernel/thead_ppu.py", "embedding"),
     "triton": ("kernel/triton_level.py", "embedding_triton"),
     "native": ("kernel/_native_shim.py", "embedding_native"),
 }

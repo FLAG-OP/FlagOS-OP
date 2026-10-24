@@ -1,0 +1,67 @@
+{
+  "device": "cuda:6",
+  "aten_embedding_has_schema": true,
+  "aten_index_select_has_schema": true,
+  "aten_embedding_backward_has_schema": true,
+  "device_name": "PPU-ZW810E",
+  "is_ppu": true,
+  "native_forward": [
+    {
+      "dtype": "float32",
+      "pad": -1,
+      "err": 0.0
+    },
+    {
+      "dtype": "float32",
+      "pad": 3,
+      "err": 0.0
+    },
+    {
+      "dtype": "float16",
+      "pad": -1,
+      "err": 0.0
+    },
+    {
+      "dtype": "float16",
+      "pad": 3,
+      "err": 0.0
+    },
+    {
+      "dtype": "bfloat16",
+      "pad": -1,
+      "err": 0.0
+    },
+    {
+      "dtype": "bfloat16",
+      "pad": 3,
+      "err": 0.0
+    }
+  ],
+  "index_select_err": 0.0,
+  "native_backward": [
+    {
+      "scale": false,
+      "pad": -1,
+      "status": "ok",
+      "err": 0.0001220703125
+    },
+    {
+      "scale": false,
+      "pad": 3,
+      "status": "ok",
+      "err": 0.0001220703125
+    },
+    {
+      "scale": true,
+      "pad": -1,
+      "status": "ok",
+      "err": 6.103515625e-05
+    },
+    {
+      "scale": true,
+      "pad": 3,
+      "status": "ok",
+      "err": 6.103515625e-05
+    }
+  ]
+}

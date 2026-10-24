@@ -30,9 +30,9 @@ platform_families:
     roadmap_note: 覆盖当前 P800 XMLIR 栈；含 FlagGems 5.0 复测 profile。
   thead:
     display_name: 平头哥
-    status: planned
-    current_profiles: []
-    roadmap_note: 首个算子交付时补充 profile 与命名。
+    status: partial
+    current_profiles: [thead-ppu]
+    roadmap_note: 首个算子 sdpa 已交付；embedding/sdpa_math 待接。
   enflame:
     display_name: 燧原 GCU
     status: planned
@@ -78,7 +78,7 @@ operators:
     directory: sdpa
     group: core
     purpose: 标准 scaled-dot-product attention 前向路径。
-    key_result: 三平台黄金覆盖 397/397。
+    key_result: 四平台黄金覆盖 397/397。
     platforms:
       ascend:
         profiles: [ascend910]
@@ -89,12 +89,15 @@ operators:
       cambricon:
         profiles: [mlu590]
         implementation: TMO / fused overrideable 委托
+      thead:
+        profiles: [thead-ppu]
+        implementation: flash/efficient 分流委托
 
   - name: sdpa_math
     directory: sdpa_math
     group: core
     purpose: 私有 SDPA math 后端，同时返回完整概率图。
-    key_result: 四份实现通过同一组 175 例黄金数据。
+    key_result: 五份实现通过同一组 175 例黄金数据。
     platforms:
       ascend:
         profiles: [ascend910]
@@ -102,18 +105,24 @@ operators:
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: vendor O/LSE 加 exact-P 重建
+      thead:
+        profiles: [thead-ppu]
+        implementation: flash/efficient 分流 O/LSE 加 exact-P 重建
 
   - name: embedding
     directory: embedding
     group: core
     purpose: 稠密 embedding 前向和 dense backward。
-    key_result: 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
+    key_result: 已在三个当前厂商平台交付；MLU/PPU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
     platforms:
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: 原生 row-gather 与反向补偿
       cambricon:
         profiles: [cambricon]
+        implementation: 原生 index_select 与 embedding_backward 委托
+      thead:
+        profiles: [thead-ppu]
         implementation: 原生 index_select 与 embedding_backward 委托
 
   - name: type_as
