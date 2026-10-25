@@ -55,6 +55,16 @@
 - A1 拦截 key = **AutogradCUDA**（probes/thead_first_probe.py 实测
   6/7 命中; 唯一零命中 inference_mode = known-issues #19 Autograd 键
   通病, 与 p800/T1-sdpa 同结论）。
+- 中央 YAML 分层（PR36 条目 2 取证, 2026-10-25）:
+  `configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 是**中央 A1 基键**,
+  与本节 `AutogradCUDA` 分层并存（同 cambricon.yaml=`PrivateUse1` /
+  本地 `AutogradPrivateUse1` 的分层, 见 reports/cambricon.md §4）。中央消费点
+  （`tests/framework_level/_harness.py` → `A1_DISPATCH_KEY` →
+  `injection/sitecustomize.py`, 另有 `scripts/intake_validate.py`、
+  `scripts/bench_dispatch.py`、`tests/op_level/test_a1.py`）实测基键在
+  grad/no_grad/inference_mode 三口径各拦 1 次, 而 `AutogradCUDA` 在
+  inference_mode 零命中（known-issues #19.3）——复现
+  `python3 scripts/smoke_dispatch_key.py`; 取证表见 `ops/sdpa/PLATFORM.md` §3c-1。
 - **原生 `embedding_backward` 完整**（`padding_idx` 与
   `scale_grad_by_freq=True` 直通, fp16 err 6.1e-5~1.2e-4 累加序噪声）
   ——与 cambricon 同型零补偿；若未来栈升级出现 p800 式

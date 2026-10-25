@@ -80,7 +80,7 @@ triton **3.6.0** / vllm 0.19.0；无 flag_gems、无 vllm-plugin-fl），
 | 绑定项 | 结论 |
 |---|---|
 | 设备表现 | PPU 经 CUDA 兼容层直曝 `device.type="cuda"`；守卫要求设备名含 `PPU`（triton `PPUDriver` 为二路证据，见 `probes/thead_triton_dot_smoke.py`）。`get_impl("cuda")` 三候选路由：`torch_xmlir`→p800、PPU 栈→thead_ppu、否则报错 |
-| 注册 key | **`AutogradCUDA`**。实测（`probes/thead_reg_probe.py`，每 key 独立进程）：`AutogradCUDA` 6/7 探针命中（唯一零命中是 `inference_mode`，同 known-issues #19 的 CUDA 栈现象）；纯 `CUDA` 7/7 全命中但反传出现"未注册 Autograd kernel"警告——故选 `AutogradCUDA`。注意 `configs/devices/thead-ppu.yaml` 的 `dispatch_key` 字段写的是 `CUDA`（P0 首测时的保守值），`ops/sdpa/_profile.py` 以 `_is_ppu_stack()` 检测覆盖为 `AutogradCUDA`，以本表为准 |
+| 注册 key | **`AutogradCUDA`**（算子本地注册点）。实测（`probes/thead_reg_probe.py`，每 key 独立进程）：`AutogradCUDA` 6/7 探针命中（唯一零命中是 `inference_mode`，同 known-issues #19 的 CUDA 栈现象）；纯 `CUDA` 7/7 全命中但反传出现"未注册 Autograd kernel"警告——故选 `AutogradCUDA`。中央 YAML 另存基键 `CUDA`，与本行**有意分层**并存（非笔误），依据见 §3c-1 |
 | GQA | efficient/flash schema **均无 `enable_gqa`**（8 参数实测）→ `repeat_interleave` 扩 KV |
 | 主实现（maskless） | 直调 `aten::_scaled_dot_product_flash_attention`。`TorchDispatchMode` 实证 PPU 原生 `F.sdpa` 内部恰好只调这一个 overload——直调即与原生同 kernel；flash schema **无 attn_mask**（传入报 `Unknown keyword argument 'attn_mask'`） |
 | 主实现（带 mask） | efficient 委托 `aten::_scaled_dot_product_efficient_attention`；bool mask 转 additive `-inf` bias；全遮蔽行输出端 `masked_fill` 恢复 NaN |
@@ -91,6 +91,30 @@ triton **3.6.0** / vllm 0.19.0；无 flag_gems、无 vllm-plugin-fl），
 | triton 备选 | triton 3.6.0 在 PPU 可编译执行（target cuda arch=80, PPUDriver），但 `tl.dot` 精度掉到 fp16 量级（64³ 点积 rel≈7e-4；ieee K=128 abs 1.03e-4），仍超黄金 fp32 1e-5 → 仅记备选，不接生产 |
 | 性能 | 首版全量走 efficient + `get_impl` 每调用 `find_spec` 解析 → **4.07× 倒挂**（0.426 ms vs 原生 0.105 ms）。收口两步：① maskless 分流 flash；② `backends.get_impl` 加进程级解析缓存（cProfile 实测 find_spec/importlib ~80-100 µs/调用）。最终 perf_run 台账 **0.114 ms vs 原生 0.104 ms（1.10×，37.7 TFLOPS）**，六形状 bench 0.63-0.99×（见 `reports/performance.md`） |
 | 跨层一致性缺证 | 仓库级 `run.py --consistency` 锚定 gelu_and_mul（A2 路由），硬依赖 `flag_gems` + `vllm_fl`——dev 容器二者均无（`ModuleNotFoundError: flag_gems`），属**结构性缺证**而非 sdpa/thead 缺陷。sdpa 的"直调↔dispatch 张量级一致"由 `test/op_level.py` 第 3 步逐位断言覆盖（`bitwise_vs_direct=True`） |
+
+### 3c-1. 中央 YAML `dispatch_key` 与算子本地 key 的分层（PR36 条目 2 取证，2026-10-25）
+
+`configs/devices/thead-ppu.yaml` 的 `device.dispatch_key: CUDA` 是**有意保留的中央
+基键**，与上表算子本地 `AutogradCUDA` 分层并存，不是笔误：
+
+| 侧 | key | 消费点（取证到的读取路径） |
+|---|---|---|
+| 中央 | `CUDA`（基键） | `common/device.py` → `tests/framework_level/_harness.py` / `_aten_harness.py` 写 `A1_DISPATCH_KEY` → `injection/sitecustomize.py` 注册 `aten::silu`；`scripts/intake_validate.py`、`scripts/bench_dispatch.py`、`tests/op_level/test_a1.py` 同读该字段 |
+| 算子本地 | `AutogradCUDA` | `ops/<op>/_profile.py` → op / kernel / framework 三层测试与探针 |
+
+中央取基键而非 `AutogradCUDA` 的依据（2026-10-25 卡 6 实测，`python3
+scripts/smoke_dispatch_key.py` 复现，三断言全绿）：
+
+- 基键 `CUDA` 在 grad / no_grad / inference_mode 三口径各拦截 1 次、输出逐位相同，
+  反向梯度有限且对齐 silu 解析反向（`max_err=1.2e-7`）；
+- `AutogradCUDA` 在 `inference_mode` 零命中（known-issues #19.3，即本节上表 6/7 的
+  唯一零命中）——中央 A1 注册若改用它会在 inference 上静默失拦；
+- 先例一致：`p800-kunlunxin{,-gems5}.yaml` = `CUDA`、`cambricon.yaml` =
+  `PrivateUse1`，同为「YAML 基键 / 算子本地 `Autograd*` 键」分层（cambricon 侧
+  分层已由 `ops/embedding/reports/cambricon.md` §4 记录）。
+
+算子本地 `AutogradCUDA` 的探针依据不变（上表「注册 key」行）；两键分层不改任何
+既有测试口径。
 
 ## 4. 平台专属数字（不可跨平台引用）
 

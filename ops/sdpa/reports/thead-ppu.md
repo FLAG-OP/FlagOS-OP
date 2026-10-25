@@ -63,7 +63,7 @@ PYTHONPATH=/hosthome/FlagOS-OP python3 probes/guard_check.py thead-ppu
 | 项 | 结论 |
 |---|---|
 | dispatch key | **`AutogradCUDA`**。`probes/thead_reg_probe.py`（每 key 独立进程）：AutogradCUDA 6/7 命中（唯一零命中 `inference_mode`，同 known-issues #19）；纯 `CUDA` 7/7 全命中但反传有"未注册 Autograd kernel"警告 |
-| yaml 差异 | `configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 是 P0 首测保守值；`_profile.py` 以 `_is_ppu_stack()` 检测覆盖为 `AutogradCUDA`，以 PLATFORM.md §3c 为准 |
+| yaml 差异 | **2026-10-25 按 PR36 条目 2 取证收口**: `configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 是中央 A1 **基键**（有意分层，非笔误），`_profile.py` 的 `AutogradCUDA` 是算子本地注册点——消费点、先例比对与三口径实测见 `PLATFORM.md` §3c-1；复现 `python3 scripts/smoke_dispatch_key.py` |
 | autograd | q/k/v 直调反向（flash/efficient 均有 backward op）；可微 additive mask 走 A1 数学 backward |
 | 拦截 | op 层 count=2；注册路径与直调路径**逐位一致**（`bitwise_vs_direct=True`）；framework 拦截 28 次 |
 | 梯度 | dq/dk/dv vs 原生子进程 max_err 4.88e-4 / 4.88e-4 / 3.91e-3（bf16 容差内）；direct q/k/v + 可微 mask 反向通过（`direct_grad_check=vendor+math-fallback`） |
@@ -196,6 +196,12 @@ python3 scripts/perf_compare.py --device thead-ppu
 - `inference_mode` 下 AutogradCUDA 零命中（known-issues #19 同款，
   推理方需 `no_grad` 或纯 `CUDA` key 注册方案）；
 - FlagGems 三方性能对比缺证（P3，thead-ci 第二 profile）；
-- `configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 与实测生效值
+- ~~`configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 与实测生效值
   `AutogradCUDA` 不一致——configs 改动需先上报（任务书 §3），
-  当前由 `_profile.py` 检测覆盖。
+  当前由 `_profile.py` 检测覆盖。~~
+  **2026-10-25 已按 PR36 条目 2 取证收口**：保留 YAML 基键 `CUDA`（中央 A1
+  消费点读取，grad/no_grad/inference_mode 三口径实测各拦 1 次）与算子本地
+  `AutogradCUDA` 分层——先例比对（p800-kunlunxin{,-gems5}=CUDA、
+  cambricon=PrivateUse1 同型）与取证路径写入 `PLATFORM.md` §3c-1 及
+  thead-ppu.yaml 注释；新增 `scripts/smoke_dispatch_key.py` 三断言
+  （注册 key / 反向路径 / no_grad·inference 一致）跑绿。

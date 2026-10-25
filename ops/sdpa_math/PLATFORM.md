@@ -48,6 +48,7 @@ sdpa_math 必须物化第二输出 P，不能整体替换为 flash/efficient—�
 |---|---|
 | 设备表现 | PPU 经 CUDA 兼容层直曝 `device.type="cuda"`；守卫以设备名含 `PPU` 为准（triton `PPUDriver` 为二路证据） |
 | 注册 key | **`AutogradCUDA`**。`probes/thead_first_probe.py`（每 key 独立进程）：AutogradCUDA **6/7** 命中（唯一零命中 `inference_mode`，同 known-issues #19）；纯 `CUDA` 7/7 全命中但反传带"未注册 Autograd kernel"警告——与 p800/T1-sdpa/T2-embedding 一致选 AutogradCUDA |
+| 中央 YAML `dispatch_key` | **`CUDA`（基键，PR36 条目 2 取证后有意分层，非笔误）**：中央 A1 消费点读该字段（`tests/framework_level/_harness.py` → `A1_DISPATCH_KEY` → `injection/sitecustomize.py`，另有 `scripts/intake_validate.py`/`bench_dispatch.py`/`tests/op_level/test_a1.py`）；实测基键在 grad/no_grad/inference_mode 三口径各拦 1 次，而 `AutogradCUDA` 在 inference_mode 零命中（known-issues #19.3），故中央不用它。先例 `p800-kunlunxin{,-gems5}`=CUDA、`cambricon`=PrivateUse1 同型；取证表 `ops/sdpa/PLATFORM.md` §3c-1，复现 `python3 scripts/smoke_dispatch_key.py` |
 | 主实现（maskless 且非 causal 或 Sq==Skv） | flash 直调 `aten::_scaled_dot_product_flash_attention`。**LSE 精确 (B,H,Sq)，无 pad**。T1-sdpa 证原生 F.sdpa 内部即此 kernel |
 | 主实现（带 mask 或非方阵 causal） | efficient 委托 `aten::_scaled_dot_product_efficient_attention`。**LSE 按 32 倍数 pad**（Sq=16→32, 100→128, 197→224）——materialize P 前必须 `lse[..., :Sq]` 切片（p800 XMLIR 栈无此 pad，**thead 专属**）。bool mask → additive -inf bias；16B stride 不齐 `_aligned_bias` 列 pad |
 | flash 非方阵 causal 缺陷 | PPU flash 对 Sq≠Skv 的 causal **不生效**（首测 flash O err≈2.0 vs efficient err≈0）——非方阵 causal 强制走 efficient |

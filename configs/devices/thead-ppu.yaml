@@ -14,7 +14,18 @@ device:
                                   # framework 级证据由 thead-ci 第二 profile 承接；若在本 profile 跑框架层需按
                                   # 文档口径调整并记录配置差异。
   visible_devices: "6,7"          # 框架级测试暴露卡号（实测 2MiB/0% 空闲对；避 4/11 100%、5 占 76G）
-  dispatch_key: CUDA              # A1 aten 注册 key（与昆仑芯 XMLIR 伪装 CUDA 同路径）
+  dispatch_key: CUDA              # 中央 A1 注册 key（基键口径, PR36 条目 2 取证后有意保留）
+                                  # 中央消费点: common/device.py → tests/framework_level/
+                                  #   _harness.py|_aten_harness.py 写 A1_DISPATCH_KEY →
+                                  #   injection/sitecustomize.py; 另有 scripts/intake_validate.py、
+                                  #   scripts/bench_dispatch.py、tests/op_level/test_a1.py 同读。
+                                  # 依据(2026-10-25 卡6 实测, scripts/smoke_dispatch_key.py 可复现):
+                                  #   基键 CUDA 在 grad/no_grad/inference_mode 三口径各拦 1 次、
+                                  #   输出逐位相同、反向梯度对齐 silu 解析反向; AutogradCUDA 在
+                                  #   inference_mode 零命中(known-issues #19.3)。
+                                  # 先例比对: p800-kunlunxin{,-gems5}=CUDA、cambricon=PrivateUse1,
+                                  #   同为「YAML 基键 / 算子本地 Autograd* 键」分层; sdpa/embedding/
+                                  #   sdpa_math 本地 _profile 取 AutogradCUDA, 见各自 PLATFORM.md thead 节。
 
 framework:
   tensor_parallel_size: 2
