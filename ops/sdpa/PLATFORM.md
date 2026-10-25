@@ -116,6 +116,44 @@ scripts/smoke_dispatch_key.py` 复现，三断言全绿）：
 算子本地 `AutogradCUDA` 的探针依据不变（上表「注册 key」行）；两键分层不改任何
 既有测试口径。
 
+### 3c-2. 设备编号口径（PR36 条目 3 取证，2026-10-25）
+
+审阅质疑「profile 默认 `cuda:6` 与 `visible_devices: "6,7"` 并存，经
+`CUDA_VISIBLE_DEVICES` 重映射后子进程合法索引可能只有 `cuda:0/1`」。取证结论：
+`configs/devices/thead-ppu.yaml` 与本算子本地 `cuda:6` **都取物理卡号**，
+kernel / op / framework 三层同一口径，字段值不改。
+
+| 层 | 入口（消费点） | 实际用卡 |
+|---|---|---|
+| kernel | 中央 YAML `device.torch_device` → `tests/kernel_level/*`；本地 `_profile.py` thead 节 → `ops/<op>/test/kernel_level*.py` | 物理卡 6 |
+| op | 中央 YAML → `tests/op_level/*`；本地 `_profile.py` → `ops/<op>/test/op_level.py`、探针 | 物理卡 6 |
+| framework（算子应用层） | 同读 `profile.torch_device` → `ops/<op>/test/framework_level.py` | 物理卡 6 |
+| framework（中央 vLLM harness） | YAML `device.visible_devices` → `tests/framework_level/_harness.py:62` 写子进程 `CUDA_VISIBLE_DEVICES` | 物理卡 6,7（子进程逻辑 0/1） |
+
+依据：
+
+- 全仓只有三处写 `CUDA_VISIBLE_DEVICES`：`tests/framework_level/_harness.py:62`、
+  `scripts/drift_study.py:31`、`examples/b-fullstack/example.py:208`。三处都只写
+  **vLLM 子进程** env（`os.environ.copy()` 的副本），父进程与 kernel/op 算子进程
+  从不重映射——仓库内没有物理→逻辑的映射逻辑可依，所以 profile 只能、也只需
+  按物理卡号声明。
+- 被重映射的子进程是 `tests/framework_level/_vllm_runner.py`，它只消费
+  `profile.engine_args()` 与 `profile.name`，**不读 `profile.torch_device`**——
+  `cuda:6` 不会在重映射子进程里被使用，仓库驱动流程因此没有越界路径。
+  `examples/b-fullstack/example.py` 的 `stage_l2`（用 `torch_device`）与
+  `stage_l4`（写 CVD）分属不同阶段、不同进程环境，同理不冲突。
+- 实测（2026-10-25，跑前 `ppu-smi` 确认 6/7 空闲）：无 CVD 时 `device_count=16`、
+  `cuda:6` 可用；`CUDA_VISIBLE_DEVICES=6,7` 的子进程 `device_count=2`、
+  `get_device_name(0)="PPU-ZW810E"`，此时 `cuda:6` 报 `invalid device
+  ordinal`——即**只有外层 shell 自行 `export` CVD 时**才需换算：物理卡 =
+  列表第 N 项，`cuda:0/1` = 物理 `6/7`（换算说明沿用
+  `docs/device-profiles.md`「昆仑芯卡号与入口选择」表）。
+- 先例比对：`p800-kunlunxin{,-gems5}` = `cuda:1` + `"1,2"`、
+  `cambricon`/`mlu590` = `mlu:0` + `"0"`——同为「`torch_device` 索引 ∈
+  `visible_devices` 集合」的物理卡号写法。
+
+本节只补口径声明与换算规则，未改任何字段值、未放宽任何既有断言。
+
 ## 4. 平台专属数字（不可跨平台引用）
 
 - ascend910 性能与根因分解见 `reports/performance.md`、

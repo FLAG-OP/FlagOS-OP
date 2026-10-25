@@ -8,12 +8,22 @@ auto_detect:
   enabled: false                  # 探测不可靠——仅显式 --device thead-ppu / load_profile() 选择（先例: p800-kunlunxin-gems5）
 
 device:
-  torch_device: "cuda:6"          # 算子层测试设备（PPU torch 经 CUDA 兼容路径直曝 16 卡 cuda:0-15；16 可见时 cuda:6=物理卡 6，实测空闲）
-                                  # ⚠️ 逻辑编号口径（docs「改卡时注意」）：framework harness 会按 visible_devices 写
-                                  # 子进程 CUDA_VISIBLE_DEVICES，届时合法索引仅 0/1，cuda:6 失效——本 profile
-                                  # framework 级证据由 thead-ci 第二 profile 承接；若在本 profile 跑框架层需按
-                                  # 文档口径调整并记录配置差异。
-  visible_devices: "6,7"          # 框架级测试暴露卡号（实测 2MiB/0% 空闲对；避 4/11 100%、5 占 76G）
+  # ── 设备编号口径（PR36 条目 3 取证, 2026-10-25）: 本 profile 两个设备字段均取
+  #    **物理卡号**, kernel / op / framework 三层同一口径（取证表: ops/sdpa/PLATFORM.md §3c-2）。
+  # · torch_device: 仓库默认不写 CUDA_VISIBLE_DEVICES、16 卡直曝时 cuda:6 = 物理卡 6（实测空闲）。
+  # · visible_devices: 是 CVD 列表, 语义天然物理——harness 子进程内逻辑 0/1 = 物理 6/7
+  #   （2026-10-25 实测: 该子进程 device_count=2, get_device_name(0)=PPU-ZW810E）。
+  # · 消费点取证: 全仓仅三处写 CVD——tests/framework_level/_harness.py:62、
+  #   scripts/drift_study.py:31、examples/b-fullstack/example.py:208——三处都只写 vLLM
+  #   子进程 env, 且该子进程只读 profile.engine_args()/profile.name, **不读 torch_device**——
+  #   故两字段本就是同一物理卡号口径, 也不存在重映射后越界路径: 本次只补口径声明与
+  #   换算规则, 不改任何字段数值。
+  # · 仅外层 shell 自行 export CUDA_VISIBLE_DEVICES 时才需换算成逻辑口径:
+  #   CVD=6,7 下 cuda:6 实测报 invalid device ordinal, 此时物理 6 = 逻辑 0
+  #   （换算说明见 docs/device-profiles.md「昆仑芯卡号与入口选择」表）。
+  torch_device: "cuda:6"          # kernel/op 与算子框架层测试设备（PPU 经 CUDA 兼容路径直曝 16 卡 cuda:0-15）
+  visible_devices: "6,7"          # 中央 framework harness 暴露的物理卡对（实测 2MiB/0% 空闲; 避 4/11 100%、5 占 76G）
+                                  # 中央 vLLM framework 证据仍待 thead-ci 第二 profile 承接（model_path 占位）
   dispatch_key: CUDA              # 中央 A1 注册 key（基键口径, PR36 条目 2 取证后有意保留）
                                   # 中央消费点: common/device.py → tests/framework_level/
                                   #   _harness.py|_aten_harness.py 写 A1_DISPATCH_KEY →

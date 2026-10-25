@@ -79,6 +79,9 @@ def load_profile(name: str | None = None) -> LocalProfile:
         #   inference_mode, 同 known-issues #19 的 Autograd* 键通病）;
         #   CUDA 键 7/7 全命中但 requires_grad 反传带"未注册 Autograd kernel"
         #   警告。与 p800 先例一致选 AutogradCUDA。
+        # 设备编号口径（PR36 条目 3）: 物理卡号 cuda:6——与中央 YAML 的
+        # torch_device / visible_devices("6,7") 同口径, kernel/op/framework
+        # 三层均落在物理卡 6; 取证与换算规则见 PLATFORM.md §3c-2。
         return LocalProfile(
             name="thead-ppu",
             vendor="thead",

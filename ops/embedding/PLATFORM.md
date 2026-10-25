@@ -65,6 +65,12 @@
   grad/no_grad/inference_mode 三口径各拦 1 次, 而 `AutogradCUDA` 在
   inference_mode 零命中（known-issues #19.3）——复现
   `python3 scripts/smoke_dispatch_key.py`; 取证表见 `ops/sdpa/PLATFORM.md` §3c-1。
+- 设备编号口径（PR36 条目 3 取证, 2026-10-25）: 本地 `_profile.py` 的 `cuda:6`
+  与中央 YAML `device.torch_device: cuda:6`、`visible_devices: "6,7"` 同取
+  **物理卡号**——kernel / op / framework 三层都落在物理卡 6（中央 vLLM harness
+  用 6,7, 其子进程逻辑 0/1 = 物理 6/7）。全仓只有三处写 `CUDA_VISIBLE_DEVICES`,
+  且被重映射的 `_vllm_runner.py` 子进程不读 `torch_device`；换算规则与实测见
+  `ops/sdpa/PLATFORM.md` §3c-2。`EMBEDDING_TEST_DEVICE` 的覆盖值同样按物理卡号理解。
 - **原生 `embedding_backward` 完整**（`padding_idx` 与
   `scale_grad_by_freq=True` 直通, fp16 err 6.1e-5~1.2e-4 累加序噪声）
   ——与 cambricon 同型零补偿；若未来栈升级出现 p800 式
