@@ -3,7 +3,13 @@
 # 数学语义（与 aten::scaled_dot_product_attention 对齐）:
 #   out = softmax(Q @ K^T * scale + mask_bias) @ V
 #   - scale 缺省 1/sqrt(D)；D = q.shape[-1]
-#   - is_causal: 仅支持 Sq == Skv 的下三角遮蔽（与 aten 语义一致）
+#   - is_causal: 左上 tril 遮蔽，作用在 (Sq, Skv)——方阵/非方阵同一规则。
+#     （2026-10-25 PR36 条目 4: 原先断言 Sq == Skv，实测与 aten 不符——
+#     CPU 与 PPU 原生 F.sdpa 对 Sq≠Skv causal 均按 top-tril 出结果，
+#     探针 probes/thead_nonsq_causal_probe.json native 行与 CPU fp32 参考
+#     同容差（fp32 ≤2.53e-7 / fp16 ≤5.62e-4 / bf16 ≤2.98e-3，与 efficient
+#     逐案同值）；
+#     与 ops/sdpa_math/reference.py:149 同规则。）
 #   - attn_mask: bool → False 处 -inf（遮蔽）；float → 加性 bias
 #   - GQA: Hq != Hkv 时 K/V 按 Hq//Hkv 组广播
 #   - 内部全程 fp32，最后 cast 回输入 dtype
@@ -57,9 +63,8 @@ def sdpa_reference(
     scores = torch.matmul(q, k.transpose(-1, -2)) * sm_scale  # (B,H,Sq,Skv)
 
     if is_causal:
-        assert Sq == Skv, "causal 语义要求 Sq == Skv（与 aten 一致）"
         causal = torch.ones(Sq, Skv, dtype=torch.bool, device=q.device)
-        causal = torch.tril(causal)
+        causal = torch.tril(causal)          # 非方阵同为左上 tril
         scores = scores.masked_fill(~causal, _NEG_INF)
 
     if attn_mask is not None:

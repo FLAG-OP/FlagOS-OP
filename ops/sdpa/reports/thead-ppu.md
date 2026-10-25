@@ -65,7 +65,7 @@ PYTHONPATH=/hosthome/FlagOS-OP python3 probes/guard_check.py thead-ppu
 | dispatch key | **`AutogradCUDA`**。`probes/thead_reg_probe.py`（每 key 独立进程）：AutogradCUDA 6/7 命中（唯一零命中 `inference_mode`，同 known-issues #19）；纯 `CUDA` 7/7 全命中但反传有"未注册 Autograd kernel"警告 |
 | yaml 差异 | **2026-10-25 按 PR36 条目 2 取证收口**: `configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 是中央 A1 **基键**（有意分层，非笔误），`_profile.py` 的 `AutogradCUDA` 是算子本地注册点——消费点、先例比对与三口径实测见 `PLATFORM.md` §3c-1；复现 `python3 scripts/smoke_dispatch_key.py` |
 | autograd | q/k/v 直调反向（flash/efficient 均有 backward op）；可微 additive mask 走 A1 数学 backward |
-| 拦截 | op 层 count=2；注册路径与直调路径**逐位一致**（`bitwise_vs_direct=True`）；framework 拦截 28 次 |
+| 拦截 | op 层 count=3（含 PR36 条目 4 的非方阵 causal 一例）；注册路径与直调路径**逐位一致**（`bitwise_vs_direct=True`）；framework 拦截 28 次 |
 | 梯度 | dq/dk/dv vs 原生子进程 max_err 4.88e-4 / 4.88e-4 / 3.91e-3（bf16 容差内）；direct q/k/v + 可微 mask 反向通过（`direct_grad_check=vendor+math-fallback`） |
 
 ## 4. 验证结果
@@ -81,9 +81,9 @@ PYTHONPATH=/hosthome/FlagOS-OP python3 probes/guard_check.py thead-ppu
 | 项 | 结果 |
 |---|---|
 | kernel 层 | ✅ 37/37，max_err 3.91e-3（bf16），哨兵通过，1k D128 ~0.12ms |
-| tail 覆盖（§2d） | ✅ 37/37：S3072 causal ×3 seed、S5000/5120、S5000/5001-bool-mask、zeros/large/boundary；boundary 判定用相对容差 5e-3（黄金 extreme 口径），bf16 用 parity_vs_native + 有限子集 rel |
+| tail 覆盖（§2d） | ✅ 88/88：S3072 causal ×3 seed、S5000/5120、S5000/5001-bool-mask、zeros/large/boundary + **非方阵 causal 48 案例（8 形状 × 3 dtype × 2 seed）与原生 parity 3 例（PR36 条目 4，见 §6.12）**；boundary 判定用相对容差 5e-3（黄金 extreme 口径），bf16 用 parity_vs_native + 有限子集 rel；带 mask 案例改判「非有限位置与参考逐位一致」（`nonfinite=n/n_ref finite_pos=True`），旧 `n_nonfinite==0` 会把参考自身的合法全遮蔽 NaN 行误判为 FAIL |
 | 黄金 | ✅ 397/397，worst 7.812e-3 @ bf16 float-mask（容差 2e-2 内）；extreme fp32 rel 4.988e-3 |
-| op 层 | ✅ AutogradCUDA 拦截、注册=直调(逐位)、vs 原生 0.0、梯度通过 |
+| op 层 | ✅ AutogradCUDA 拦截（count=3）、注册=直调(逐位)、vs 原生 0.0、梯度通过；**非方阵 causal 经 A1 拦截、注册=直调(逐位)、vs 原生 0.0，梯度 vs CPU 参考 dq 1.22e-4 / dk 1.26e-4 / dv 1.92e-3**（PR36 条目 4） |
 | 应用层 | ✅ mini-decoder（GQA8/2 causal fp16）拦截 28 次，logits max_diff=0.0，top1/贪心续写一致率 1.00 |
 | 守卫 | ✅ 元数据 / cuda:6 PPU 正向路径 / CPU 拒绝 / 注册守卫（`ALL GUARD CHECKS PASS`） |
 | perf gate | ✅ `scripts/perf_run.py --device thead-ppu --pattern ops.sdpa --update-baseline` 入库；`perf_compare` FAIL 0 · WARN 0 |
@@ -160,6 +160,22 @@ FlagGems 三方对比：dev 容器无 flag_gems（任务书口径"缺一写原�
     gelu_and_mul（A2 路由），import `flag_gems`/`vllm_fl`——dev 容器
     均无（`ModuleNotFoundError: flag_gems`），失败与 sdpa/thead 无关。
     sdpa 的"直调↔dispatch 张量级一致"由 `test/op_level.py` 逐位断言覆盖。
+12. **非方阵 causal（Sq≠Skv）本可委托，原拒绝是多余的**（PR36 条目 4，
+    2026-10-25）：`probes/thead_nonsq_causal_probe.py`（跑前 ppu-smi 6/7
+    空闲）实测——原生 `F.sdpa` 对该输入**正确**（aten 语义 = 左上
+    `tril(ones(Sq,Skv))`，旧行「与 aten 一致的 Sq==Skv 限制」不成立）；
+    **flash 直调 + causal 不生效**（6 形状 × fp16/bf16 err 1.2-1.9，
+    所以 maskless 分支不能吃非方阵 causal）；**efficient 直调全对**
+    （6 形状 × 3 dtype：≤5.62e-4 / ≤2.98e-3 / ≤2.53e-7，与原生逐案同值）；
+    LSE 按 32 倍数 pad（`[..., :Sq]` err ≤9.5e-7）、`_aligned_bias` 与
+    GQA 扩 KV 非方阵均等价、厂商反向 dq/dk/dv ≤3.9e-3。故选型 **a**
+    （实现按文档路由）：删 `thead_ppu.py` 拒绝行、maskless 非方阵 causal
+    改道 efficient、拆 `register.py` 的 `Sq==Skv` 数学 backward 门（旧门
+    实测梯度差 **4.68**——非方阵上不折 causal）、`reference.py` 改与
+    aten 一致的 top-tril；其余三平台保持显式拒绝（ascend 原为
+    `IS_CAUSAL=is_causal and Sq==Skv` **静默降级成不遮蔽**，本批补同款
+    拒绝）。判卷黄金集无非方阵 causal 案例，397 例口径不变。
+    详见 `PLATFORM.md` §3c-3（四平台矩阵 + 证据表）。
 
 ## 7. 复现命令
 
@@ -173,6 +189,7 @@ python3 script/bench_perf.py --device cuda:6 \
     --json-out reports/perf_fp16_thead-ppu.json
 python3 probes/guard_check.py thead-ppu
 python3 probes/thead_eff_probe.py        # 委托全矩阵（效率/精度/schema）
+python3 probes/thead_nonsq_causal_probe.py   # 非方阵 causal 取证（PR36 条目 4，输出 probes/out/）
 python3 probes/thead_bias_layout.py      # bias 对齐规则 + kv_pad 规避
 python3 probes/thead_bf16_bias_pad.py    # T4 补验: bf16 非对齐 _aligned_bias 等价 + 黄金 masked 子集回归
 python3 probes/thead_reg_probe.py AutogradCUDA   # dispatch key 命中

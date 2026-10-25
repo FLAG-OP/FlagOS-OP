@@ -5,7 +5,12 @@
 #     专门打到 PPU efficient kernel 的 attn_bias 16B stride 对齐修复路径）
 #   - fp32 / fp16 / bf16 × ≥3 seed
 #   - zeros / large / boundary 特殊分布（docs/acceptance.md 特殊用例口径）
-# 平台无关共享资产（kernel_level.py / reference.py / goldendata）零改动。
+#   - 非方阵 causal（Sq≠Skv, PR36 条目 4）: 8 形状 × 3 dtype × 2 seed，
+#     另加与原生 F.sdpa 的 parity 断言——原实现此处抛 ValueError 拒绝
+#     （thead_ppu.py 旧行），现按 efficient 路由出结果
+# 平台无关共享资产（kernel_level.py / goldendata）零改动；
+# reference.py 的 is_causal 改为与 aten 一致的 top-tril 非方阵语义
+# （探针 probes/thead_nonsq_causal_probe.json），本文件第 3 节依赖该语义。
 #
 # 运行: python3 test/kernel_level_tail_thead_ppu.py [thead-ppu]
 from __future__ import annotations
@@ -76,7 +81,14 @@ def _case(tag, B, Hq, Hkv, Sq, Skv, D, dt, seed, causal, mask_kind, kind,
         diff = diff[keep]
     finite = torch.isfinite(diff)
     err = diff[finite].max().item() if finite.any() else float("inf")
+    # 全遮蔽行: 参考返回 NaN（`input_spec` 口径），判定改为「非有限位置与
+    # 参考逐位一致」——按元素计数相等 + 掩码位置相同，不再要求 out 全有限
+    # （旧行为 n_nonfinite==0 在带 mask 的非方阵 causal 上会把参考自身的
+    # 合法 NaN 行误判为 FAIL）。参考无非有限值时该条件退化为 n==0。
     n_nonfinite = int((~torch.isfinite(out)).sum())
+    n_nonfinite_ref = int((~torch.isfinite(ref)).sum())
+    same_nonfinite = bool(torch.equal(torch.isfinite(out),
+                                      torch.isfinite(ref)))
 
     name = f"{str(dt).split('.')[-1]:9s} seed{seed}"
     line = (f"  [{tag}] {name} S{Sq}/{Skv} D{D} causal={int(causal)} "
@@ -110,9 +122,11 @@ def _case(tag, B, Hq, Hkv, Sq, Skv, D, dt, seed, causal, mask_kind, kind,
         return
 
     tol = TOL[dtn]
-    status = "OK" if (err < tol and n_nonfinite == 0) else "FAIL"
-    line += f" nonfinite={n_nonfinite}  {status}" + (
-        "  <== 超容差" if status == "FAIL" else "")
+    status = "OK" if (err < tol and same_nonfinite) else "FAIL"
+    line += (f" nonfinite={n_nonfinite}/{n_nonfinite_ref}"
+             f" finite_pos={same_nonfinite}  {status}")
+    if status != "OK":
+        line += "  <== 超容差"
     results.append(line)
     assert status == "OK", line
 
@@ -145,9 +159,48 @@ def run(profile):
             _case(f"special-{kind}", 1, 4, 4, 1024, 1024, 64, dt, 5,
                   True, None, kind, dev, results)
 
-    # 3) 哨兵: 尾块 shape 下确定性 + 输入敏感（#11 静默 no-op 类）
+    # 3) 非方阵 causal（Sq≠Skv, PR36 条目 4）: 8 形状 × 3 dtype × 2 seed。
+    #    覆盖三条联动约束 —— 非对齐 bias(_aligned_bias)、GQA 扩 KV、
+    #    fp32 ATen 组合路径；判卷仍是 CPU fp32 参考（top-tril）。
+    nonsq_causal = [
+        # (B,Hq,Hkv,Sq,Skv,D,mask,tag)
+        (1, 4, 4, 4, 8, 64, None, "nonsq-4x8"),
+        (1, 4, 4, 8, 4, 64, None, "nonsq-8x4"),
+        (1, 4, 4, 1, 64, 64, None, "nonsq-1x64"),
+        (1, 4, 4, 100, 197, 64, None, "nonsq-100x197"),
+        (1, 4, 4, 100, 197, 64, "bool", "nonsq-100x197-bool"),
+        (1, 4, 4, 333, 197, 64, "float", "nonsq-333x197-float"),
+        (1, 8, 2, 1, 64, 64, None, "nonsq-gqa82-1x64"),
+        (1, 8, 2, 100, 197, 64, None, "nonsq-gqa82-100x197"),
+    ]
+    for (B, Hq, Hkv, Sq, Skv, D, mask, tag) in nonsq_causal:
+        for dt in (torch.float32, torch.float16, torch.bfloat16):
+            for seed in (1, 2):
+                _case(tag, B, Hq, Hkv, Sq, Skv, D, dt, seed, True, mask,
+                      "normal", dev, results)
+
+    # 3b) 非方阵 causal 与原生 F.sdpa 的 parity（A1 不得比原生更严——
+    #     原生在 PPU 对该输入是正确的 top-tril，旧实现却抛 ValueError）
+    import torch.nn.functional as F
+
     from kernel.triton_level import sdpa_triton
 
+    for (Sq, Skv, dt) in ((4, 8, torch.float16), (1, 64, torch.float16),
+                          (100, 197, torch.bfloat16)):
+        q = _gen((1, 4, Sq, 64), dt, 1, "normal", dev)
+        k = _gen((1, 4, Skv, 64), dt, 1, "normal", dev)
+        v = _gen((1, 4, Skv, 64), dt, 1, "normal", dev)
+        ours = sdpa_triton(q, k, v, None, 0.0, True, None, False)
+        nat = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        e = (ours.float() - nat.float()).abs().max().item()
+        ok = e < 2e-2
+        line = (f"  [nonsq-native-parity] S{Sq}/{Skv} "
+                f"{str(dt).split('.')[-1]:9s} err={e:.3e} "
+                + ("OK" if ok else "<== FAIL"))
+        results.append(line)
+        assert ok, line
+
+    # 4) 哨兵: 尾块 shape 下确定性 + 输入敏感（#11 静默 no-op 类）
     q, k, v = (_gen((1, 4, 3072, 64), torch.float16, 7, "normal", dev)
                for _ in range(3))
     o1 = sdpa_triton(q, k, v, None, 0.0, True, None, False)

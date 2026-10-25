@@ -15,6 +15,16 @@ Engineering choice
 - **带 mask → efficient 委托**（flash schema 无 attn_mask 参数，
   实测 ``Unknown keyword argument 'attn_mask'``）。masked 形状
   bench 实测 1.08× 原生。
+- **非方阵 causal（Sq≠Skv 且 is_causal=True）→ 强制 efficient**，
+  不进 flash 分支（PR36 条目 4，2026-10-25 探针实测
+  ``probes/thead_nonsq_causal_probe.py``）：flash 直调对非方阵 causal
+  **不生效**（6 形状 × fp16/bf16 err 1.2-1.9，与 sdpa_math 首测
+  flash O err≈2.0 同源），而 efficient 直调全对（err ≤5.62e-4 fp16 /
+  ≤2.98e-3 bf16 / ≤2.53e-7 fp32，与原生 F.sdpa 同容差、逐案同值）；
+  原生 F.sdpa 在 PPU 对非方阵 causal 正确（top-tril），故 A1 不得比
+  原生更严——原 ``ValueError`` 拒绝已删。联动约束同带 mask 路径:
+  LSE 按 32 倍数 pad（``lse[..., :Sq]`` 切回 err ≤9.5e-7）、非对齐
+  bias 走 ``_aligned_bias``、GQA 仍 ``repeat_interleave`` 扩 KV。
 
 首版全量走 efficient 时出现 4.07× 性能倒挂（基线台账 native 0.105 ms/
 41.07 TFLOPS vs efficient 0.426 ms/10.08 TFLOPS），根因两个、均已收口:
@@ -230,8 +240,8 @@ def sdpa_triton(
         raise ValueError("query/key/value dtype 不一致")
     if query.shape[-1] != key.shape[-1] or query.shape[-1] != value.shape[-1]:
         raise ValueError("head_dim 不一致")
-    if is_causal and query.shape[-2] != key.shape[-2]:
-        raise ValueError("causal 语义要求 Sq == Skv（与 aten/reference 一致）")
+    # 非方阵 causal 不再拒绝: aten/原生实测支持（top-tril）, 本平台由
+    # efficient 委托接住——见模块 docstring 与 probes/thead_nonsq_causal_probe。
 
     hq, hkv = query.shape[1], key.shape[1]
     if attn_mask is not None:
@@ -268,7 +278,10 @@ def sdpa_triton(
             query, key, value, attn_mask, dropout_p, is_causal, scale,
             enable_gqa,
         )
-    if attn_mask is None and dropout_p == 0.0:
+    # 非方阵 causal 必须绕开 flash: flash 直调对该输入不生效（causal 未
+    # 施加, 探针 err 1.2-1.9），efficient 才是与原生同语义的路径。
+    nonsq_causal = is_causal and query.shape[-2] != key.shape[-2]
+    if attn_mask is None and dropout_p == 0.0 and not nonsq_causal:
         # maskless: flash 与原生 F.sdpa 同速（efficient 有 ~2.1× 倒挂,
         # 见模块 docstring / reports/performance.md）
         return _flash_sdpa(

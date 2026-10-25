@@ -106,7 +106,10 @@ class _SDPA_A1_Function(torch.autograd.Function):
 
         # 分步构造（与 reference 完全同路，保证语义一致）
         scores = torch.matmul(q, k.transpose(-1, -2)) * s
-        if ctx.is_causal and Sq == Skv:
+        if ctx.is_causal:
+            # 非方阵同为左上 tril（PR36 条目 4 拆掉 Sq==Skv 门: 原门在
+            # 非方阵 causal 上静默不折 causal，梯度实测与参考差 4.68，
+            # 见 probes/out/thead_nonsq_causal_probe.json a1_math_backward_gate）
             causal = torch.tril(torch.ones(Sq, Skv, dtype=torch.bool,
                                            device=q.device))
             scores = scores.masked_fill(~causal, float("-inf"))

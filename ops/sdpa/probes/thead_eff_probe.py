@@ -149,7 +149,9 @@ def main() -> int:
                 if shape[3] >= 3072 and cname not in ("none", "causal",
                                                       "bool"):
                     continue
-                # causal 语义要求 Sq == Skv（aten/reference 一致）
+                # 本探针（2026-10-23 首测口径）跳过非方阵 causal，专门覆盖
+                # 该输入的委托可行性见 probes/thead_nonsq_causal_probe.py
+                # （PR36 条目 4）——efficient 全 PASS、flash 不生效。
                 if causal and shape[3] != shape[4]:
                     continue
                 r = run_case(f"{tag}/{cname}", shape, dt, dev, causal, mask,

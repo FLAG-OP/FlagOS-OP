@@ -180,7 +180,8 @@ _kunlunxin/...` 各厂商目录并列，已实际存在），所以:
       委托、math bool-mask 分化已显式标注
 - [x] `probes/guard_check.py mlu590` 全绿；`reports/perf_fp16_mlu590.json`
       与 `reports/mlu590.md` 就位（修订后 1.00-1.33x 原生）
-- [x] thead-ppu: 黄金 397/397 + kernel 层 37/37 + tail 覆盖 37/37 +
+- [x] thead-ppu: 黄金 397/397 + kernel 层 37/37 + tail 覆盖 88/88（含
+      非方阵 causal 48 案例 + 原生 parity，PR36 条目 4） +
       op/framework/guard 绿（flash/efficient 分流，见 PLATFORM.md §3c）
 - [x] PLATFORM.md 有 thead-ppu 小节（§3c）；bias 对齐两种报错原文、
       bf16 boundary parity 口径、consistency 缺证（dev 栈无 flag_gems）

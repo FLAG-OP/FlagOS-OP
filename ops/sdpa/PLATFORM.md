@@ -84,6 +84,7 @@ triton **3.6.0** / vllm 0.19.0；无 flag_gems、无 vllm-plugin-fl），
 | GQA | efficient/flash schema **均无 `enable_gqa`**（8 参数实测）→ `repeat_interleave` 扩 KV |
 | 主实现（maskless） | 直调 `aten::_scaled_dot_product_flash_attention`。`TorchDispatchMode` 实证 PPU 原生 `F.sdpa` 内部恰好只调这一个 overload——直调即与原生同 kernel；flash schema **无 attn_mask**（传入报 `Unknown keyword argument 'attn_mask'`） |
 | 主实现（带 mask） | efficient 委托 `aten::_scaled_dot_product_efficient_attention`；bool mask 转 additive `-inf` bias；全遮蔽行输出端 `masked_fill` 恢复 NaN |
+| 非方阵 causal（`Sq≠Skv` 且 `is_causal=True`） | **2026-10-25 PR36 条目 4 接入**：不进 maskless flash 分支（flash 直调对该输入**不生效**，6 形状 × fp16/bf16 err 1.2-1.9），强制 efficient 委托——实测 6 形状 × 3 dtype err ≤5.63e-4(fp16)/≤2.98e-3(bf16)/≤2.54e-7(fp32)，与原生 `F.sdpa` 同容差且逐案同值；原 `ValueError("causal 语义要求 Sq == Skv...")` 已删。联动约束同带 mask 路径：LSE 按 32 倍数 pad（`lse[..., :Sq]` 切回 err ≤9.5e-7）、非对齐 bias 走 `_aligned_bias`（3/3，其中 2 例 `bias_repaired=True`）、GQA `repeat_interleave`（4/4）、厂商 efficient 反向可用（dq/dk/dv ≤3.9e-3）。证据 `probes/out/thead_nonsq_causal_probe.json`（现行）+ `..._prefix.json`（整改前快照）；**梯度侧同批拆门**：`register.py` 数学 backward 原 `if ctx.is_causal and Sq == Skv` 在非方阵上静默不折 causal（实测梯度差 4.68），已改为一律按 `(Sq, Skv)` 左上 tril |
 | bias 16B stride 对齐 | efficient kernel 强制要求。报错原文两种：`(stride(1)*elem)%16!=0` → `attn_bias is not correctly aligned (strideH)`；`(stride(2)*elem)%16!=0` → `attn_bias is not correctly aligned`（无后缀）。修复（`_aligned_bias`，探针里叫 kv_pad）：把 bias 复制进按列 pad 到 16B 步长的缓冲再 `as_strided` 回原逻辑形状（K-stride 保持 1）。**生效范围：fp32/fp16 已验证等价（`probes/thead_bias_layout.json` 9/9）；bf16 2026-10-24 已补验收口（`probes/out/thead_bf16_bias_pad.json`，T4）：实测生产 `_aligned_bias` vs 连续 kv_pad 布局直算 vs CPU fp32 参考 11/11 用例在 bf16 1e-2 abs（黄金口径收紧）内一致（两路径互差 0），报错原文两种变体在 bf16 均复现。黄金集 bf16 masked 案例全为 basic S128（row stride 256B %16==0），走连续 bias 不触发非对齐分支——黄金 24 组 masked bf16 子集经生产 facade 回归无回退（worst 7.8125e-3 = 交付时历史 worst）** |
 | fp32 路径 | 委托精度本身很好（非 extreme 3e-7～5e-6），但 scale=8 饱和（黄金 extreme 口径）abs 2.79e-3 超 1e-5 判卷线 → **fp32 走 ATen 组合**（`sdpa_reference` 设备端）。PPU **无** p800 的 XMLIR bmm JIT 缺陷：S∈(320,640] 设备组合 vs CPU 参考 ≤5.7e-7，**无需 768 pad** |
 | bf16 boundary | V≈dtype_max/2 × 长序列时厂商 kernel 中间量溢出为 inf（随 Sq 增大阈值下降）——**原生 `F.sdpa` 同样溢出**，属平台分化而非实现缺陷。tail 测试判定口径：与原生 `inf` 位置 parity + 有限子集 rel<5e-3（黄金 extreme 同款相对容差） |
@@ -153,6 +154,68 @@ kernel / op / framework 三层同一口径，字段值不改。
   `visible_devices` 集合」的物理卡号写法。
 
 本节只补口径声明与换算规则，未改任何字段值、未放宽任何既有断言。
+
+### 3c-3. 非方阵 causal（Sq≠Skv）四平台现状（PR36 条目 4 取证，2026-10-25）
+
+审阅质疑「T-Head SDPA 文档写明 Sq != Skv 的 causal 会转 efficient，但当前
+backend 仍直接拒绝该输入」。取证三步：
+
+**1) 拒绝发生在哪一行**：`kernel/backends/thead_ppu.py` 旧第 233-234 行
+（dtype/head_dim 校验之后、flash/efficient 分流之前）
+`if is_causal and query.shape[-2] != key.shape[-2]: raise ValueError("causal
+语义要求 Sq == Skv（与 aten/reference 一致）")`；同款拒绝另见
+`p800_kunlunxin.py:211`、`mlu590.py:272`；判卷侧 `reference.py` 旧第 60 行断言
+`assert Sq == Skv`（现该断言已删）。
+
+**2) 文档作出该路由结论的原文行**：`ops/sdpa/PLATFORM.md` 自身**没有**这条
+结论——grep `Sq` / `Skv` / `causal` 只命中 §2 的 ascend 两行、§3b 的 mlu590
+快路径行与 `causal+mask` 行、§3c 的 bf16 boundary 行（均为别平台、别语义）。
+作出该结论的是同一 T-Head 交付里的 **sdpa_math 侧文档**：
+
+| 文件:行 | 原文 |
+|---|---|
+| `ops/sdpa_math/PLATFORM.md:54` | 「主实现（带 mask 或**非方阵 causal**） → efficient 委托」 |
+| `ops/sdpa_math/PLATFORM.md:55` | 「非方阵 causal **强制走 efficient**」（附首测 flash O err≈2.0 vs efficient err≈0） |
+| `ops/sdpa_math/reports/thead-ppu.md:41` | 「带 mask 或**非方阵 causal → efficient**」 |
+| `ops/sdpa_math/reports/development.md:77`、`ops/sdpa_math/REPORT.md:25` | 同款分流行 |
+
+而 `ops/sdpa/reports/development.md` **改前第 214 行**（本批已改写为选型 a
+的结论）反向写「Sq≠Skv 的 causal 语义未实现（**aten 本身限制性语义**）→
+wrapper 断言拒绝，与参考一致」——sdpa 侧按拒绝、sdpa_math 侧按转
+efficient，两边对不上，即审阅所指矛盾。
+
+**3) 实测**（`probes/thead_nonsq_causal_probe.py`，跑卡前 `ppu-smi` 确认
+6/7 空闲 2MiB/0%；产物：现行 `probes/out/thead_nonsq_causal_probe.json`
++ 整改前只读快照 `probes/out/thead_nonsq_causal_probe_prefix.json`）：
+
+| 探针项 | 结果 |
+|---|---|
+| 生产 facade `sdpa_triton` | **整改前**（快照 `..._prefix.json`）：6 非方阵形状 × 3 dtype = 18 例全 `ValueError` + `reference` 1 例 `AssertionError`（`summary REJECT 19`），方阵对照 3 例 PASS；**整改后**（本 JSON）：21 例全 PASS，非方阵 18 例 err 0.000e+00 |
+| 原生 `F.sdpa`（PPU） | 全 PASS——aten 语义是 **top-tril** `tril(ones(Sq, Skv))`，非方阵同样支持；旧 assert 的「与 aten 一致」不成立 |
+| flash 直调 `is_causal=True` | 全 FAIL（err 1.21-1.91，causal 未施加）→ **不能**当非方阵 causal 路径 |
+| efficient 直调 `is_causal=True` | 6 形状（4×8/8×4/1×64/100×197/333×197/64×1）× fp16/bf16/fp32 全 PASS：err ≤5.62e-4 / ≤2.98e-3 / ≤2.53e-7，与原生逐案同误差 |
+| LSE 32-pad 切回 | `lse.shape[-1]` = Sq 上取整到 32（4→32、100→128、333→352），`[..., :Sq]` 后 err ≤9.5e-7 |
+| `_aligned_bias` × 非方阵 causal | bool 333×197、float 100×197 PASS 且 `bias_repaired=True`（bias 确被修复）；bool 1×64 PASS `bias_repaired=False`（Sq=1 无需 pad） |
+| GQA 扩 KV × 非方阵 causal | Hq/Hkv=8/2 的 1×64、100×197 PASS |
+| 厂商 efficient 反向 | dq 2.4e-4 / dk 4.9e-4 / dv 3.9e-3（fp16 容差内） |
+| A1 数学 backward（**旧门回放**，5b 内联复刻整改前门体） | **MISMATCH err=4.678**——非方阵上不折 causal；现门已拆，现行判卷见 `test/op_level.py` 第 6 步 |
+
+**选型：a）实现按文档路由**。依据是探针而不是推断：efficient 委托六形状三
+dtype 全对、与原生同值，且原生本就支持该输入（A1 注册不该比原生更严）；代价
+不结构性——只需删拒绝行、把 maskless 分支的非方阵 causal 改道 efficient、
+拆 `register.py:109` 梯度门、`reference.py` 与 aten 对齐（黄金集无非方阵
+causal 案例，397 例判卷口径不变）。四平台现状：
+
+| 平台 | 非方阵 causal（`is_causal=True` 且 `Sq≠Skv`） | 位置 |
+|---|---|---|
+| thead-ppu | **支持**：maskless 与带 mask 都走 efficient（fp16/bf16/fp32、GQA、非对齐 bias、反向全验） | `kernel/backends/thead_ppu.py` 分流 + `register.py` 梯度 |
+| p800-kunlunxin | 显式拒绝 `ValueError`（本平台未接入，未在 PPU 之外实测） | `kernel/backends/p800_kunlunxin.py` |
+| mlu590 | 显式拒绝 `ValueError`（同上） | `kernel/backends/mlu590.py` |
+| ascend910 | 显式拒绝 `ValueError`——原为 `IS_CAUSAL=is_causal and Sq == Skv` **静默降级成不遮蔽**（前向错、且与拆门后的反向折 causal 不一致），本批补同款拒绝 | `kernel/backends/ascend910.py` |
+
+配套测试：`test/kernel_level_tail_thead_ppu.py` 第 3 节（8 形状 × 3 dtype ×
+2 seed + 与原生 parity 3 例）、`test/op_level.py` 第 6 步（thead 专用：A1 拦截、
+注册=直调逐位、梯度 vs CPU 参考）。
 
 ## 4. 平台专属数字（不可跨平台引用）
 
