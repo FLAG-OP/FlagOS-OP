@@ -8,6 +8,9 @@ import torch
 
 
 def _target_strides(self, memory_format):
+    # 元数据经 meta 设备推导，**与设备无关**（torch_npu 原生 empty_like 对
+    # preserve_format+非连续输入会退化为连续，见 PLATFORM.md；本实现按
+    # PyTorch 文档语义 dense 保留 stride）。Dashener2 2026-10-15-fix
     if memory_format == torch.preserve_format:
         return tuple(self.to("meta").stride())
     shape = tuple(self.shape)

@@ -37,6 +37,7 @@ if os.environ.get("FLAGOS_A1_ATEN_INJECT") == "1":
         a1_aten_ops.register_all(
             os.environ.get("A1_DISPATCH_KEY", "PrivateUse1"),
             root=_root or None,
+            platform=os.environ.get("A1_PLATFORM"),
         )
     except Exception:
         pass

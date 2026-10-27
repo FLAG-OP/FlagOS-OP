@@ -22,7 +22,7 @@ def run(profile):
 
     reg.CALL_COUNT["_local_scalar_dense"] = 0
     _CALLS = {"n": 0}
-    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS, platform=profile.vendor)
     assert lib is not None
     before = reg.CALL_COUNT["_local_scalar_dense"]
     x = torch.full((1,), 3.5, dtype=torch.float32, device=dev)

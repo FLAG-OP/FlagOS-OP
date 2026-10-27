@@ -17,7 +17,7 @@ def run(profile):
 
     dev = profile.torch_device
     try:
-        reg.register_a1(profile.dispatch_key)
+        reg.register_a1(profile.dispatch_key, platform=profile.vendor)
         raise AssertionError("不应被注册")
     except NotImplementedError:
         pass

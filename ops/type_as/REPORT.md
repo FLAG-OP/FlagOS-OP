@@ -60,3 +60,13 @@ FlagGems `to_copy` 快约 40%。遗留: 真实 vLLM 应用层（环境未装）�
 | 测试报告（范围矩阵） | [reports/test-report.md](reports/test-report.md) |
 | 精度分册 | [reports/accuracy.md](reports/accuracy.md) |
 | 性能分册 | [reports/performance.md](reports/performance.md) |
+
+## 证据分级（C0 / C1 / C2，对齐 #42 P800）
+
+| 级别 | 含义 | 本 PR |
+|---|---|---|
+| **C0** | 黄金 + op 层 | ✅ |
+| **C1** | per-op 等价消费方（等价 torch API 子进程） | ✅ |
+| **C2** | 真实 vLLM 前向实际命中 | ✖ 受 known-issues #26 限制，不做声明 |
+
+结论：本 PR 达到 **C1**，C2 不作交付声明。

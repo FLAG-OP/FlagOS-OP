@@ -18,7 +18,7 @@ def run(profile):
     dev = profile.torch_device
     reg.CALL_COUNT["type_as"] = 0
     _CALLS = {"n": 0}
-    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS, platform=profile.vendor)
     assert lib is not None
 
     # 1) 拦截验证: torch 宿主调用必须命中我们的实现

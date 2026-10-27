@@ -34,37 +34,40 @@ python3 scripts/build_env_index.py --check
 ## 已登记实测环境
 
 <a id="ascend910"></a>
-### Ascend 910_9382 SDPA 交付环境
+### Ascend 910_9382（flagrt routeA 开发容器）
 
 | 项 | 声明 |
 |---|---|
 | profile | [`ascend910`](../configs/devices/ascend910.yaml) |
 | 平台家族 | `ascend` |
-| 硬件 | Ascend 910_9382 ×8 · 64 GB HBM/卡 · 计算拓扑: 24 AICore/卡 @ 1800MHz · 运行时: CANN 9.0.0（V100R001C10SPC001B250） |
+| 硬件 | Ascend 910_9382 ×8 · 64 GB HBM/卡 · 计算拓扑: 24 AICore/卡 @ 1800MHz · 运行时: CANN 9.0.0 |
 | 系统 / 内核 | openEuler aarch64 / 5.10.0-216 |
 | Python | `3.11.15` |
-| 声明采集时间 | 软件栈 2026-09-16 · 硬件快照 2026-09-16 |
+| 声明采集时间 | 软件栈 2026-10-20 · 硬件快照 2026-10-20 |
 | 环境锁 | [`ascend910.lock.yaml`](../configs/env/ascend910.lock.yaml) |
 | 基座镜像 | 未登记 |
 
 适用范围：
 
 - ops/sdpa Ascend 910 backend
+- 9 个多精度/训练算子 Ascend 接入 （clone/empty_like/empty_strided/detach/detach_/item/_local_scalar_dense/result_type/type_as）
 
 | 软件包 / 组件 | 锁定版本 |
 |---|---|
 | `torch` | `2.10.0+cpu` |
 | `torch_npu` | `2.10.0` |
-| `triton` | `3.5.1` |
-| `flag_gems` | `5.3.5` |
+| `flagtree` | `0.6.0+ascend.git15ec1a6c` |
+| `flag_gems` | `0.0.0+f7ae8e6b934a` |
+| `numpy` | `1.26.4` |
 | `vllm` | `0.20.2+empty` |
 
 证据入口：
 
 - [ops/sdpa/reports/development.md](../ops/sdpa/reports/development.md)：环境声明与实现报告
 - [ops/sdpa/reports/performance.md](../ops/sdpa/reports/performance.md)：性能环境与结果
+- [configs/devices/ascend910.yaml](../configs/devices/ascend910.yaml)：Ascend910 设备 profile（含 TASK_QUEUE 排序前提）
 
-备注：vLLM 为空壳安装，真实 vLLM 框架级与应用级入口不可用；ops/sdpa 使用 kernel 层、op 层、黄金与性能对照收口，并包含 mini-decoder 应用验证。共享 8 卡服务器的绝对延迟存在 ±15µs 级扰动。
+备注：容器 flagrt/ascend-operator-runtime:2.0.0-flagtree3.5-routeA-cann9.0-py311-torch2.10-arm64。 vLLM 为空壳安装（`0.20.2+empty`）；真实 vLLM 基线可跑，但基础 aten 的 A1 全局注入 受 torch_npu 内部重入限制（见 docs/known-issues.md #26）。 9 算子应用层采用仓库既有口径的等价消费方（mini-decoder/子进程）。 共享 8 卡服务器的绝对延迟存在 ±15µs 级扰动。
 
 <a id="cambricon"></a>
 ### Cambricon MLU 本地实测版本（v26.08.0 容器）

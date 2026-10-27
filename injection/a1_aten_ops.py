@@ -94,7 +94,8 @@ def _wrap(fn, saved):
 
 
 def register_all(dispatch_key: str = "PrivateUse1",
-                 root: str | None = None) -> list[str]:
+                 root: str | None = None,
+                 platform: str | None = None) -> list[str]:
     """注册本仓库的 A1 aten 算子，返回成功注册的算子名列表。"""
     base = Path(root or os.environ.get("FLAGOS_TEMPLATES_ROOT") or _DEFAULT_ROOT)
     registered: list[str] = []
@@ -108,7 +109,7 @@ def register_all(dispatch_key: str = "PrivateUse1",
             if callable(fn) and name.endswith("_aten"):
                 setattr(mod, name, _wrap(fn, saved))
         try:
-            mod.register_a1(dispatch_key)
+            mod.register_a1(dispatch_key, platform=platform)
             registered.append(op)
         except Exception:
             pass

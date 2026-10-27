@@ -1,4 +1,7 @@
-# Triton 级实现: aten::clone 的 MLU 版本。
+# Triton 级实现: aten::clone（多平台: cambricon/MLU590 + ascend910）。
+# Dashener2 2026-10-15-fix 接入 ascend910: tile 上限按设备类型自适应
+# （Ascend UB 192KB → 连续 16384 / strided 8192，见 PLATFORM.md）。
+# # Dashener2 <dashen272@outlook.com>
 #
 # 硬约束: 启动包 torch_device_fn.device（#11）；无 tl.sum，不涉 #15a；
 # 不用 autotune（#15b）。纯拷贝，无算术。
@@ -97,14 +100,27 @@ def _collapse(shape, dstr, sstr):
     return sizes, ds, ss
 
 
-def _block(n):
-    if n >= 65536:
-        return 65536
+# Tile caps (contiguous, strided)。Ascend UB 192KB: 连续 copy tile 上限实测
+# 16384，带逐元素索引的 strided 上限 8192（超出触发 BiShengHIR "ub overflow";
+# 见 PLATFORM.md）。GPU/MLU 沿用原上限（MLU NRAM 524288B）。
+_TILE_CAP_NPU = (16384, 8192)
+_TILE_CAP_DEFAULT = (65536, 16384)
+
+
+def _caps(device_type):
+    """(contig_cap, nd_cap) —— 按设备类型取 tile 上限。"""
+    if device_type == "npu":
+        return _TILE_CAP_NPU
+    return _TILE_CAP_DEFAULT
+
+
+def _block(n, cap=65536):
+    if n >= cap:
+        return cap
     return max(1024, triton.next_power_of_2(n))
 
 
-def _block_nd(n, rank):
-    cap = 16384
+def _block_nd(n, rank, cap=16384):
     if n >= cap:
         return cap
     return max(1024, triton.next_power_of_2(n))
@@ -138,10 +154,11 @@ def clone_triton(src: torch.Tensor,
     if n == 0:
         return out
 
+    contig_cap, nd_cap = _caps(src.device.type)
     with torch_device_fn.device(src.device):      # ← 硬约束 #11
         if out.is_contiguous() and src.is_contiguous():
-            _clone_contig[(triton.cdiv(n, _block(n)),)](
-                out, src, n, BLOCK=_block(n))
+            B = _block(n, contig_cap)
+            _clone_contig[(triton.cdiv(n, B),)](out, src, n, BLOCK=B)
             return out
 
         sizes, ds, ss = _collapse(src.shape, out.stride(), src.stride())
@@ -151,7 +168,7 @@ def clone_triton(src: torch.Tensor,
             return out
 
         r = len(sizes)
-        B = _block_nd(n, r)
+        B = _block_nd(n, r, nd_cap)
         g = (triton.cdiv(n, B),)
         if r == 1:
             _clone_1d[g](out, src, n, ds[0], ss[0], BLOCK=B)

@@ -25,7 +25,7 @@ def run(profile):
 
     reg.CALL_COUNT["clone"] = 0
     _CALLS = {"n": 0}
-    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS, platform=profile.vendor)
     assert lib is not None
 
     # 1) 拦截验证
@@ -57,8 +57,13 @@ def run(profile):
     import subprocess
 
     root = str(OP_DIR.parent.parent)
+    dev_s = str(dev)
+    backend_import = ("import torch_mlu" if dev_s.startswith("mlu")
+                      else "import torch_npu" if dev_s.startswith("npu")
+                      else "pass")
     child = (
-        "import torch, torch_mlu\n"
+        "import torch\n"
+        f"{backend_import}  # noqa: F401  触发设备后端注册\n"
         "from ops.clone.register import clone_aten\n"
         f"x = torch.zeros(3, device='{dev}')\n"
         "y = clone_aten(x)\n"

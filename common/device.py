@@ -3,9 +3,34 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+
+# Ascend(torch_npu) 排序陷阱: 镜像默认 TASK_QUEUE_ENABLE=1，torch_npu 把
+# 算子排入 task queue 异步执行，而 triton-ascend 直接在 raw stream 上启动
+# kernel（见 triton/backends/ascend/backend_register.py::get_current_stream）。
+# 两者之间**没有顺序保证**——生产者算子（randn/.to/mul）尚未完成，自研
+# Triton kernel 就读到未初始化输入，表现为非确定性错值/NaN（本库实测：
+# 同一输入两次调用结果不同、有时对有时错）。A1 自研 kernel 依赖输入就绪，
+# 且必须在 torch_npu 初始化之前生效。
+#
+# Dashener2 2026-10-20-fix（按 review #34 收敛）: 不再“只要装了 torch_npu
+# 就影响整个进程”。改为 **Ascend 显式 opt-in**：
+#   - `FLAGOS_ASCEND_TASK_QUEUE=0` 显式开启；`=1` 显式关闭本行为；
+#   - 或 `FLAGOS_DEVICE` / `FLAGOS_PROFILE` / 命令行参数里指明 ascend profile。
+# 未命中则不触碰 TASK_QUEUE_ENABLE（CPU/MLU/CUDA 及同机其它进程不受影响）。
+# # Dashener2 <dashen272@outlook.com>
+_tq_opt = os.environ.get("FLAGOS_ASCEND_TASK_QUEUE")
+if _tq_opt != "1":
+    _asc_hint = " ".join([
+        os.environ.get("FLAGOS_DEVICE", ""),
+        os.environ.get("FLAGOS_PROFILE", ""),
+        " ".join(a for a in sys.argv[1:] if not a.startswith("-")),
+    ]).lower()
+    if _tq_opt == "0" or "ascend" in _asc_hint:
+        os.environ["TASK_QUEUE_ENABLE"] = "0"
 
 import torch  # noqa: F401  # 必须早于 xpu_compat(→triton) 导入：MLU 栈
 # 要求先 import torch，否则 torch.library 的 triton 命名空间重复注册报错

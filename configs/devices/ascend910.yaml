@@ -1,6 +1,13 @@
 # Ascend 910 (初代, 910_9382) — 首个接入本库的 NPU 设备 profile
 # 实测环境: CANN 9.0.0 / torch_npu 2.10.0 / triton-ascend 3.5.1
 # 首个算子: ops/sdpa（A1 路线，注册点 AutogradPrivateUse1——见该算子 PLATFORM.md）
+#
+# ⚠️ 排序前提: 必须 TASK_QUEUE_ENABLE=0（早于 torch_npu 初始化）。镜像默认 1，
+# 会让 torch 算子异步入队、与 triton-ascend 直发的 raw stream 无序，自研 kernel
+# 读到未完成输入（非确定性错值/NaN）。common/device.py 顶部已强制；见
+# docs/known-issues.md #24。
+# 训练/布局算子族（clone/empty_like/empty_strided/detach/detach_/item/
+# _local_scalar_dense/result_type/type_as）已接入 ascend910（各 op 的 PLATFORM.md）。
 name: ascend910
 vendor: ascend                 # 与 flag_gems DeviceDetector().vendor_name 一致
 
@@ -41,3 +48,20 @@ reference_fallback: reference.torch
 # 厂商 kernel 直测清单（可选）: 初代 910 无独立厂商 kernel 包，
 # 原生参照走 torch_npu 的 F.scaled_dot_product_attention（CANN 内核）
 vendor_kernels: []
+
+# A1 真实 vLLM 启用策略（对齐 FlagGems _ascend::CUSTOMIZED_UNUSED_OPS）
+# 见 docs/known-issues.md #26。这些基础 aten 会被 torch_npu 内部重入，全局
+# PrivateUse1 覆盖会破坏内部调用，故默认**不在真实 vLLM 中全局启用**；
+# 需要时走白名单 / 作用域（only_enable / use_gems(exclude=...) / 子进程隔离）。
+real_vllm:
+  enabled: false
+  excluded_ops:
+    - clone
+    - empty_like
+    - empty_strided
+    - detach
+    - detach_
+    - item
+    - _local_scalar_dense
+    - type_as
+    - result_type

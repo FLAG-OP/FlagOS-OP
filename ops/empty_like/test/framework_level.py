@@ -35,12 +35,13 @@ def _app_forward(device: str):
     return buf @ w
 
 
-def _app_child(out_path: str, register: bool, device: str) -> None:
+def _app_child(out_path: str, register: bool, device: str,
+               platform: str | None = None) -> None:
     import torch
 
     if register:
         import register as reg
-        reg.register_a1("PrivateUse1")
+        reg.register_a1("PrivateUse1", platform=platform)
     y = _app_forward(device)
     calls = None
     if register:
@@ -51,7 +52,8 @@ def _app_child(out_path: str, register: bool, device: str) -> None:
         "sum": float(y.float().sum().item()), "calls": calls}))
 
 
-def _run_child(register: bool, device: str):
+def _run_child(register: bool, device: str,
+               platform: str | None = None):
     import torch
 
     with tempfile.TemporaryDirectory() as d:
@@ -59,7 +61,8 @@ def _run_child(register: bool, device: str):
         env = os.environ.copy()
         env["A1_EMPTY_LIKE_COUNT_FILE"] = os.path.join(d, "counts.json")
         cmd = [sys.executable, str(Path(__file__).resolve()),
-               "--child", out, "--device", device]
+               "--child", out, "--device", device,
+               "--platform", platform or ""]
         if register:
             cmd.append("--register")
         subprocess.run(cmd, check=True, env=env, cwd=str(ROOT))
@@ -70,8 +73,8 @@ def _run_child(register: bool, device: str):
 
 def run(profile):
     dev = profile.torch_device
-    base_meta, base_t = _run_child(register=False, device=dev)
-    plug_meta, plug_t = _run_child(register=True, device=dev)
+    base_meta, base_t = _run_child(register=False, device=dev, platform=profile.vendor)
+    plug_meta, plug_t = _run_child(register=True, device=dev, platform=profile.vendor)
 
     calls = plug_meta.get("calls") or 0
     assert calls > 0, "应用层未命中 empty_like"
@@ -90,7 +93,10 @@ if __name__ == "__main__":
     if "--child" in sys.argv:
         i = sys.argv.index("--child")
         j = sys.argv.index("--device")
-        _app_child(sys.argv[i + 1], "--register" in sys.argv, sys.argv[j + 1])
+        _plat = (sys.argv[sys.argv.index("--platform") + 1]
+                 if "--platform" in sys.argv else None)
+        _app_child(sys.argv[i + 1], "--register" in sys.argv,
+                   sys.argv[j + 1], _plat)
     else:
         from common.device import load_profile
         print(run(load_profile(sys.argv[1] if len(sys.argv) > 1
