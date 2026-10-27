@@ -9,8 +9,8 @@
 | 算子 | `aten::scaled_dot_product_attention`（SDPA / flash-attention 族） |
 | 语义 | [reference.py](reference.py)（fp32 内部、GQA、causal、bool/float mask） |
 | 路线 | A1 aten 拦截；平台实现由 [kernel/triton_level.py](kernel/triton_level.py) facade 分发 |
-| 硬件平台 | **4 个**：ascend910（Triton 主实现）· p800-kunlunxin（厂商委托 + fp32 补偿）· mlu590（TMO FA + fused overrideable 委托）· thead-ppu（flash/efficient 分流委托） |
-| 状态 | 2026-10-23: thead-ppu 三层 + 黄金全绿（flash 分流后 1.10x 原生，首版 4.07x 倒挂已收口）；2026-09-23: MLU590 三层 + 黄金全绿；2026-09-22: P800 三层 + 黄金全绿 |
+| 硬件平台 | **4 个**：ascend910（Triton）· p800-kunlunxin（厂商委托 + fp32 补偿）· mlu590（TMO+fused 委托）· thead-ppu（flash/efficient 分流） |
+| 状态 | 2026-10-23: thead-ppu 三层 + 黄金全绿（1.10x 原生，倒挂已收口）；2026-09-23: MLU590 全绿；2026-09-22: P800 全绿 |
 
 ## 实现矩阵
 
@@ -19,7 +19,7 @@
 | ascend910 | Triton | [kernel/backends/ascend910.py](kernel/backends/ascend910.py) | ✅ | online-softmax two-pass、causal 截断、GQA/双 mask/尾块 |
 | p800-kunlunxin | 厂商 kernel 委托 | [kernel/backends/p800_kunlunxin.py](kernel/backends/p800_kunlunxin.py) | ✅ | fp16/bf16 直调 efficient attention；fp32 走 ATen 组合 + bmm workaround |
 | mlu590 | 厂商 kernel 委托 | [kernel/backends/mlu590.py](kernel/backends/mlu590.py) | ✅ | TMO FA（半精度）→ fused overrideable；math/FlagGems 兜底 |
-| thead-ppu | 厂商 kernel 委托 | [kernel/backends/thead_ppu.py](kernel/backends/thead_ppu.py) | ✅ | maskless flash 直调 / masked efficient（bias 16B 对齐修复）；**非方阵 causal → efficient**（flash 直调该输入不生效，见 PLATFORM.md §3c-3）；fp32 走 ATen 组合 |
+| thead-ppu | 厂商 kernel 委托 | [thead_ppu.py](kernel/backends/thead_ppu.py) | ✅ | maskless flash / masked efficient；非方阵 causal → efficient；fp32 走 ATen 组合 |
 | 通用 | torch | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | 第二判卷人 / 对照 |
 | 硬件级 | — | [kernel/hardware_level/README.md](kernel/hardware_level/README.md) | ⬜ 置空 | P800 硬件 SDK 不在当前容器；XMLIR/Triton 试验仍显著慢于厂商 kernel |
 
@@ -28,9 +28,9 @@
 | 层级 | 命令 / 入口 | 结果 |
 |---|---|---|
 | kernel | `python3 test/kernel_level.py thead-ppu` | ✅ 37/37，最大误差 3.91e-3（bf16），哨兵通过，1k D128 ~0.12ms |
-| tail 覆盖 | `python3 test/kernel_level_tail_thead_ppu.py thead-ppu` | ✅ 88/88（3072/5000/5120 尾块 × 3 seed + zeros/large/boundary + **非方阵 causal 48 案例与原生 parity 3 例（PR36 条目 4）**） |
+| tail 覆盖 | `test/kernel_level_tail_thead_ppu.py thead-ppu` | ✅ 88/88（尾块 × 3 seed + zeros/large/boundary + 非方阵 causal 48 例与原生 parity 3 例，PR36 条目 4） |
 | 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:6` | ✅ 397/397，worst 7.81e-3（bf16 float-mask，容差内） |
-| op | `python3 test/op_level.py thead-ppu` | ✅ AutogradCUDA 拦截(count=3)、注册=直调(逐位)、vs 原生 0.0、梯度通过；**非方阵 causal: A1 拦截 + 逐位一致 + vs 原生 0.0 + 梯度 vs CPU 参考 1.22e-4/1.26e-4/1.92e-3** |
+| op | `python3 test/op_level.py thead-ppu` | ✅ AutogradCUDA 拦截 3 次、注册=直调逐位、vs 原生 0.0、梯度过；非方阵 causal 梯度 1.22e-4/1.26e-4/1.92e-3 |
 | 应用 | `python3 test/framework_level.py thead-ppu` | ✅ mini-decoder 拦截 28 次，logits diff=0.0，续写一致率 1.00 |
 | 守卫 | `python3 probes/guard_check.py thead-ppu` | ✅ 元数据 / PPU 路径 / CPU 拒绝 / 注册 |
 | perf gate | `scripts/perf_run.py --device thead-ppu --pattern ops.sdpa` | ✅ thead/native 用例入库（0.114/0.104 ms，1.10x），FAIL 0 · WARN 0 |
@@ -137,4 +137,4 @@ thead-ppu 为第四个交付平台：flash/efficient 分流后 1.10x 原生，
 | Ascend 开发报告 | [reports/development.md](reports/development.md) |
 | Ascend 测试报告 | [reports/test-report.md](reports/test-report.md) |
 | Ascend 精度 / 性能分册 | [reports/accuracy.md](reports/accuracy.md) / [reports/performance.md](reports/performance.md) |
-| 性能 JSON | [reports/perf_fp16_p800-kunlunxin.json](reports/perf_fp16_p800-kunlunxin.json) · [reports/perf_fp16_mlu590.json](reports/perf_fp16_mlu590.json) · [reports/perf_fp16_thead-ppu.json](reports/perf_fp16_thead-ppu.json) |
+| 性能 JSON | [reports/](reports/) 下 `perf_fp16_{p800-kunlunxin,mlu590,thead-ppu}.json` |

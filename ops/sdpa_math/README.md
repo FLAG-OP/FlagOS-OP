@@ -14,8 +14,8 @@
 | 算子 | `aten::_scaled_dot_product_attention_math`（torch SDPA 的 **math 后端**，`CompositeImplicitAutograd`） |
 | 语义 | `softmax(QKᵀ·scale + mask)` 双输出：`(out, attn_probs)` · GQA · causal · bool/float mask · dropout 双规则 · fp32 内部（fp64 保持；P800 半精度 fast path 见下） |
 | 路线 | **A1** aten 拦截（成对注册 `Autograd*` + 纯设备键），旧业务代码零改动 |
-| 平台 | **硬件交付**：ascend910（自研 Triton）· p800-kunlunxin（vendor O/LSE + exact-P + A1）· thead-ppu（flash/efficient 分流 + exact-P）；**CPU**：ATen 组合（对照/梯度兜底） |
-| 验证 | kernel 52 组 ×4 profile · 黄金 **175/175** · 原生对照 **131/131**（44 组 bool 跳过）· op 22 项（6 gradcheck + fused backward）· 应用层 8-9 项 · FlagOS E2E ✅（p800 · C1；thead 缺 flag_gems，C2 跟踪 #37） |
+| 平台 | **硬件交付**：ascend910（自研 Triton）· p800-kunlunxin（vendor O/LSE + exact-P）· thead-ppu（flash/efficient 分流 + exact-P）；**CPU**：ATen 对照 |
+| 验证 | kernel 52 组 ×4 profile · 黄金 **175/175** · 原生 131/131（44 bool 跳过）· op 22 项 · 应用 8-9 项 · FlagOS E2E ✅（p800 · C1；thead 缺 flag_gems，C2 #37） |
 | NPU 性能（fp16，vs 同为"返回 out+P"的原生 math） | prefill1k D64 **1.22x** · 1k D128 **1.29x** · 2k D128 **2.03x** · GQA **1.67x** · decode **1.17x** · tail100 **1.16x** |
 | CPU 性能（fp32，同口径） | 1.05-1.40x（6 形状全过） |
 | P800 性能（fp16，同口径） | direct **1.46-2.21x** native；A1 **1.31-2.17x** |

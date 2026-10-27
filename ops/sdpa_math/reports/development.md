@@ -74,7 +74,7 @@ dispatch dump），旧代码零改动。
 | torch | `kernel/torch_level.py` | CPU 交付 + 第二判卷人 | `where` 生成 causal bias、`nan_to_num(softmax)` 守卫（与 reference 不同写法） |
 | triton | `kernel/triton_level.py` | NPU 交付 | 两段式：`_probs_kernel`(pass1 行最大 + pass2 归一) → `_pv_kernel`；`_score_block` 两 pass 共用；固定 64×64 tile；dropout 用 ATen 收口。**小形状按 score tile 数（≤56）自动改走单 kernel 融合**（QK→softmax→PV 一趟，见 [performance.md §6/§9](performance.md)） |
 | p800 | `kernel/p800_fast_level.py` | P800 交付 | vendor efficient attention 产出 `O/LSE`；`P=exp(scale·QKᵀ-LSE)` 保留双输出契约；mask/dropout/fp32/direct-autograd 回退 torch |
-| thead | `kernel/thead_fast_level.py` | thead-ppu 交付 | maskless 方阵 causal 或无 causal → flash；带 mask 或非方阵 causal → efficient；LSE 按 32 pad 切片后 exact-P 补偿；fp32/dropout/grad-building 回退 torch |
+| thead | `kernel/thead_fast_level.py` | thead-ppu 交付 | 方阵 causal/无 causal → flash；带 mask 或非方阵 causal → efficient；LSE 32-pad 后 exact-P；fp32/dropout/grad 回退 torch |
 
 **Triton 关键决策**:
 1. 必须物化 P（算子契约），故不能用 flash 的重算策略 → 两段式而非单遍；

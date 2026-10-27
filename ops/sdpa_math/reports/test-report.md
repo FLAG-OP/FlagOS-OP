@@ -4,7 +4,7 @@
 |---|---|
 | 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ thead fast（thead-ppu）+ torch（CPU/fallback） |
 | 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `thead-ppu` · `cpu` / 2026-09-30~10-02 · 2026-10-24 |
-| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · 四件套 ☑；应用证据按 profile 拆分见 §6——p800-kunlunxin FlagOS E2E ☑，thead-ppu C1 framework 层 ☑ 但 e2e_flagos.py / run.py --consistency 结构性缺证，C2 真实引擎全缺（跟踪 #37）） |
+| 结论 | **通过**（Must 清单全勾；应用证据按 profile 拆分见 §6——p800 FlagOS E2E ☑、thead C1 ☑ 而 e2e/consistency 缺证、C2 全缺（#37）） |
 
 ## 1. 测试范围
 
@@ -12,7 +12,7 @@
 |---|---|---|---|
 | kernel 层 | ☑ | `test/kernel_level.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | PASS：52 组（16 shape × 3 dtype + 全遮蔽/哨兵/dropout/错误路径）×4 profile |
 | thead tail 直测 | ☑ | `test/kernel_level_tail_thead_ppu.py` | PASS：47 组（3072/5000/5120/5000×5001 tails × fp32/bf16/fp16 × seeds 11/22/33 + zeros/large/boundary + 4096 floatmask） |
-| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | PASS：22 项（四模式拦截 · 注册=直调逐位 · P800 fused backward · 6 组 gradcheck · F.sdpa(MATH)） |
+| 框架层 | ☑ | `test/op_level.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | PASS：22 项（四模式拦截 · 注册=直调逐位 · P800 fused backward · gradcheck · F.sdpa(MATH)） |
 | 应用层 | ☑ | `test/framework_level.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | PASS：8-9 项（mini-decoder + 概率图消费者双跑） |
 | 黄金回归 | ☑ | `script/gen_golden.py` + `check_accuracy.py` | **175/175** ×5 实现（含 thead）；原生对照 131/131（44 bool 跳过） |
 | 性能门禁 | ☑ | `scripts/perf_run.py --pattern sdpa_math` + `perf_compare.py` | OK：FAIL 0 · WARN 0（triton 0.504ms / 8.524 TFLOPS 入库基线） |
@@ -186,7 +186,7 @@ backward、8 步贪心生成。
 | profile | C1 mini consumer | C2 真实引擎 |
 |---|---|---|
 | p800-kunlunxin | ☑ framework 层 8-9 项 + FlagOS E2E（4 层 mini-LLM，§4.1） | ✗ 本报告无 |
-| thead-ppu | ☑ framework 层 8-9 项（mini-decoder + 概率图消费者）；e2e_flagos.py / run.py --consistency 结构性缺证（dev 栈无 flag_gems） | ✗ 跟踪 #37（PR36 合并门槛） |
+| thead-ppu | ☑ framework 层 8-9 项（mini-decoder + 概率图消费者）；e2e_flagos.py / run.py --consistency 缺证（dev 栈无 flag_gems） | ✗ 跟踪 #37（PR36 合并门槛） |
 
 Should 项（三方对比中 FlagGems 缺席）已给出
 原因：无同语义（返回概率图）实现。

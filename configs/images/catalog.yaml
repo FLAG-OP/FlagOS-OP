@@ -1,7 +1,7 @@
 # FlagOS-OP 的基座镜像索引。
 # 本文件登记外部协作基座线索；FlagOS-OP 不构建、不分发这些镜像。
 schema: 1
-updated: "2026-10-16"
+updated: "2026-10-26"
 source:
   repository: FlagRT/runtime-team
   revision: "74197bf7d4b5dc8cdd3b2b89b15ac3561936dda6"

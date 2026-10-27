@@ -4,7 +4,10 @@ name: thead-ppu
 vendor: thead                     # 实测: flag_gems 5.3.4 runtime.backend.device_finder.DeviceDetector().vendor_name = 'thead'
 
 auto_detect:
-  module: flagtree                # 厂商栈模块（仅记录；实测基座 flagtree wheel 损坏不可 import，且 5.3.4 的 vendor 探测路径与 FlagOS-OP common/device.py 期望的 runtime.backend.device 不一致）
+  # 厂商栈模块（仅记录）：实测基座 flagtree wheel 损坏不可 import；且 5.3.4 的
+  # vendor 探测路径与 FlagOS-OP common/device.py 期望的 runtime.backend.device
+  # 不一致。
+  module: flagtree
   enabled: false                  # 探测不可靠——仅显式 --device thead-ppu / load_profile() 选择（先例: p800-kunlunxin-gems5）
 
 device:
@@ -48,7 +51,9 @@ framework:
   enable_prefix_caching: false
   load_format: safetensors
   seed: 20260823
-  model_path: /path/to/placeholder-model   # 冒烟模型未就绪: 用 FLAGOS_MODEL_PATH 覆盖（见 docs/device-profiles.md#模型路径覆盖）；framework 级证据待 thead-ci 栈 profile
+  # 冒烟模型未就绪: 用 FLAGOS_MODEL_PATH 覆盖（见 docs/device-profiles.md#模型路径覆盖）；
+  # framework 级证据待 thead-ci 栈 profile。
+  model_path: /path/to/placeholder-model
   quirks:
     keep_default_prefer: true     # known-issues #1: 禁设 VLLM_FL_PREFER=flagos（PPU 栈无该插件配置，保守沿用）
     require_two_visible_devices: false

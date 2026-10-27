@@ -32,4 +32,3 @@
 
 见 [PLATFORM.md](PLATFORM.md)（ascend910 64×64 tile 上限 / p800
 vendor O/LSE + exact-P / thead flash·efficient 分流 + LSE pad 切片）。
-

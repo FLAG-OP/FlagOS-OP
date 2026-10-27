@@ -36,8 +36,8 @@ thead fast 均过同一 175 组黄金。
 | kernel 层 | `test/kernel_level.py` | ☑ 52 组 ×4 profile，哨兵/dropout/错误路径全过 | [reports/accuracy.md](reports/accuracy.md) |
 | 框架层 | `test/op_level.py` | ☑ 22 项：四模式拦截、注册=直调（逐位）、P800 fused backward、6 组 gradcheck、F.sdpa(MATH) 拦截 | [reports/test-report.md](reports/test-report.md) |
 | 应用层 | `test/framework_level.py` | ☑ 8-9 项：mini-decoder + 概率图消费者；P800 在 FlagGems 栈内运行 | [reports/test-report.md](reports/test-report.md) |
-| 黄金回归 | `script/gen_golden.py` + `check_accuracy.py` | ☑ **175/175**（reference/torch/triton/p800/thead 五实现）；原生对照 **131/131**（44 bool 跳过） | [reports/accuracy.md](reports/accuracy.md) |
-| 性能 | `script/bench_perf.py`（含 `--register` A1 路径） | ☑ NPU 直调 1.16-2.03x（6 形状全过）；CPU 1.05-1.40x；P800 1.46-2.21x；thead 直调 **2.38x** native composite | [reports/performance.md](reports/performance.md) |
+| 黄金回归 | `gen_golden.py` + `check_accuracy.py` | ☑ **175/175**（五实现，含 thead）；原生对照 **131/131**（44 bool 跳过） | [reports/accuracy.md](reports/accuracy.md) |
+| 性能 | `script/bench_perf.py`（含 `--register`） | ☑ NPU 1.16-2.03x；CPU 1.05-1.40x；P800 1.46-2.21x；thead **2.38x** native composite | [reports/performance.md](reports/performance.md) |
 | 语义证据 | `probes/native_semantics.py` | ☑ 6 节全过（两 profile） | [reports/development.md](reports/development.md) |
 | perf 门禁 | `common/perf_registry.py` → `scripts/perf_run.py --pattern sdpa_math` | ☑ 已登记 `ops.sdpa_math`（含 thead-ppu） | [reports/performance.md](reports/performance.md) |
 | P800 | `python3 example.py p800-kunlunxin` | ☑ kernel 52 · 黄金 175/175 · A1 22 · FlagGems 应用层 9 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) |
@@ -54,7 +54,7 @@ thead fast 均过同一 175 组黄金。
 | 延迟（NPU fp16 vs 原生 math） | 2k D128 **1.369ms / 2.776ms = 2.03x**；1k D128 1.29x；GQA 1.67x；decode **1.17x**；tail **1.16x** | 同为"返回 out+概率图"的公平口径 |
 | A1 包装开销 | 1k D64 直调 0.515ms → A1 0.555ms；decode 直调 0.217ms → A1 0.295ms（≈0.078ms） | 1k 仍 1.13x 于原生；decode A1 0.86x（小形状包装占比高） |
 | P800 fp16 | direct **1.46-2.21x** native；A1 **1.31-2.17x** | 同为返回 out+P 的公平口径 |
-| thead-ppu fp16 | direct **2.38x** native composite（0.328ms vs 0.782ms, 13.10 vs 5.49 TFLOPS）；A1 ~1.00x（注册后 native 即本实现） | 同为返回 out+P；native 列为未注册 composite math |
+| thead-ppu fp16 | direct **2.38x** native composite（0.328 vs 0.782ms）；A1 ~1.00x（注册后 native 即本实现） | 同为返回 out+P；native 列为未注册 composite |
 | P800 no-P 参考 | exact-contract math 比 `F.sdpa` 慢 **1.98-4.46x** | **非同输出契约**：`F.sdpa` 不返回/物化 P，只作融合上限参考 |
 | A100 绝对性能（外部参照） | 同契约 private-math 未测；非等价 no-P 口径下 P800 vendor efficient 为 A100·FA2 的 **36-53%** | 论文读数、非同机复测；不能折算成 exact-P 加速比 |
 | FlagOS E2E | forward **1.07x**；train-out **1.45x**；train+probs **1.48x**；generate **1.09x** | fused backward off/on **1.45-1.50x**，覆盖 dO+dP |

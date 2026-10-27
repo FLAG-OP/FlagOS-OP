@@ -79,19 +79,19 @@ triton **3.6.0** / vllm 0.19.0；无 flag_gems、无 vllm-plugin-fl），
 
 | 绑定项 | 结论 |
 |---|---|
-| 设备表现 | PPU 经 CUDA 兼容层直曝 `device.type="cuda"`；守卫要求设备名含 `PPU`（triton `PPUDriver` 为二路证据，见 `probes/thead_triton_dot_smoke.py`）。`get_impl("cuda")` 三候选路由：`torch_xmlir`→p800、PPU 栈→thead_ppu、否则报错 |
-| 注册 key | **`AutogradCUDA`**（算子本地注册点）。实测（`probes/thead_reg_probe.py`，每 key 独立进程）：`AutogradCUDA` 6/7 探针命中（唯一零命中是 `inference_mode`，同 known-issues #19 的 CUDA 栈现象）；纯 `CUDA` 7/7 全命中但反传出现"未注册 Autograd kernel"警告——故选 `AutogradCUDA`。中央 YAML 另存基键 `CUDA`，与本行**有意分层**并存（非笔误），依据见 §3c-1 |
+| 设备表现 | PPU 经 CUDA 兼容层直曝 `device.type="cuda"`；守卫要求设备名含 `PPU`；`get_impl("cuda")` 三候选路由：`torch_xmlir`→p800、PPU 栈→thead_ppu |
+| 注册 key | **`AutogradCUDA`**（算子本地）：探针 6/7 命中（零命中仅 inference_mode，known-issues #19）。中央 YAML 另存基键 `CUDA` 有意分层，见 §3c-1 |
 | GQA | efficient/flash schema **均无 `enable_gqa`**（8 参数实测）→ `repeat_interleave` 扩 KV |
-| 主实现（maskless） | 直调 `aten::_scaled_dot_product_flash_attention`。`TorchDispatchMode` 实证 PPU 原生 `F.sdpa` 内部恰好只调这一个 overload——直调即与原生同 kernel；flash schema **无 attn_mask**（传入报 `Unknown keyword argument 'attn_mask'`） |
+| 主实现（maskless） | 直调 `aten::_scaled_dot_product_flash_attention`；`TorchDispatchMode` 实证原生 `F.sdpa` 内部同此 overload。flash schema **无 attn_mask** |
 | 主实现（带 mask） | efficient 委托 `aten::_scaled_dot_product_efficient_attention`；bool mask 转 additive `-inf` bias；全遮蔽行输出端 `masked_fill` 恢复 NaN |
-| 非方阵 causal（`Sq≠Skv` 且 `is_causal=True`） | **2026-10-25 PR36 条目 4 接入**：不进 maskless flash 分支（flash 直调对该输入**不生效**，6 形状 × fp16/bf16 err 1.2-1.9），强制 efficient 委托——实测 6 形状 × 3 dtype err ≤5.63e-4(fp16)/≤2.98e-3(bf16)/≤2.54e-7(fp32)，与原生 `F.sdpa` 同容差且逐案同值；原 `ValueError("causal 语义要求 Sq == Skv...")` 已删。联动约束同带 mask 路径：LSE 按 32 倍数 pad（`lse[..., :Sq]` 切回 err ≤9.5e-7）、非对齐 bias 走 `_aligned_bias`（3/3，其中 2 例 `bias_repaired=True`）、GQA `repeat_interleave`（4/4）、厂商 efficient 反向可用（dq/dk/dv ≤3.9e-3）。证据 `probes/out/thead_nonsq_causal_probe.json`（现行）+ `..._prefix.json`（整改前快照）；**梯度侧同批拆门**：`register.py` 数学 backward 原 `if ctx.is_causal and Sq == Skv` 在非方阵上静默不折 causal（实测梯度差 4.68），已改为一律按 `(Sq, Skv)` 左上 tril |
-| bias 16B stride 对齐 | efficient kernel 强制要求。报错原文两种：`(stride(1)*elem)%16!=0` → `attn_bias is not correctly aligned (strideH)`；`(stride(2)*elem)%16!=0` → `attn_bias is not correctly aligned`（无后缀）。修复（`_aligned_bias`，探针里叫 kv_pad）：把 bias 复制进按列 pad 到 16B 步长的缓冲再 `as_strided` 回原逻辑形状（K-stride 保持 1）。**生效范围：fp32/fp16 已验证等价（`probes/thead_bias_layout.json` 9/9）；bf16 2026-10-24 已补验收口（`probes/out/thead_bf16_bias_pad.json`，T4）：实测生产 `_aligned_bias` vs 连续 kv_pad 布局直算 vs CPU fp32 参考 11/11 用例在 bf16 1e-2 abs（黄金口径收紧）内一致（两路径互差 0），报错原文两种变体在 bf16 均复现。黄金集 bf16 masked 案例全为 basic S128（row stride 256B %16==0），走连续 bias 不触发非对齐分支——黄金 24 组 masked bf16 子集经生产 facade 回归无回退（worst 7.8125e-3 = 交付时历史 worst）** |
-| fp32 路径 | 委托精度本身很好（非 extreme 3e-7～5e-6），但 scale=8 饱和（黄金 extreme 口径）abs 2.79e-3 超 1e-5 判卷线 → **fp32 走 ATen 组合**（`sdpa_reference` 设备端）。PPU **无** p800 的 XMLIR bmm JIT 缺陷：S∈(320,640] 设备组合 vs CPU 参考 ≤5.7e-7，**无需 768 pad** |
-| bf16 boundary | V≈dtype_max/2 × 长序列时厂商 kernel 中间量溢出为 inf（随 Sq 增大阈值下降）——**原生 `F.sdpa` 同样溢出**，属平台分化而非实现缺陷。tail 测试判定口径：与原生 `inf` 位置 parity + 有限子集 rel<5e-3（黄金 extreme 同款相对容差） |
-| cudnn / overrideable | `_scaled_dot_product_cudnn_attention` 直调报 `CUDNN_BACKEND_TENSOR_DESCRIPTOR: ... ACDNN_STATUS_BAD_PARAM`；`_scaled_dot_product_fused_attention_overrideable` 报 `NotImplementedError`（该入口是 privateuse1 专用）——均不选 |
-| triton 备选 | triton 3.6.0 在 PPU 可编译执行（target cuda arch=80, PPUDriver），但 `tl.dot` 精度掉到 fp16 量级（64³ 点积 rel≈7e-4；ieee K=128 abs 1.03e-4），仍超黄金 fp32 1e-5 → 仅记备选，不接生产 |
-| 性能 | 首版全量走 efficient + `get_impl` 每调用 `find_spec` 解析 → **4.07× 倒挂**（0.426 ms vs 原生 0.105 ms）。收口两步：① maskless 分流 flash；② `backends.get_impl` 加进程级解析缓存（cProfile 实测 find_spec/importlib ~80-100 µs/调用）。最终 perf_run 台账 **0.114 ms vs 原生 0.104 ms（1.10×，37.7 TFLOPS）**，六形状 bench 0.63-0.99×（见 `reports/performance.md`） |
-| 跨层一致性缺证 | 仓库级 `run.py --consistency` 锚定 gelu_and_mul（A2 路由），硬依赖 `flag_gems` + `vllm_fl`——dev 容器二者均无（`ModuleNotFoundError: flag_gems`），属**结构性缺证**而非 sdpa/thead 缺陷。sdpa 的"直调↔dispatch 张量级一致"由 `test/op_level.py` 第 3 步逐位断言覆盖（`bitwise_vs_direct=True`） |
+| 非方阵 causal（`Sq≠Skv` 且 `is_causal=True`） | **PR36 条目 4 接入**：maskless 亦强制 efficient（flash 对该输入不生效），梯度门同批拆；取证见 §3c-3 |
+| bias 16B stride 对齐 | efficient kernel 强制要求；非对齐输入走 `_aligned_bias` 列 pad 修复，fp32/fp16/bf16 均已验收（细节与报错原文见 §3c-4） |
+| fp32 路径 | 委托精度好（非 extreme 3e-7～5e-6）但 scale=8 饱和超 1e-5 判卷线 → **fp32 走 ATen 组合**。PPU 无 p800 的 XMLIR bmm JIT 缺陷，无需 768 pad |
+| bf16 boundary | V≈dtype_max/2 × 长序列时厂商 kernel 中间量溢出 inf（**原生同溢出**，平台分化非缺陷）。tail 判定：inf 位置 parity + 有限子集 rel<5e-3 |
+| cudnn / overrideable | 两入口直调分别报 `CUDNN_BACKEND_TENSOR_DESCRIPTOR` 与 `NotImplementedError`（privateuse1 专用）——均不选 |
+| triton 备选 | triton 3.6.0 可编译执行（target cuda arch=80, PPUDriver）但 `tl.dot` 精度掉到 fp16 量级（64³ rel≈7e-4）→ 仅记备选，不接生产 |
+| 性能 | 首版 4.07× 倒挂；收口 maskless flash 分流 + get_impl 缓存后 **1.10× 原生**，六形状 0.63-0.99×（见 reports/performance.md） |
+| 跨层一致性缺证 | `run.py --consistency` 锚定 gelu_and_mul（A2），硬依赖 `flag_gems` + `vllm_fl`——dev 容器均无。直调↔dispatch 一致由 op 层断言覆盖 |
 
 ### 3c-1. 中央 YAML `dispatch_key` 与算子本地 key 的分层（PR36 条目 2 取证，2026-10-25）
 
@@ -100,7 +100,7 @@ triton **3.6.0** / vllm 0.19.0；无 flag_gems、无 vllm-plugin-fl），
 
 | 侧 | key | 消费点（取证到的读取路径） |
 |---|---|---|
-| 中央 | `CUDA`（基键） | `common/device.py` → `tests/framework_level/_harness.py` / `_aten_harness.py` 写 `A1_DISPATCH_KEY` → `injection/sitecustomize.py` 注册 `aten::silu`；`scripts/intake_validate.py`、`scripts/bench_dispatch.py`、`tests/op_level/test_a1.py` 同读该字段 |
+| 中央 | `CUDA`（基键） | `common/device.py` → `_harness.py`/`_aten_harness.py` 写 `A1_DISPATCH_KEY` → `injection/sitecustomize.py`；另 intake/bench/op_a1 同读 |
 | 算子本地 | `AutogradCUDA` | `ops/<op>/_profile.py` → op / kernel / framework 三层测试与探针 |
 
 中央取基键而非 `AutogradCUDA` 的依据（2026-10-25 卡 6 实测，`python3
@@ -190,7 +190,7 @@ efficient，两边对不上，即审阅所指矛盾。
 
 | 探针项 | 结果 |
 |---|---|
-| 生产 facade `sdpa_triton` | **整改前**（快照 `..._prefix.json`）：6 非方阵形状 × 3 dtype = 18 例全 `ValueError` + `reference` 1 例 `AssertionError`（`summary REJECT 19`），方阵对照 3 例 PASS；**整改后**（本 JSON）：21 例全 PASS，非方阵 18 例 err 0.000e+00 |
+| 生产 facade `sdpa_triton` | **整改前**（快照）：18 例 ValueError + reference 1 例 AssertionError（REJECT 19），方阵对照 PASS；**整改后**：21 例全 PASS，非方阵 err 0 |
 | 原生 `F.sdpa`（PPU） | 全 PASS——aten 语义是 **top-tril** `tril(ones(Sq, Skv))`，非方阵同样支持；旧 assert 的「与 aten 一致」不成立 |
 | flash 直调 `is_causal=True` | 全 FAIL（err 1.21-1.91，causal 未施加）→ **不能**当非方阵 causal 路径 |
 | efficient 直调 `is_causal=True` | 6 形状（4×8/8×4/1×64/100×197/333×197/64×1）× fp16/bf16/fp32 全 PASS：err ≤5.62e-4 / ≤2.98e-3 / ≤2.53e-7，与原生逐案同误差 |
@@ -211,11 +211,27 @@ causal 案例，397 例判卷口径不变）。四平台现状：
 | thead-ppu | **支持**：maskless 与带 mask 都走 efficient（fp16/bf16/fp32、GQA、非对齐 bias、反向全验） | `kernel/backends/thead_ppu.py` 分流 + `register.py` 梯度 |
 | p800-kunlunxin | 显式拒绝 `ValueError`（本平台未接入，未在 PPU 之外实测） | `kernel/backends/p800_kunlunxin.py` |
 | mlu590 | 显式拒绝 `ValueError`（同上） | `kernel/backends/mlu590.py` |
-| ascend910 | 显式拒绝 `ValueError`——原为 `IS_CAUSAL=is_causal and Sq == Skv` **静默降级成不遮蔽**（前向错、且与拆门后的反向折 causal 不一致），本批补同款拒绝 | `kernel/backends/ascend910.py` |
+| ascend910 | 显式拒绝 `ValueError`——原 `IS_CAUSAL` 折叠 **静默降级成不遮蔽**（前向错且与反向不一致），本批补拒绝 | `kernel/backends/ascend910.py` |
 
 配套测试：`test/kernel_level_tail_thead_ppu.py` 第 3 节（8 形状 × 3 dtype ×
 2 seed + 与原生 parity 3 例）、`test/op_level.py` 第 6 步（thead 专用：A1 拦截、
 注册=直调逐位、梯度 vs CPU 参考）。
+
+### 3c-4. bias 16B stride 对齐细节（thead 专属）
+
+- 报错原文两种：`(stride(1)*elem)%16!=0` →
+  `attn_bias is not correctly aligned (strideH)`；
+  `(stride(2)*elem)%16!=0` → `attn_bias is not correctly aligned`（无后缀）。
+- 修复（`_aligned_bias`，探针里叫 kv_pad）：把 bias 复制进按列 pad 到 16B 步长
+  的缓冲再 `as_strided` 回原逻辑形状（K-stride 保持 1）。
+- 生效范围：fp32/fp16 已验证等价（`probes/thead_bias_layout.json` 9/9）；
+  bf16 2026-10-24 已补验收口（`probes/out/thead_bf16_bias_pad.json`，T4）：
+  生产 `_aligned_bias` vs 连续 kv_pad 布局直算 vs CPU fp32 参考 11/11 用例在
+  bf16 1e-2 abs（黄金口径收紧）内一致（两路径互差 0），报错原文两种变体在
+  bf16 均复现。
+- 黄金集 bf16 masked 案例全为 basic S128（row stride 256B %16==0），走连续
+  bias 不触发非对齐分支——黄金 24 组 masked bf16 子集经生产 facade 回归无回退
+  （worst 7.8125e-3 = 交付时历史 worst）。
 
 ## 4. 平台专属数字（不可跨平台引用）
 

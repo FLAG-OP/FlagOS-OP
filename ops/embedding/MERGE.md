@@ -39,7 +39,7 @@
 | op（ascend910） | `test/op_level.py` | 拦截 5 次·逐位·梯度 err=0.0 |
 | kernel/op/应用（p800） | 同上 | 20/20+6/6 err=0；A1 拦截 5 次 |
 | kernel/op/应用（cambricon） | `EMBEDDING_PROFILE=cambricon ...` | 见 reports/cambricon.md |
-| kernel/tail/op/应用（thead-ppu） | `example.py thead-ppu` + `test/kernel_level_tail_thead_ppu.py thead-ppu` | 20/20+6/6+37/37 err=0；黄金 174/174；A1 拦截 5 次；见 reports/thead-ppu.md |
+| kernel/tail/op/应用（thead-ppu） | `example.py thead-ppu` + `test/kernel_level_tail_thead_ppu.py` | 20/20+6/6+37/37 err=0；黄金 174/174；A1 拦截 5 次；见 reports/thead-ppu.md |
 | 包化共存 | `python3 ops/test_packaging.py` | 16 算子导入+双注册+消费 全绿 |
 
 ## cuda 双候选路由（XMLIR / PPU）

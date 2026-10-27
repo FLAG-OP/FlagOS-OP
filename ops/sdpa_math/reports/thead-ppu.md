@@ -11,7 +11,7 @@
 |---|---|---|
 | T1 `ops/sdpa` | 结构级 | 新文件 `kernel/thead_fast_level.py`、函数 `sdpa_math_thead_fast`。两段式 probs+PV 在 PPU flash 上无对应路径，需独立路由 |
 | T2 `ops/embedding` | 参数级 | 已有 thead catalog 条目，直接沿用 T1-sdpa 的 kernel 本体 |
-| T3 `ops/sdpa_math` | **结构级** | 同 T1。sdpa_math 必须物化第二输出 P，不能整体替换为 flash/efficient——与 p800 同构为 vendor O/LSE + exact-P 补偿。与 p800 的差异是路由与 LSE 布局（见 §3），写入 PLATFORM.md §3a |
+| T3 `ops/sdpa_math` | **结构级** | 同 T1；须物化第二输出 P（不整体换 flash/efficient）；同构 p800 vendor O/LSE + exact-P，差异在路由与 LSE 布局，见 PLATFORM.md §3a |
 
 T1 的绑定结论全部迁入 sdpa_math 的 thead 章节（PLATFORM.md §3a），
 本报告仅记录 sdpa_math 专属证据。

@@ -62,8 +62,8 @@ PYTHONPATH=/hosthome/FlagOS-OP python3 probes/guard_check.py thead-ppu
 
 | 项 | 结论 |
 |---|---|
-| dispatch key | **`AutogradCUDA`**。`probes/thead_reg_probe.py`（每 key 独立进程）：AutogradCUDA 6/7 命中（唯一零命中 `inference_mode`，同 known-issues #19）；纯 `CUDA` 7/7 全命中但反传有"未注册 Autograd kernel"警告 |
-| yaml 差异 | **2026-10-25 按 PR36 条目 2 取证收口**: `configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 是中央 A1 **基键**（有意分层，非笔误），`_profile.py` 的 `AutogradCUDA` 是算子本地注册点——消费点、先例比对与三口径实测见 `PLATFORM.md` §3c-1；复现 `python3 scripts/smoke_dispatch_key.py` |
+| dispatch key | **`AutogradCUDA`**。`probes/thead_reg_probe.py`：6/7 命中（零命中仅 `inference_mode`，known-issues #19）；纯 `CUDA` 7/7 命中但反传带未注册 Autograd 警告 |
+| yaml 差异 | PR36 条目 2 取证：yaml `dispatch_key: CUDA` 是中央基键（有意分层），`_profile` 的 `AutogradCUDA` 是本地注册点——见 `PLATFORM.md` §3c-1 |
 | autograd | q/k/v 直调反向（flash/efficient 均有 backward op）；可微 additive mask 走 A1 数学 backward |
 | 拦截 | op 层 count=3（含 PR36 条目 4 的非方阵 causal 一例）；注册路径与直调路径**逐位一致**（`bitwise_vs_direct=True`）；framework 拦截 28 次 |
 | 梯度 | dq/dk/dv vs 原生子进程 max_err 4.88e-4 / 4.88e-4 / 3.91e-3（bf16 容差内）；direct q/k/v + 可微 mask 反向通过（`direct_grad_check=vendor+math-fallback`） |
@@ -81,13 +81,18 @@ PYTHONPATH=/hosthome/FlagOS-OP python3 probes/guard_check.py thead-ppu
 | 项 | 结果 |
 |---|---|
 | kernel 层 | ✅ 37/37，max_err 3.91e-3（bf16），哨兵通过，1k D128 ~0.12ms |
-| tail 覆盖（§2d） | ✅ 88/88：S3072 causal ×3 seed、S5000/5120、S5000/5001-bool-mask、zeros/large/boundary + **非方阵 causal 48 案例（8 形状 × 3 dtype × 2 seed）与原生 parity 3 例（PR36 条目 4，见 §6.12）**；boundary 判定用相对容差 5e-3（黄金 extreme 口径），bf16 用 parity_vs_native + 有限子集 rel；带 mask 案例改判「非有限位置与参考逐位一致」（`nonfinite=n/n_ref finite_pos=True`），旧 `n_nonfinite==0` 会把参考自身的合法全遮蔽 NaN 行误判为 FAIL |
+| tail 覆盖（§2d） | ✅ 88/88：S3072/5000/5120/5001 tails ×3 seed + zeros/large/boundary + 非方阵 causal 48 例与原生 parity 3 例（PR36 条目 4，见 §6.12） |
 | 黄金 | ✅ 397/397，worst 7.812e-3 @ bf16 float-mask（容差 2e-2 内）；extreme fp32 rel 4.988e-3 |
-| op 层 | ✅ AutogradCUDA 拦截（count=3）、注册=直调(逐位)、vs 原生 0.0、梯度通过；**非方阵 causal 经 A1 拦截、注册=直调(逐位)、vs 原生 0.0，梯度 vs CPU 参考 dq 1.22e-4 / dk 1.26e-4 / dv 1.92e-3**（PR36 条目 4） |
+| op 层 | ✅ AutogradCUDA 拦截 3 次、注册=直调逐位、vs 原生 0.0、梯度过；非方阵 causal 梯度 vs CPU dq 1.22e-4 / dk 1.26e-4 / dv 1.92e-3（PR36 条目 4） |
 | 应用层 | ✅ mini-decoder（GQA8/2 causal fp16）拦截 28 次，logits max_diff=0.0，top1/贪心续写一致率 1.00 |
 | 守卫 | ✅ 元数据 / cuda:6 PPU 正向路径 / CPU 拒绝 / 注册守卫（`ALL GUARD CHECKS PASS`） |
 | perf gate | ✅ `scripts/perf_run.py --device thead-ppu --pattern ops.sdpa --update-baseline` 入库；`perf_compare` FAIL 0 · WARN 0 |
 | 仓库一致性 | ◐ `run.py --consistency` FAIL：`ModuleNotFoundError: flag_gems`（A2/gelu_and_mul 锚定门禁，dev 栈结构性缺证，见 §6.11） |
+
+tail 判定口径：boundary 用相对容差 5e-3（黄金 extreme 口径），bf16 用
+parity_vs_native + 有限子集 rel；带 mask 案例改判「非有限位置与参考逐位
+一致」（`nonfinite=n/n_ref finite_pos=True`），旧 `n_nonfinite==0` 会把
+参考自身的合法全遮蔽 NaN 行误判为 FAIL。
 
 ## 5. 性能采样与倒挂收口
 

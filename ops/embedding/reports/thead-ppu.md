@@ -63,7 +63,7 @@ fp16 量级（sdpa 报告 §2.1），gather 场景更无理由绕开 native。
 | 项 | 结论 |
 |---|---|
 | dispatch key | **`AutogradCUDA`**（§2.2）；`_profile.py` thead-ppu 条目同 |
-| cuda 双候选路由 | `kernel/platform.py::_cuda_impl` + `register.py::_cuda_backend`：torch_xmlir → p800，PPU 设备名 → thead，进程级缓存（T1 教训: 无缓存 find_spec 路由 80-100µs/调用） |
+| cuda 双候选路由 | `kernel/platform.py::_cuda_impl` + `register.py::_cuda_backend`：torch_xmlir → p800，PPU 设备名 → thead，进程级缓存（无缓存 find_spec 80-100µs/调用） |
 | 拦截 | op 层 count=5；注册路径与直调路径**逐位一致**；framework 拦截 8 次 |
 | 梯度 | dense/scale_freq grad vs CPU 参考 err=0.0；应用层 embedding/首层 linear 梯度 diff=0 |
 | 守卫 | sparse backward NotImplementedError / invalid padding IndexError——kernel 层 guard 2/2 通过（cambricon 先例同口径） |
@@ -82,7 +82,7 @@ PYTHONPATH=/hosthome/FlagOS-OP python3 scripts/perf_compare.py --device thead-pp
 | 项 | 结果 |
 |---|---|
 | kernel 层 | ✅ 20 前向 + 6 反向，max_err **0.0**（逐位）；守卫 2/2；16k×D128 ~0.041ms |
-| tail 覆盖（§2d） | ✅ 37/37：gather 长度 3072/5000/5120 × 3 dtype × 3 seed 全 err=0；zeros/large/boundary 全 err=0（gather 天然逐位, boundary 相对容差 5e-3 口径下 rel=0）；哨兵确定性+输入敏感通过 |
+| tail 覆盖（§2d） | ✅ 37/37：gather 3072/5000/5120 × 3 dtype × 3 seed 全 err=0；zeros/large/boundary 全 err=0（boundary rel 5e-3 口径下 rel=0）；哨兵通过 |
 | 黄金 | ✅ **174/174**，worst=0.000e+00（逐位判据, CPU goldendata 直接复用） |
 | op 层 | ✅ AutogradCUDA 拦截 5 次；注册=直调(逐位)；dense/scale grad err=0.0；sparse fwd OK / bwd rejected |
 | 应用层 | ✅ nn.Embedding+TokenMLP bf16 拦截 8 次；logits diff=0.0；贪心一致率 1.00；两级梯度 diff=0 |

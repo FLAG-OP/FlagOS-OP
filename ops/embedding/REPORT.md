@@ -63,8 +63,8 @@ gather，行采集是厂商库强项，**生产委托是两平台一致的工程
 |---|---|---|---|
 | P800 厂商委托 | [kernel/p800_kunlunxin.py](kernel/p800_kunlunxin.py) | ✅ | forward 走 native `index_select`；dense backward 走 native `embedding_backward`；XPU 缺 `scale_grad_by_freq` → 自实现 inverse-frequency 补偿 |
 | Cambricon MLU 委托 | [kernel/cambricon.py](kernel/cambricon.py) | ✅ | forward 走 native `index_select`；backward 走 native `embedding_backward`（`padding_idx`/`scale_grad_by_freq` 完整，无需补偿）；`sparse=True` backward 显式拒绝 |
-| T-head PPU 委托 | [kernel/thead_ppu.py](kernel/thead_ppu.py) | ✅ | forward 走 native `index_select`；backward 走 native `embedding_backward`（原生完整, cambricon 同型零补偿）；`sparse=True` backward 显式拒绝 |
-| 多平台门面 | [kernel/platform.py](kernel/platform.py) | ✅ | 按 `tensor.device.type` 路由后端（cuda 双候选 XMLIR/PPU 按栈身份, 进程级缓存），附 `dispatch_key_for` / `synchronize`；测试与 A1 注册共用 |
+| T-head PPU 委托 | [kernel/thead_ppu.py](kernel/thead_ppu.py) | ✅ | forward `index_select`；backward 走 native `embedding_backward`（原生完整、零补偿）；sparse 拒绝 |
+| 多平台门面 | [kernel/platform.py](kernel/platform.py) | ✅ | 按 `tensor.device.type` 路由后端（cuda 双候选按栈身份，进程级缓存），附 `dispatch_key_for` / `synchronize` |
 | Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ✅ 探针 | 正确但比 native gather 慢，未接入生产 |
 | torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | 独立 index-select 参考/对照 |
 | 硬件级 | [kernel/hardware_level/README.md](kernel/hardware_level/README.md) | ⬜ 置空 | native row-gather 已达到生产水位，暂无重写收益 |

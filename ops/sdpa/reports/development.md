@@ -212,7 +212,12 @@ vs FlagGems: **3.3-17.6x 加速**。vs 原生差距的根因分解见性能分�
 | 1 | torch.library 注册进程内不可撤销 | 长驻进程混跑多实现需子进程隔离 | op 层测试已用子进程；文档标注 |
 | 2 | 大 BM/BN 编译失败（UB 192KB） | tile 调优空间封死在 64×64 | 性能分册记录；待 BiShengIR 演进 |
 | 3 | 共享服务器 bench 扰动 | 绝对值 ±15µs 级 | 相对比值口径；空闲时段采集 |
-| 4 | Sq≠Skv 的 causal：旧结论「未实现 / 与参考一致地拒绝」**不成立**（aten 本身按 top-tril 支持；拒绝只是 wrapper 断言，且与 sdpa_math 侧「强制走 efficient」文档相反） | 非方阵 causal 全被拒，原生可算 | **2026-10-25 按 PR36 条目 4 选型 a 接入**：thead-ppu 删拒绝行、maskless 非方阵 causal 改道 efficient 委托（探针 6 形状 × 3 dtype 全对）、拆 register.py 的 Sq==Skv 梯度门、reference 改 top-tril；p800/mlu590/ascend 保持**显式拒绝**（ascend 原为静默降级成不遮蔽，已补同款拒绝）。详见 PLATFORM.md §3c-3 |
+| 4 | Sq≠Skv causal：旧结论「未实现/拒绝」不成立（aten 按 top-tril 支持） | 非方阵 causal 全被拒，原生可算 | **PR36 条目 4 已接入**，细节见下 |
+
+条目 4 接入细节（2026-10-25）：thead-ppu 删拒绝行、maskless 非方阵 causal
+改道 efficient 委托（探针 6 形状 × 3 dtype 全对）、拆 register.py 的
+Sq==Skv 梯度门、reference 改 top-tril；p800/mlu590/ascend 保持显式拒绝
+（ascend 原为静默降级成不遮蔽，已补同款拒绝）。详见 PLATFORM.md §3c-3。
 
 ## 7. 结论与路线
 
@@ -324,7 +329,7 @@ triton 3.6.0，profile `thead-ppu`）。完整证据链见
 | 步骤 | 结论 |
 |---|---|
 | a. 分叉判定 | 结构级：新 backend 文件 `kernel/backends/thead_ppu.py` + 三候选路由 |
-| b. 首测 | Triton-on-PPU 可编译运行（tl.dot 64³ 对点 rel≈7e-4，精度 fp16 量级）；efficient/flash overload 均存在、cudnn 报 BAD_PARAM；dispatch key `AutogradCUDA` 6/7 命中（`inference_mode` 零命中同 #19）；bias 16B stride 对齐两条规则钉死 |
+| b. 首测 | Triton-on-PPU 可编译运行（tl.dot rel≈7e-4）；efficient/flash 存在、cudnn BAD_PARAM；key AutogradCUDA 6/7（inference_mode 零命中 #19）；bias 16B 两规则钉死 |
 | c. 实现 | fp32→ATen 组合（无 bmm bug、无需 pad）；fp16/bf16→厂商 overload 直调；GQA `repeat_interleave`；bool→additive；全遮蔽行 NaN；可微 mask→A1 数学 backward |
 | d. kernel 直测 | 37/37 + tail 覆盖 88/88（3072/5000/5120 尾块 ×3 seed + zeros/large/boundary；**2026-10-25 PR36 条目 4 增补非方阵 causal 48 案例 + 原生 parity 3 例**） |
 | e. A1 注册 | `AutogradCUDA` 拦截、注册=直调逐位、梯度 vs 原生通过 |

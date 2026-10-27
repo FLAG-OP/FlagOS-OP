@@ -124,8 +124,8 @@ dq 4.9e-4 · dk 4.9e-4 · dv 3.9e-3。
 
 | 层级 | 结果 |
 |---|---|
-| tail 覆盖 | `test/kernel_level_tail_thead_ppu.py thead-ppu` **88/88**（原 37 + 非方阵 causal 8 形状 × 3 dtype × 2 seed = 48 + 原生 parity 3；带 mask 案例改判「非有限位置与参考逐位一致」） |
-| A1 op | 非方阵 causal 经 `AutogradCUDA` 拦截（count=3）、注册=直调**逐位**一致、vs 原生 **0.0**；梯度 vs CPU fp32 参考 dq 1.22e-4 / dk 1.26e-4 / dv 1.92e-3（旧 `Sq==Skv` 门实测梯度差 4.68，已拆） |
+| tail 覆盖 | `test/kernel_level_tail_thead_ppu.py thead-ppu` **88/88**（原 37 + 非方阵 causal 48 + 原生 parity 3；带 mask 改判非有限位与参考逐位一致） |
+| A1 op | 非方阵 causal 经 `AutogradCUDA` 拦截、注册=直调逐位、vs 原生 **0.0**；梯度 vs CPU dq 1.22e-4 / dk 1.26e-4 / dv 1.92e-3（旧 `Sq==Skv` 门梯度差 4.68，已拆） |
 | kernel | `test/kernel_level.py thead-ppu` 37/37 无回退；黄金 **397/397**（worst 7.812e-3，与交付时持平） |
 | 应用/守卫 | `example.py thead-ppu` 三层全绿；`probes/guard_check.py thead-ppu` 全过 |
 | 回归口径 | `tests/unit` 46/46；三索引 `--check` 全绿；`git diff --check` 干净 |

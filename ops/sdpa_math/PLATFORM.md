@@ -47,24 +47,41 @@ sdpa_math 必须物化第二输出 P，不能整体替换为 flash/efficient—�
 | 绑定项 | 结论 |
 |---|---|
 | 设备表现 | PPU 经 CUDA 兼容层直曝 `device.type="cuda"`；守卫以设备名含 `PPU` 为准（triton `PPUDriver` 为二路证据） |
-| 注册 key | **`AutogradCUDA`**。`probes/thead_first_probe.py`（每 key 独立进程）：AutogradCUDA **6/7** 命中（唯一零命中 `inference_mode`，同 known-issues #19）；纯 `CUDA` 7/7 全命中但反传带"未注册 Autograd kernel"警告——与 p800/T1-sdpa/T2-embedding 一致选 AutogradCUDA |
-| 中央 YAML `dispatch_key` | **`CUDA`（基键，PR36 条目 2 取证后有意分层，非笔误）**：中央 A1 消费点读该字段（`tests/framework_level/_harness.py` → `A1_DISPATCH_KEY` → `injection/sitecustomize.py`，另有 `scripts/intake_validate.py`/`bench_dispatch.py`/`tests/op_level/test_a1.py`）；实测基键在 grad/no_grad/inference_mode 三口径各拦 1 次，而 `AutogradCUDA` 在 inference_mode 零命中（known-issues #19.3），故中央不用它。先例 `p800-kunlunxin{,-gems5}`=CUDA、`cambricon`=PrivateUse1 同型；取证表 `ops/sdpa/PLATFORM.md` §3c-1，复现 `python3 scripts/smoke_dispatch_key.py` |
-| 设备编号口径（PR36 条目 3 取证, 2026-10-25） | 本地 `cuda:6`、中央 YAML `device.torch_device: cuda:6` 与 `visible_devices: "6,7"` **同取物理卡号**，kernel / op / framework 三层都落在物理卡 6（中央 vLLM harness 用 6,7，其子进程逻辑 0/1 = 物理 6/7）。全仓仅三处写 `CUDA_VISIBLE_DEVICES`（`_harness.py:62`、`drift_study.py:31`、`b-fullstack/example.py:208`），且被重映射的 `_vllm_runner.py` 子进程只读 `engine_args()`/`name`、不读 `torch_device`——无「重映射后 `cuda:6` 越界」路径。换算规则与 2026-10-25 实测见 `ops/sdpa/PLATFORM.md` §3c-2；`SDPA_MATH_TEST_DEVICE` 覆盖值同样按物理卡号理解 |
+| 注册 key | **`AutogradCUDA`**。`probes/thead_first_probe.py`：6/7 命中（零命中仅 `inference_mode`，known-issues #19）；与 p800/T1-sdpa/T2-embedding 一致选它 |
+| 中央 YAML `dispatch_key` | **`CUDA`（基键，有意分层）**：中央 A1 消费点读它注入；`AutogradCUDA` inference_mode 零命中（#19.3）故不用。取证见 sdpa PLATFORM §3c-1 |
+| 设备编号口径（PR36 条目 3） | yaml `torch_device: cuda:6` 与 `visible_devices "6,7"` 同取物理卡号，三层都落物理卡 6；换算与实测见 sdpa PLATFORM §3c-2 |
 | 主实现（maskless 且非 causal 或 Sq==Skv） | flash 直调 `aten::_scaled_dot_product_flash_attention`。**LSE 精确 (B,H,Sq)，无 pad**。T1-sdpa 证原生 F.sdpa 内部即此 kernel |
-| 主实现（带 mask 或非方阵 causal） | efficient 委托 `aten::_scaled_dot_product_efficient_attention`。**LSE 按 32 倍数 pad**（Sq=16→32, 100→128, 197→224）——materialize P 前必须 `lse[..., :Sq]` 切片（p800 XMLIR 栈无此 pad，**thead 专属**）。bool mask → additive -inf bias；16B stride 不齐 `_aligned_bias` 列 pad |
+| 主实现（带 mask 或非方阵 causal） | efficient 委托。**LSE 按 32 倍数 pad**——物化 P 前须 `lse[..., :Sq]` 切片（thead 专属，见下）；16B 不齐走 `_aligned_bias` |
 | flash 非方阵 causal 缺陷 | PPU flash 对 Sq≠Skv 的 causal **不生效**（首测 flash O err≈2.0 vs efficient err≈0）——非方阵 causal 强制走 efficient |
 | flash dtype 限制 | flash 仅 fp16/bf16（fp32 直调报 `FlashAttention only support fp16 and bf16 data type`） |
-| fp32 路径 | 全量走 torch_level ATen 组合。首测: mild 委托 err 3.6e-7 达标，但 extreme scale=8 委托 abs≈2e-5 超 1e-5 判卷线（T1-sdpa/p800 同判）。PPU 无 p800 的 XMLIR bmm JIT 缺陷 |
+| fp32 路径 | 全量走 torch_level ATen 组合。mild 委托 err 3.6e-7 达标但 extreme scale=8 abs≈2e-5 超 1e-5 判卷线（T1-sdpa/p800 同判）；无 p800 bmm JIT 缺陷 |
 | GQA | flash/efficient schema 均无 `enable_gqa` → `repeat_interleave` 扩 KV |
 | bool_b1 头广播 mask | efficient 要求 bias 头维与 Hq 对齐——`(B,1,Sq,Skv)` 先 `expand` 到 Hq 再进 kernel |
 | 全遮蔽行 | vendor LSE=0、out=0；naive exp(score−LSE) 出垃圾 P——mask/causal 零填充后 P=0（native 语义） |
-| bf16 boundary | V≈dtype_max/2 时厂商 kernel O 中间量溢出（原生同溢出）；fp32 torch 路径可保持有限。tail 判定: 有限子集 rel + inf parity（本实现未溢出则以参考精度为准） |
-| 性能 | `perf/baselines/thead-ppu.json`: `ops.sdpa_math.thead-ppu` **0.328ms / 13.10 TFLOPS** vs native math composite **0.782ms / 5.49 TFLOPS** = **2.38x**；bench 六形状 0.97-1.06x（vs 注册后原生——A1 同路径）；A1 包装路径 ~1.00x native |
-| 跨层一致性缺证 | `run.py --consistency` 锚定 gelu_and_mul（A2）硬依赖 `flag_gems`——dev 容器无（`ModuleNotFoundError`），结构性缺证（T1/T2 同根因）。op 层拦截 count>0 + 注册=直调逐位已覆盖直调↔dispatch 一致 |
+| bf16 boundary | V≈dtype_max/2 时厂商 kernel O 中间量溢出（原生同溢出）；fp32 torch 路径保持有限。tail 判定: 有限子集 rel + inf parity |
+| 性能 | `perf/baselines/thead-ppu.json`：0.328ms / 13.10 TFLOPS vs native math 0.782ms = **2.38x**；bench 六形状 0.97-1.06x；A1 包装 ~1.00x native |
+| 跨层一致性缺证 | `run.py --consistency` 锚定 gelu_and_mul（A2）硬依赖 `flag_gems`——dev 容器无，结构性缺证（T1/T2 同根因）。op 层拦截 + 注册=直调逐位覆盖 |
+
+表行拆出的补充细节：
+
+- 注册 key 探针每 key 起独立进程；纯 `CUDA` 虽 7/7 全命中但反传带
+  “未注册 Autograd kernel”警告，故选 `AutogradCUDA`。
+- 中央 A1 消费点：`tests/framework_level/_harness.py` →
+  `A1_DISPATCH_KEY` → `injection/sitecustomize.py`；另有
+  `scripts/intake_validate.py`、`bench_dispatch.py`、
+  `tests/op_level/test_a1.py` 同读。先例 `p800-kunlunxin{,-gems5}`=CUDA、
+  `cambricon`=PrivateUse1 同型；复现 `python3 scripts/smoke_dispatch_key.py`。
+- 设备编号：全仓仅三处写 `CUDA_VISIBLE_DEVICES`（`_harness.py:62`、
+  `drift_study.py:31`、`b-fullstack/example.py:208`）且只写 vLLM 子进程
+  env；被重映射的 `_vllm_runner.py` 只读 `engine_args()`/`name`、不读
+  `torch_device`——无「重映射后 `cuda:6` 越界」路径。
+  `SDPA_MATH_TEST_DEVICE` 覆盖值同样按物理卡号理解。
+- LSE pad 实测：Sq=16→32、100→128、197→224；p800 XMLIR 栈无此 pad。
+  efficient 的 bool mask 转 additive `-inf` bias；16B stride 不齐走
+  `_aligned_bias` 列 pad（报错原文与 bf16 验收见 sdpa PLATFORM §3c-4）。
 
 ## 4. 新平台接入
 
 参照 `ops/sdpa/MERGE.md` 七步流程（本算子暂无独立 MERGE.md，结构
 对齐后可裁剪复用）；kernel 本体 + register 平台分发 + 三层验证 +
 包化 `__init__.py`（已有）四件套不可省。
-
