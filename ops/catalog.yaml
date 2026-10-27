@@ -6,7 +6,7 @@
 # - 修改本文件后运行 scripts/build_ops_index.py。
 
 schema: 1
-updated: 2026-10-14
+updated: 2026-10-26
 
 target_scope:
   vendor_family_count: 6
@@ -32,7 +32,7 @@ platform_families:
     display_name: 平头哥
     status: partial
     current_profiles: [thead-ppu]
-    roadmap_note: 首个算子 sdpa 已交付；embedding/sdpa_math 待接。
+    roadmap_note: sdpa、embedding、sdpa_math 已交付（kernel/A1）；C2 真实引擎验证跟踪 #37。
   enflame:
     display_name: 燧原 GCU
     status: planned

@@ -248,6 +248,8 @@ python3 scripts/build_env_index.py --check
 - [docs/base-images.md](../docs/base-images.md)：thead-ppu-runtime 登记基座说明（本锁实测实例为 dev 基座，与该条目 registry_reference 同机）
 - [configs/images/catalog.yaml](../configs/images/catalog.yaml)：thead-ppu-runtime-v1 登记条目（sdpa 交付后为 version-aligned + related_profiles [thead-ppu]）
 - [ops/sdpa/reports/thead-ppu.md](../ops/sdpa/reports/thead-ppu.md)：sdpa thead-ppu 移植与验证报告（三层/黄金/perf 基线证据）
+- [ops/embedding/reports/thead-ppu.md](../ops/embedding/reports/thead-ppu.md)：embedding thead-ppu 移植与验证报告（三层/黄金/perf 基线证据）
+- [ops/sdpa_math/reports/thead-ppu.md](../ops/sdpa_math/reports/thead-ppu.md)：sdpa_math thead-ppu 移植与验证报告（三层/黄金/perf 基线证据）
 
 备注：本栈无 flag_gems、无 vllm-plugin-fl；A2/framework 级证据计划由 thead-ci 镜像 （harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:v0.24.0-thead-ci，在用实例含 flag_gems 5.3.4 + 插件 0.3.0rc2.post1，vllm 0.24.0+empty、triton pip=3.5.0/import=3.6.0 自相矛盾待独立实例复核）第二 profile/锁补，仿 p800-kunlunxin / p800-kunlunxin-gems5 双 profile 先例。 ⚠️ 基座缺陷：flagtree 0.6.1+ppu3.6 wheel 损坏——pip show 在册但 import ModuleNotFoundError， pip show -f 可见条目仅 dist-info 与 proton 两 bin；torch/triton 不受影响。 卡况（2026-10-23 快照）：4/11 为 100% 占用、5 占 76G，勿用；空闲 6,7,8,9,10,13,14,15（2MiB/0%）。 登记基座干净实例（registry_reference 镜像）无 triton/flagtree——本锁钉的是 dev 基座实测实例； sdpa 交付后 thead-ppu-runtime-v1 已改为 version-aligned + related_profiles: [thead-ppu] （主版本线 python 3.12.3/torch 2.10.0/triton 3.6.0 对齐），锁内 base_images 段同步补关联。 登记基座干净实例组件集与 dev 栈不同（缺 triton/flagtree），未验同镜像实例，不作 validated-in-image 声明。
 

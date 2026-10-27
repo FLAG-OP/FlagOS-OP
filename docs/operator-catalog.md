@@ -41,7 +41,7 @@ catalog 当前建模六个厂商平台家族：
 | `ascend` | 华为昇腾 | partial |
 | `cambricon` | 寒武纪 | partial |
 | `kunlunxin` | 昆仑芯 | partial |
-| `thead` | 平头哥 | planned |
+| `thead` | 平头哥 | partial |
 | `enflame` | 燧原 GCU | planned；已知型号 GCU300 / GCU400 / GCU410 |
 | `biren` | 壁仞 | planned |
 

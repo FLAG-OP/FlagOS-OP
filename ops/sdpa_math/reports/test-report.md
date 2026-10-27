@@ -4,7 +4,7 @@
 |---|---|
 | 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ thead fast（thead-ppu）+ torch（CPU/fallback） |
 | 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `thead-ppu` · `cpu` / 2026-09-30~10-02 · 2026-10-24 |
-| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · FlagOS E2E ☑ · 四件套 ☑；thead-ppu 缺证：run.py --consistency 锚定依赖 flag_gems） |
+| 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · 四件套 ☑；应用证据按 profile 拆分见 §6——p800-kunlunxin FlagOS E2E ☑，thead-ppu C1 framework 层 ☑ 但 e2e_flagos.py / run.py --consistency 结构性缺证，C2 真实引擎全缺（跟踪 #37）） |
 
 ## 1. 测试范围
 
@@ -18,7 +18,9 @@
 | 性能门禁 | ☑ | `scripts/perf_run.py --pattern sdpa_math` + `perf_compare.py` | OK：FAIL 0 · WARN 0（triton 0.504ms / 8.524 TFLOPS 入库基线） |
 | 语义证据 | ☑ | `probes/native_semantics.py [ascend910\|cpu]` | 6 节全过（schema / dropout 双规则表 / bool 怪癖 / 冲突边界 / F.sdpa 参数形态 / 注册键） |
 | 跨层一致性 | ☑ | 黄金生成的三重互验（§3） | 参考 vs `F.sdpa(MATH)` vs 原生直调 vs 自洽式，全一致 |
-| FlagOS E2E | ☑ | `script/e2e_flagos.py` | PASS：4 层 mini-LLM / 前向 / 反向 / 生成 / 概率图熵正则（§4.1） |
+| FlagOS E2E（C1，p800-kunlunxin） | ☑ | `script/e2e_flagos.py` | PASS：4 层 mini-LLM / 前向 / 反向 / 生成 / 概率图熵正则（§4.1） |
+| FlagOS E2E（thead-ppu） | ✗ | `script/e2e_flagos.py` | 缺证：dev 栈无 flag_gems，结构性缺证（同 T1/T2，跟踪 #37） |
+| C2 真实引擎 | ✗ | — | 本报告无真实 vLLM/EngineCore 证据（PPU 侧跟踪 #37，PR36 合并门槛） |
 | 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | 三层全绿 |
 
 ## 2. 环境
@@ -29,7 +31,9 @@ flag_gems 5.3.5 · python 3.11.15 · profile `configs/devices/ascend910.yaml`
 环境以 [reports/development.md](development.md) §1 表为准）。
 P800 复验环境为 torch `2.9.0+cu129` + torch_xmlir
 `XMLIR--bc1b1dc6f-dev+2026032411` + FlagGems `4.2.1rc0`，设备 `cuda:1`
-（详见 development §1.1）。
+（详见 development §1.1）。thead-ppu 复验环境为 torch `2.10.0` +
+triton `3.6.0`（flagtree wheel 损坏），dev 容器 `flagos-ppu-wt-dev`，
+设备 `cuda:6`（详见 [configs/env/thead-ppu.lock.yaml](../../../configs/env/thead-ppu.lock.yaml)）。
 
 ## 3. 精度结果
 
@@ -133,7 +137,11 @@ python3 script/bench_perf.py --device cuda:1 --register \
   --json-out reports/perf_p800-kunlunxin.json
 ```
 
-### 2026-10-02 FlagOS 端到端复验
+### 2026-10-02 FlagOS 端到端复验（p800-kunlunxin · C1 mini consumer）
+
+以下结果仅覆盖 p800-kunlunxin；thead-ppu 因 dev 栈无 flag_gems 未能运行
+本入口（结构性缺证，同 T1/T2；其 C1 证据由 framework 层 mini-decoder +
+概率图消费者覆盖）。C2 真实引擎（EngineCore/worker）证据本报告无。
 
 入口: [script/e2e_flagos.py](../script/e2e_flagos.py)。原生与 A1 两条链
 均运行在 FlagOS 栈内：`flag_gems.only_enable(['gelu'])` 提供模型 MLP 的
@@ -171,6 +179,14 @@ backward、8 步贪心生成。
 对照 [Must 清单](../../../docs/acceptance.md#levels)：
 精度必测矩阵 ☑（非整倍数 shape、三 dtype、特殊用例、≥2 seed/组合）·
 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 0 FAIL ☑ ·
-FlagOS E2E ☑ ·
-报告四件套 ☑ → **可交付**。Should 项（三方对比中 FlagGems 缺席）已给出
+报告四件套 ☑ → **可交付**。
+
+应用证据按 profile 拆分（C1/C2 口径见 [docs/testing.md](../../../docs/testing.md#framework)）：
+
+| profile | C1 mini consumer | C2 真实引擎 |
+|---|---|---|
+| p800-kunlunxin | ☑ framework 层 8-9 项 + FlagOS E2E（4 层 mini-LLM，§4.1） | ✗ 本报告无 |
+| thead-ppu | ☑ framework 层 8-9 项（mini-decoder + 概率图消费者）；e2e_flagos.py / run.py --consistency 结构性缺证（dev 栈无 flag_gems） | ✗ 跟踪 #37（PR36 合并门槛） |
+
+Should 项（三方对比中 FlagGems 缺席）已给出
 原因：无同语义（返回概率图）实现。
