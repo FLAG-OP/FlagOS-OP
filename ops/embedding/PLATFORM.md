@@ -1,9 +1,11 @@
 # 平台绑定清单（Platform Binding）— embedding
 
-> 当前交付包含三个平台：**ascend910**（厂商委托：index_select 同源
-> err=0 + dense_backward 委托）、**p800-kunlunxin**（厂商委托同构，
+> 当前交付包含两个平台：**p800-kunlunxin**（厂商委托同构，
 > gatherFIX 探针见 reports/）与 **cambricon**（MLU590，Autograd key
-> 注册——见 reports/cambricon.md §4）。
+> 注册——见 reports/cambricon.md §4）。**ascend910** 仅保留历史实验
+> 记录（见 §2 与 REPORT.md 历史章节），不计入当前平台矩阵
+> （与 `ops/catalog.yaml` / `ops/README.md` / `REPORT.md` 口径一致，
+> issue #38）。
 > 本文件记录不可凭直觉搬运的绑定结论；跨平台移植时逐项重验，不要把
 > 单平台实验结果当成普适行为。
 
@@ -17,7 +19,11 @@
 | 三层测试、性能脚本 | `test/`、`script/`（`EMBEDDING_PROFILE` 切平台） |
 | A1 autograd.Function 包装 | `register.py`（`_BACKENDS` 选择器 + `_DEVICE_PROBE` 守卫） |
 
-## 2. ascend910 绑定（厂商委托）
+## 2. ascend910 绑定（历史实验，非当前交付）
+
+> **降级声明（issue #38）**：ascend910 行仅作历史追溯。当前 catalog
+> 不登记 embedding 的 ascend 平台；无真实 vLLM C2 证据。若恢复交付，
+> 须补齐 C0/C1/C2 证据并重新登记 `ops/catalog.yaml`。
 
 | 绑定项 | 实测结论 |
 |---|---|
