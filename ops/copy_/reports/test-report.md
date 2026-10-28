@@ -49,3 +49,15 @@
 ## 6. 结论
 
 Must 项（适用层验证通过（C1 等价 torch API）、黄金、原地/广播/cast 正确）**通过**。
+
+## 7. P800（p800-kunlunxin）复验（2026-10-26）
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel 层 | `python3 test/kernel_level.py p800-kunlunxin` | PASS |
+| 框架层 | `python3 test/op_level.py p800-kunlunxin` | PASS；拦截 4 次 |
+| 应用层 | `python3 test/framework_level.py p800-kunlunxin` | PASS（等价 torch API 子进程） |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | 78/78，0 fail |
+| 性能门禁 | `python3 scripts/perf_compare.py --device p800-kunlunxin` | OK |
+
+结论：P800 复验 **通过**。dst=bf16 且 src 非 bf16 时先用原生 type_as 转换；P800 原生 copy_ 广播路径实测错值，reference 已物化广播源后判卷。

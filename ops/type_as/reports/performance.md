@@ -44,3 +44,17 @@ python3 scripts/perf_compare.py --device cambricon
 `common/perf.py` 的 `_sync` 原本只 `torch.cuda.synchronize()`；在 MLU
 上不同步，实测出现 25 TB/s 的假数据。已补 `torch.mlu.synchronize()`，
 上表为修复后数据。
+
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+环境：torch 2.9.0+cu129 / torch_xmlir 1.0.0.1 / Triton 3.6.0 / FlagGems 4.2.1rc0；benchmark 使用空闲物理 P800（逻辑 `cuda:1`），run C 建基线、run D 复核，所有用例偏差 ≤5.9%（0.005 ms 级分配/元数据用例绝对差 <2 µs）。口径与 MLU 相同（warmup 20 + iters 100 + 设备同步）。
+
+| 实现 | 延迟 (ms) |
+|---|---:|
+| reference | 0.213 |
+| torch | 0.213 |
+| triton | 0.516 |
+
+自研 Triton 0.516 ms / 原生 0.213 ms（约 0.41x）；目标 bf16 走原生兜底，fp16→fp32 的 Triton cast 在 P800 上仍慢于原生，后续可调 vector width。
+
+基线已写入 `perf/baselines/p800-kunlunxin.json`；`python3 scripts/perf_compare.py --device p800-kunlunxin` → **OK**（FAIL 0 / WARN 0 / NEW 0）。

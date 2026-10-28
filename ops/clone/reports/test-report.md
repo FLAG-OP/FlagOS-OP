@@ -53,3 +53,15 @@ FlagGems 无 clone 算子。自研与原生持平。
 ## 6. 结论
 
 Must 项（适用层验证通过（C1 等价 torch API）、黄金、位级一致、存储独立）**通过**。
+
+## 7. P800（p800-kunlunxin）复验（2026-10-26）
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel 层 | `python3 test/kernel_level.py p800-kunlunxin` | PASS |
+| 框架层 | `python3 test/op_level.py p800-kunlunxin` | PASS；拦截 6 次 |
+| 应用层 | `python3 test/framework_level.py p800-kunlunxin` | PASS（等价 torch API 子进程） |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | 48/48，0 fail |
+| 性能门禁 | `python3 scripts/perf_compare.py --device p800-kunlunxin` | OK |
+
+结论：P800 复验 **通过**。bf16/fp16/fp32 同 dtype 拷贝正常；无额外兜底。

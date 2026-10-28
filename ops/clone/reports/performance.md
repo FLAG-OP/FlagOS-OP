@@ -28,3 +28,17 @@ python3 scripts/perf_compare.py --device cambricon
 入库基线 `ops.clone.triton` 写入
 [perf/baselines/cambricon.json](../../../perf/baselines/cambricon.json)，
 门禁 20% WARN / 30% FAIL。
+
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+环境：torch 2.9.0+cu129 / torch_xmlir 1.0.0.1 / Triton 3.6.0 / FlagGems 4.2.1rc0；benchmark 使用空闲物理 P800（逻辑 `cuda:1`），run C 建基线、run D 复核，所有用例偏差 ≤5.9%（0.005 ms 级分配/元数据用例绝对差 <2 µs）。口径与 MLU 相同（warmup 20 + iters 100 + 设备同步）。
+
+| 实现 | 延迟 (ms) |
+|---|---:|
+| reference | 0.245 |
+| torch | 0.245 |
+| triton | 0.478 |
+
+P800 上自研 Triton 拷贝 0.478 ms / 原生 0.245 ms（约 0.51x，约 1.12 TB/s vs 2.19 TB/s）；功能与黄金无误，性能瓶颈在 XMLIR 下 Triton 1D copy 的向量化/启动开销，后续可调 block/向量宽度。
+
+基线已写入 `perf/baselines/p800-kunlunxin.json`；`python3 scripts/perf_compare.py --device p800-kunlunxin` → **OK**（FAIL 0 / WARN 0 / NEW 0）。

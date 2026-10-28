@@ -57,6 +57,16 @@ flag_gems 5.3.5；dispatch key `PrivateUse1`；vLLM 未安装。
 
 适用层验证通过，元数据 48/48 一致；无 Triton/硬件级（分配算子固有），注册/框架层为 N/A。
 
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+- 平台呈现：XMLIR 将 XPU 呈现为 CUDA（`device.type == "cuda"`）。
+- A1 拦截：按设计不注册（自用/实验路线）。
+- 实现路径：torch（不注册）。
+- 三层验证：kernel 与应用等价路径全绿；按设计不做 A1 注册。
+- 黄金：48/48，0 fail。
+- 性能：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0）。
+- 绑定细节与平台差异见 [PLATFORM.md](../PLATFORM.md)，合并流程见 [MERGE.md](../MERGE.md)。
+
 ## 附录: 复现命令
 
 ```bash

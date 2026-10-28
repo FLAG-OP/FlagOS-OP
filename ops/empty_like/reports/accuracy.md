@@ -31,3 +31,15 @@ python3 script/check_accuracy.py --impl torch     --device mlu
 - contiguous_format: 输出连续；channels_last: 与原生一致。
 - 存储独立: `out.data_ptr() != self.data_ptr()`。
 - 零元素 shape 保持。
+
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+```bash
+python3 script/check_accuracy.py --impl torch --device cuda:1
+```
+
+| 实现 | 通过 | 最差 abs err |
+|---|---|---|
+| torch | 168/168 | 0 |
+
+结论：P800 全用例 0 fail，黄金回归通过。

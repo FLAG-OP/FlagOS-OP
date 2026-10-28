@@ -5,13 +5,14 @@
 name: p800-kunlunxin
 schema: 1
 description: Kunlunxin P800 FlagGems 4.2 基线共享镜像实测版本
-collected_at: "2026-08-27"
+collected_at: "2026-10-26"
 hardware_collected_at: "2026-10-16"
 family: kunlunxin
 scope:
   - ops/sdpa P800 backend
   - ops/sdpa_math P800 backend
   - ops/embedding P800 backend
+  - "13 个基础 aten 算子（clone/contiguous/copy_/detach/detach_/dropout/empty/empty_like/empty_strided/item/_local_scalar_dense/result_type/type_as）的 P800 三层验证、黄金与性能门禁"
   - FlagGems / vLLM 组合使用验证
 hardware:
   model: P800 OAM
@@ -28,7 +29,7 @@ packages:
   torch: "2.9.0+cu129"
   torch_xmlir: "1.0.0.1"
   xtorch_ops: "0.1.2640+9bc36a18"
-  triton: "3.0.0+03c4c9be"
+  triton: "3.6.0"
   flag_gems: "4.2.1rc0"
   vllm: "0.13.0"
   vllm_fl: "0.1.0"
@@ -43,6 +44,8 @@ notes: |-
   `scripts/env_snapshot.py --device p800-kunlunxin`。
   `torch_xmlir` 对应发行包名 `xmlir`；`xtorch_ops` 对应发行包名
   `XTorch-Ops`。
+  Triton 3.6.0 来自镜像内置的 FlagTree 0.6.1 构建，未安装 dist-info；
+  `scripts/check_env.py` 在缺少发行元数据时回退读取模块 `__version__`。
 evidence:
   - path: ops/sdpa/reports/p800-kunlunxin.md
     note: SDPA 平台实现与性能证据
@@ -50,6 +53,10 @@ evidence:
     note: sdpa_math 三层验证与 P800 性能证据
   - path: ops/embedding/REPORT.md
     note: embedding 三层验证与 P800 性能证据
+  - path: ops/README.md
+    note: 13 个基础算子已登记 p800-kunlunxin（累计 16 个）
+  - path: ops/type_as/PLATFORM.md
+    note: 13 算子 P800 绑定/黄金/性能矩阵入口（各算子目录同构）
 base_images:
   - image_id: kunlunxin-p800-operator-runtime-v2
     relation: version-aligned

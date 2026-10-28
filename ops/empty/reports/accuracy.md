@@ -23,3 +23,15 @@ python3 script/check_accuracy.py --impl torch     --device mlu
 |---|---|---|
 | reference（CPU） | 48/48 | 元数据 |
 | torch 级（MLU） | 48/48 | shape/dtype/stride 一致 |
+
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+```bash
+python3 script/check_accuracy.py --impl torch --device cuda:1
+```
+
+| 实现 | 通过 | 最差 abs err |
+|---|---|---|
+| torch | 48/48 | 0 |
+
+结论：P800 全用例 0 fail，黄金回归通过。

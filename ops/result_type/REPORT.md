@@ -4,9 +4,28 @@
 |---|---|
 | 算子名称 | `result_type`（dtype 元数据类） |
 | 语义 | [reference.py](reference.py)：两输入在 PyTorch 类型提升下的公共 dtype |
-| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；register 契约保留，但该算子不可 A1 注册） |
-| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **自用/实验** |
-| 日期 / 状态 | 2026-09-18 定稿 / 2026-10-12 注册契约同步 |
+| 硬件平台 | **2 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；register 契约保留，但该算子不可 A1 注册）· p800-kunlunxin（P800 / XMLIR；按设计不注册） |
+| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ `p800-kunlunxin`（P800）/ **自用/实验** |
+| 日期 / 状态 | 2026-09-18 定稿 / 2026-10-12 注册契约同步 / 2026-10-22 P800 交付 / 2026-10-26 复验 |
+
+## p800-kunlunxin 接入（2026-10-22 交付 / 2026-10-26 复验）
+
+| 项 | 结论 |
+|---|---|
+| 设备呈现 | XMLIR 将 XPU 呈现为 CUDA；`device.type == "cuda"` |
+| A1 拦截 key | 按设计不注册（route=自用/实验） |
+| 设备探测 | `import torch_xmlir` + `torch.cuda.is_available()` |
+| 实现路径 | torch（不注册） |
+| 三层验证 | kernel/应用等价全绿；按设计不注册（op 层拦截 0 次） |
+| 黄金 | 7/7 + 1 skip，0 fail |
+| 性能门禁 | 空闲 P800 两轮复测：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0） |
+
+| 性能用例 | 延迟 (ms) |
+|---|---:|
+| reference | 0.0004 |
+| torch | 0.0004 |
+
+**P800 绑定结论**：reference 0.00043 ms / torch 0.00043 ms；P800 无 fp64，float64 黄金用例按设备能力 skip（7 pass / 0 fail / 1 skip）。
 
 ## 实现矩阵（三级）
 

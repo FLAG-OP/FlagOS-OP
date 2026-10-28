@@ -22,7 +22,11 @@ def main() -> None:
     args = ap.parse_args()
 
     import torch  # noqa: F401
-    import torch_mlu  # noqa: F401  # 先于 vllm 导入以绑定 MLU
+    # 先于 vllm 导入绑定后端：MLU 走 torch_mlu，P800/XPU 走 torch_xmlir。
+    try:
+        import torch_mlu  # noqa: F401
+    except ImportError:
+        import torch_xmlir  # noqa: F401
     from vllm import LLM, SamplingParams
 
     llm = LLM(model=args.model, enforce_eager=True, max_model_len=128,

@@ -186,7 +186,7 @@ python3 scripts/build_env_index.py --check
 | 硬件 | P800 OAM ×8 · 98304 MiB/卡 · 驱动: 515.58 · 固件: ALL 1.0.2.43.1.86 · 运行时: XPU-RT 未暴露版本 |
 | 系统 / 内核 | Linux / 6.8.0-87-generic |
 | Python | `3.10.18` |
-| 声明采集时间 | 软件栈 2026-08-27 · 硬件快照 2026-10-16 |
+| 声明采集时间 | 软件栈 2026-10-26 · 硬件快照 2026-10-16 |
 | 环境锁 | [`p800-kunlunxin.lock.yaml`](../configs/env/p800-kunlunxin.lock.yaml) |
 | 基座镜像 | [`kunlunxin-p800-operator-runtime-v2`](base-images.md#kunlunxin-p800-operator-runtime-v2)（版本对齐） |
 
@@ -195,6 +195,7 @@ python3 scripts/build_env_index.py --check
 - ops/sdpa P800 backend
 - ops/sdpa_math P800 backend
 - ops/embedding P800 backend
+- 13 个基础 aten 算子（clone/contiguous/copy_/detach/detach_/dropout/empty/empty_like/empty_strided/item/_local_scalar_dense/result_type/type_as）的 P800 三层验证、黄金与性能门禁
 - FlagGems / vLLM 组合使用验证
 
 | 软件包 / 组件 | 锁定版本 |
@@ -202,7 +203,7 @@ python3 scripts/build_env_index.py --check
 | `torch` | `2.9.0+cu129` |
 | `torch_xmlir` | `1.0.0.1` |
 | `xtorch_ops` | `0.1.2640+9bc36a18` |
-| `triton` | `3.0.0+03c4c9be` |
+| `triton` | `3.6.0` |
 | `flag_gems` | `4.2.1rc0` |
 | `vllm` | `0.13.0` |
 | `vllm_fl` | `0.1.0` |
@@ -213,8 +214,10 @@ python3 scripts/build_env_index.py --check
 - [ops/sdpa/reports/p800-kunlunxin.md](../ops/sdpa/reports/p800-kunlunxin.md)：SDPA 平台实现与性能证据
 - [ops/sdpa_math/REPORT.md](../ops/sdpa_math/REPORT.md)：sdpa_math 三层验证与 P800 性能证据
 - [ops/embedding/REPORT.md](../ops/embedding/REPORT.md)：embedding 三层验证与 P800 性能证据
+- [ops/README.md](../ops/README.md)：13 个基础算子已登记 p800-kunlunxin（累计 16 个）
+- [ops/type_as/PLATFORM.md](../ops/type_as/PLATFORM.md)：13 算子 P800 绑定/黄金/性能矩阵入口（各算子目录同构）
 
-备注：本锁对应 FlagGems 4.2 基线；5.0 复测栈使用独立的 `p800-kunlunxin-gems5` profile 与环境锁。选择与运行步骤见 [昆仑芯环境配置](installation.md#kunlunxin)。 flag_gems 与 vllm-plugin-fl 在共享镜像中为本地路径安装 （/env/FlagGems、/env/xvllm-plugin-FL），核对版本即可， 不建议 pip 覆盖安装。硬件快照来自 2026-10-16 的 `xpu-smi -q` 与 `scripts/env_snapshot.py --device p800-kunlunxin`。 `torch_xmlir` 对应发行包名 `xmlir`；`xtorch_ops` 对应发行包名 `XTorch-Ops`。
+备注：本锁对应 FlagGems 4.2 基线；5.0 复测栈使用独立的 `p800-kunlunxin-gems5` profile 与环境锁。选择与运行步骤见 [昆仑芯环境配置](installation.md#kunlunxin)。 flag_gems 与 vllm-plugin-fl 在共享镜像中为本地路径安装 （/env/FlagGems、/env/xvllm-plugin-FL），核对版本即可， 不建议 pip 覆盖安装。硬件快照来自 2026-10-16 的 `xpu-smi -q` 与 `scripts/env_snapshot.py --device p800-kunlunxin`。 `torch_xmlir` 对应发行包名 `xmlir`；`xtorch_ops` 对应发行包名 `XTorch-Ops`。 Triton 3.6.0 来自镜像内置的 FlagTree 0.6.1 构建，未安装 dist-info； `scripts/check_env.py` 在缺少发行元数据时回退读取模块 `__version__`。
 
 <a id="thead-ppu-c2"></a>
 ### T-Head PPU ZW810E 真实 vLLM C2 栈（flag_gems + vllm-plugin-FL）实测版本

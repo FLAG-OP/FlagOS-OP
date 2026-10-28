@@ -37,7 +37,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 |---|---|---:|---|
 | 华为昇腾（`ascend`） | 部分交付 | 2 | `ascend910` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
-| 昆仑芯（`kunlunxin`） | 部分交付 | 3 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
+| 昆仑芯（`kunlunxin`） | 部分交付 | 16 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
 | 平头哥（`thead`） | 部分交付 | 3 | `thead-ppu` · `thead-ppu-c2` |
 | 燧原 GCU（`enflame`） | 规划中 | 0 | 计划覆盖：GCU300 / GCU400 / GCU410 |
 | 壁仞（`biren`） | 规划中 | 0 | 待首个交付算子确定 |
@@ -122,6 +122,25 @@ register_a1(
 - generic Autograd 不作为单平台默认映射。
 - 可注册实现的导入顺序为包态优先、单算子脚本态 fallback。
 - clone 在 op 层测试中保留包态实际执行代表用例。
+
+### P800 基础算子注册契约
+
+适用范围：Kunlunxin P800（XMLIR）上的基础 ATen 算子族。
+
+```python
+register_a1(
+    dispatch_key="AutogradCUDA",
+    counter: dict | None = None,
+    platform=<explicit-platform>,
+)
+```
+
+- Canonical key：`AutogradCUDA`
+- Compatibility key：`CUDA`
+- 可注册算子：10
+- 不可注册算子：`empty`、`detach_`、`result_type`
+- XPU 经 XMLIR 呈现为 cuda；设备探测用 torch_xmlir + torch.cuda.is_available()。
+- P800 无 fp64；result_type 的 float64 黄金用例按设备能力 skip。
 
 ## 维护规则
 

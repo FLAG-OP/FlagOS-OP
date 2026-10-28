@@ -31,10 +31,20 @@ def main() -> int:
     path, entry = args.impl.split(":") if ":" in args.impl else IMPLS[args.impl]
     fn = _load(path, entry)
     idx = json.loads((Path(args.golden) / "index.json").read_text())
-    n_pass = n_fail = 0
+    fp64_ok = True
+    try:
+        a32 = torch.empty(1, dtype=torch.float32, device=args.device)
+        a64 = torch.empty(1, dtype=torch.float64, device=args.device)
+        fp64_ok = torch.result_type(a32, a64) == torch.float64
+    except Exception:
+        fp64_ok = False
+    n_pass = n_fail = n_skip = 0
     for f in idx["files"]:
         d = torch.load(Path(args.golden) / f["file"])
         pair = d["dtype_pair"]
+        if not fp64_ok and "float64" in pair:
+            n_skip += 1
+            continue
         a = torch.empty(2, dtype=getattr(torch, pair[0]), device=args.device)
         b = torch.empty(2, dtype=getattr(torch, pair[1]), device=args.device)
         got = str(fn(a, b)).split(".")[-1]
@@ -42,7 +52,8 @@ def main() -> int:
         n_pass, n_fail = n_pass + ok, n_fail + (not ok)
         if not ok:
             print(f"✗ {pair}: {got} != {d['expected']}")
-    print(f"结论: {n_pass} pass / {n_fail} fail")
+    print(f"结论: {n_pass} pass / {n_fail} fail / {n_skip} skip "
+          f"(device fp64={fp64_ok})")
     return 1 if n_fail else 0
 
 

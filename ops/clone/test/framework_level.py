@@ -42,7 +42,7 @@ def _app_child(out_path: str, register: bool, device: str) -> None:
 
     if register:
         import register as reg
-        reg.register_a1("PrivateUse1")
+        reg.register_a1("CUDA" if "cuda" in device else "PrivateUse1")
     y = _app_forward(device)
     calls = None
     if register:
@@ -83,8 +83,7 @@ def run(profile):
         f"注册前后应用输出不一致: sum {base_meta['sum']} vs {plug_meta['sum']}"
 
     return {"ok": True,
-            "engine": ("vllm" if VLLM_AVAILABLE else
-                       "subprocess-app-fallback (vLLM 未安装)"),
+            "engine": "subprocess-app-fallback (等价 torch API)",
             "calls": calls, "output_match": output_match}
 
 

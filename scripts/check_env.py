@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import importlib.metadata as md
 import os
 import platform
@@ -27,6 +28,19 @@ DIST = {
     "vllm_fl": "vllm-plugin-fl",
     "torch_xmlir": "xmlir",
 }
+
+
+def _package_version(module: str, dist: str) -> str:
+    """优先读发行包元数据；镜像内置且无 dist-info 时回退模块版本。"""
+    try:
+        return md.version(dist)
+    except md.PackageNotFoundError:
+        pass
+    try:
+        value = getattr(importlib.import_module(module), "__version__", None)
+    except Exception:  # noqa: BLE001 — 探测失败按未安装处理
+        value = None
+    return str(value) if value else "(未安装)"
 
 
 def main() -> int:
@@ -49,10 +63,7 @@ def main() -> int:
     n_bad = 0
     for pkg, want in lock["packages"].items():
         dist = DIST.get(pkg, pkg)
-        try:
-            got = md.version(dist)
-        except md.PackageNotFoundError:
-            got = "(未安装)"
+        got = _package_version(pkg, dist)
         ok = got == want
         n_bad += not ok
         print(f"{pkg:10s} {want:24s} {got:24s} {'✓' if ok else '✗'}")

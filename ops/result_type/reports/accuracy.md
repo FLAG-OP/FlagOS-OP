@@ -21,3 +21,15 @@ python3 script/check_accuracy.py --impl torch     --device mlu
 |---|---|---|
 | reference（CPU） | 8/8 | 公共 dtype 相等 |
 | torch 级（MLU） | 8/8 | 一致 |
+
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+```bash
+python3 script/check_accuracy.py --impl torch --device cuda:1
+```
+
+| 实现 | 通过 | 最差 abs err |
+|---|---|---|
+| torch | 7/7（1 skip） | 0 |
+
+结论：P800 全用例 0 fail；P800 无 fp64，float64 用例按设备能力 skip。

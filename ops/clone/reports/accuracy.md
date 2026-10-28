@@ -35,3 +35,15 @@ python3 script/check_accuracy.py --impl triton    --device mlu
 ## 5. 结论
 
 精度全部位级一致，满足验收标准。
+
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+```bash
+python3 script/check_accuracy.py --impl triton --device cuda:1
+```
+
+| 实现 | 通过 | 最差 abs err |
+|---|---|---|
+| triton | 48/48 | 0 |
+
+结论：P800 全用例 0 fail，黄金回归通过。

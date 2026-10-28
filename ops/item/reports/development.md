@@ -57,6 +57,16 @@ flag_gems 5.3.5；dispatch key `PrivateUse1`；vLLM 未安装。
 
 适用层验证通过（C1 等价 torch API）、36/36 黄金通过。后续: 真实 vLLM 应用层。
 
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+- 平台呈现：XMLIR 将 XPU 呈现为 CUDA（`device.type == "cuda"`）。
+- A1 拦截：`AutogradCUDA`（兼容 `CUDA`；profile `dispatch_key=CUDA`）。
+- 实现路径：torch。
+- 三层验证：`python3 example.py p800-kunlunxin` 全绿；op 层拦截 1 次；应用层为等价 torch API 子进程。
+- 黄金：36/36，0 fail。
+- 性能：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0）。
+- 绑定细节与平台差异见 [PLATFORM.md](../PLATFORM.md)，合并流程见 [MERGE.md](../MERGE.md)。
+
 ## 附录: 复现命令
 
 ```bash
