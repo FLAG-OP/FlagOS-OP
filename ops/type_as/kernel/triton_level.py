@@ -21,6 +21,7 @@ import torch
 import triton
 import triton.language as tl
 
+from flag_gems.runtime import device as runtime_device
 from flag_gems.runtime import torch_device_fn  # #11 设备上下文
 
 _FALLBACK_KEYSET = torch._C.DispatchKeySet(
@@ -28,6 +29,13 @@ _FALLBACK_KEYSET = torch._C.DispatchKeySet(
 )
 _SUPPORTED = (torch.float16, torch.float32, torch.bfloat16)
 _INT32_MAX = 2**31 - 1
+
+
+def _is_kunlunxin() -> bool:
+    try:
+        return runtime_device.vendor_name == "kunlunxin"
+    except Exception:
+        return False
 
 
 def _fallback(self: torch.Tensor, other: torch.Tensor):
@@ -172,6 +180,11 @@ def type_as_triton(self: torch.Tensor, other: torch.Tensor) -> torch.Tensor:
                            dtype=target)
     if n == 0:
         return out
+
+    if _is_kunlunxin() and target == torch.bfloat16:
+        # XMLIR Triton ->bf16 store 实测 misaligned（fp16）/ 舍入偏差（fp32），
+        # 统一走原生语义，保证与 reference 逐位/容差一致。
+        return _fallback(self, other)
 
     with torch_device_fn.device(self.device):     # ← 硬约束 #11
         if out.stride() == self.stride():

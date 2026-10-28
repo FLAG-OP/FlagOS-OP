@@ -41,3 +41,15 @@
 ## 6. 结论
 
 适用层 Must 项（原地返回 self + requires_grad=False + 存储不变）**通过**；注册/拦截层为 N/A。
+
+## 7. P800（p800-kunlunxin）复验（2026-10-26）
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel 层 | `python3 test/kernel_level.py p800-kunlunxin` | PASS |
+| 框架层 | `python3 test/op_level.py p800-kunlunxin` | PASS；按设计不注册 |
+| 应用层 | `python3 test/framework_level.py p800-kunlunxin` | PASS（等价 torch API 子进程） |
+| 黄金 | `python3 script/check_accuracy.py --impl torch --device cuda:1` | 36/36，0 fail |
+| 性能门禁 | `python3 scripts/perf_compare.py --device p800-kunlunxin` | OK |
+
+结论：P800 复验 **通过**。按设计不可 A1 注册（autograd key 语义），P800 仅 kernel/应用等价验证。

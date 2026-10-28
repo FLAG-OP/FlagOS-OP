@@ -4,9 +4,28 @@
 |---|---|
 | 算子名称 | `detach`（别名/元数据（autograd）类） |
 | 语义 | [reference.py](reference.py)：返回与 self 共享底层存储、脱离 autograd 的新张量 (requires_grad=False) |
-| 硬件平台 | **1 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；A1 canonical `AutogradPrivateUse1`，兼容 `PrivateUse1`） |
-| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ **A1** |
-| 日期 / 状态 | 2026-09-18 定稿 / 2026-10-12 注册契约同步 |
+| 硬件平台 | **2 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；A1 canonical `AutogradPrivateUse1`，兼容 `PrivateUse1`）· p800-kunlunxin（P800 / XMLIR；A1 canonical `AutogradCUDA`，兼容 `CUDA`） |
+| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ `p800-kunlunxin`（P800）/ **A1** |
+| 日期 / 状态 | 2026-09-18 定稿 / 2026-10-12 注册契约同步 / 2026-10-22 P800 交付 / 2026-10-26 复验 |
+
+## p800-kunlunxin 接入（2026-10-22 交付 / 2026-10-26 复验）
+
+| 项 | 结论 |
+|---|---|
+| 设备呈现 | XMLIR 将 XPU 呈现为 CUDA；`device.type == "cuda"` |
+| A1 拦截 key | `AutogradCUDA`（兼容 `CUDA`；profile `dispatch_key=CUDA`） |
+| 设备探测 | `import torch_xmlir` + `torch.cuda.is_available()` |
+| 实现路径 | torch |
+| 三层验证 | `python3 example.py p800-kunlunxin` 全绿；op 层拦截 1 次 |
+| 黄金 | 36/36，0 fail |
+| 性能门禁 | 空闲 P800 两轮复测：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0） |
+
+| 性能用例 | 延迟 (ms) |
+|---|---:|
+| reference | 0.0009 |
+| torch | 0.0014 |
+
+**P800 绑定结论**：reference 0.00087 ms / torch 0.00140 ms；别名/元数据操作，无设备码。
 
 ## 实现矩阵（三级）
 

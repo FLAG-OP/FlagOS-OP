@@ -6,7 +6,7 @@
 # - 修改本文件后运行 scripts/build_ops_index.py。
 
 schema: 1
-updated: 2026-10-14
+updated: 2026-10-22
 
 target_scope:
   vendor_family_count: 6
@@ -125,6 +125,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: clone
     directory: clone
@@ -135,6 +137,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: contiguous
     directory: contiguous
@@ -145,6 +149,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: copy_
     directory: copy_
@@ -155,6 +161,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: dropout
     directory: dropout
@@ -165,6 +173,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: detach
     directory: detach
@@ -175,6 +185,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: detach_
     directory: detach_
@@ -185,6 +197,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: empty_like
     directory: empty_like
@@ -195,6 +209,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: empty
     directory: empty
@@ -205,6 +221,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: empty_strided
     directory: empty_strided
@@ -215,6 +233,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: result_type
     directory: result_type
@@ -225,6 +245,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: item
     directory: item
@@ -235,6 +257,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
   - name: _local_scalar_dense
     directory: _local_scalar_dense
@@ -245,6 +269,8 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+      kunlunxin:
+        profiles: [p800-kunlunxin]
 
 registration_contracts:
   cambricon-foundation:
@@ -262,3 +288,18 @@ registration_contracts:
       - generic Autograd 不作为单平台默认映射。
       - 可注册实现的导入顺序为包态优先、单算子脚本态 fallback。
       - clone 在 op 层测试中保留包态实际执行代表用例。
+
+  kunlunxin-foundation:
+    title: P800 基础算子注册契约
+    scope: Kunlunxin P800（XMLIR）上的基础 ATen 算子族。
+    signature:
+      dispatch_key: AutogradCUDA
+      counter: dict | None
+      platform: 显式 platform 名称
+    canonical_key: AutogradCUDA
+    compatibility_key: CUDA
+    registerable_count: 10
+    non_registerable_operators: [empty, detach_, result_type]
+    notes:
+      - XPU 经 XMLIR 呈现为 cuda；设备探测用 torch_xmlir + torch.cuda.is_available()。
+      - P800 无 fp64；result_type 的 float64 黄金用例按设备能力 skip。

@@ -62,6 +62,16 @@ meta 张量推导目标 layout 的 stride（preserve_format 取 `self.to("meta")
 适用层验证通过（C1 等价 torch API），元数据 168/168 一致；无 Triton/硬件级（分配算子固有）。
 后续: 真实 vLLM 应用层（与其他算子统一做）。
 
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+- 平台呈现：XMLIR 将 XPU 呈现为 CUDA（`device.type == "cuda"`）。
+- A1 拦截：`AutogradCUDA`（兼容 `CUDA`；profile `dispatch_key=CUDA`）。
+- 实现路径：torch。
+- 三层验证：`python3 example.py p800-kunlunxin` 全绿；op 层拦截 3 次；应用层为等价 torch API 子进程。
+- 应用层 C2：中央真实 vLLM 0.13.0 + vllm_fl 0.1.0 + Qwen2.5-0.5B-Instruct 命中 5917 次，输出 token ids 逐位一致（`USE_FLAGGEMS=0`）。
+- 黄金：168/168，0 fail。
+- 性能：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0）。
+- 绑定细节与平台差异见 [PLATFORM.md](../PLATFORM.md)，合并流程见 [MERGE.md](../MERGE.md)。
 ## 附录: 复现命令
 
 ```bash

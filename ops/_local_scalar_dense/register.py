@@ -37,13 +37,12 @@ def lsd_aten(self):
     return _local_scalar_dense_torch(self)
 
 
-# ── 平台选择（单平台 cambricon/MLU590）──
-# 第二平台接入时按 ops/embedding 范式扩成多后端 + PLATFORM.md/MERGE.md。
+# ── 平台选择（cambricon/MLU590 + p800-kunlunxin）──
+# 按 ops/embedding 范式做多后端 + PLATFORM.md/MERGE.md。
 # Dashener2 2026-10-09-fix register_a1 签名升级（issue #19）: counter + platform，
 # 默认 dispatch_key 对齐模板（AutogradPrivateUse1）；_DEVICE_PROBE 注册守卫。
 # # Dashener2 <dashen272@outlook.com>
-_DEVICE_PROBE = ("mlu", lambda: torch.mlu.is_available())
-_BACKENDS = {"cambricon": "cambricon"}
+_BACKENDS = {"cambricon": "cambricon", "p800-kunlunxin": "p800-kunlunxin"}
 
 
 def _backend_for(dispatch_key: str, platform=None):
@@ -51,11 +50,13 @@ def _backend_for(dispatch_key: str, platform=None):
         if platform not in _BACKENDS:
             raise RuntimeError(
                 f"未知 platform={platform!r}; 已支持: {list(_BACKENDS)}"
-                "（第二平台接入见 ops/embedding/PLATFORM.md §5）")
+                "（新平台接入见 ops/embedding/PLATFORM.md §5）")
         return _BACKENDS[platform]
     by_key = {
-        "AutogradPrivateUse1": "cambricon",   # canonical A1 key
-        "PrivateUse1": "cambricon",           # 兼容 key
+        "AutogradPrivateUse1": "cambricon",   # MLU canonical A1 key
+        "PrivateUse1": "cambricon",           # MLU 兼容 key
+        "AutogradCUDA": "p800-kunlunxin",     # P800 canonical A1 key
+        "CUDA": "p800-kunlunxin",             # P800 兼容 key
     }
     if dispatch_key not in by_key:
         raise RuntimeError(
@@ -64,13 +65,20 @@ def _backend_for(dispatch_key: str, platform=None):
     return by_key[dispatch_key]
 
 
-def _probe_ok() -> bool:
-    attr, fn = _DEVICE_PROBE
-    try:
-        import torch_mlu  # noqa: F401  触发 torch.mlu 注册
-    except Exception:
-        return False
-    return hasattr(torch, attr) and getattr(torch, attr) is not None and fn()
+def _probe_ok(backend: str) -> bool:
+    if backend == "cambricon":
+        try:
+            import torch_mlu  # noqa: F401  触发 torch.mlu 注册
+        except Exception:
+            return False
+        return hasattr(torch, "mlu") and torch.mlu.is_available()
+    if backend == "p800-kunlunxin":
+        try:
+            import torch_xmlir  # noqa: F401  XPU 经 XMLIR 暴露为 cuda
+        except Exception:
+            return False
+        return torch.cuda.is_available()
+    return False
 
 
 def register_a1(dispatch_key: str = "AutogradPrivateUse1",
@@ -85,10 +93,10 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
     """
     global _LIB
     backend = _backend_for(dispatch_key, platform)
-    if backend == "cambricon" and not _probe_ok():
+    if not _probe_ok(backend):
         raise RuntimeError(
             f"register_a1 backend={backend!r}, dispatch_key={dispatch_key!r} "
-            "需要可用的 MLU 设备（torch.mlu.is_available()）")
+            f"需要可用的 {backend} 设备")
     fn = lsd_aten
     if counter is not None:
         def fn(*args, **kwargs):

@@ -52,3 +52,15 @@ RNG 受限，比原生慢 ~5x，但与 FlagGems 同级。
 ## 6. 结论
 
 Must 项（适用层验证通过（C1 等价 torch API）、确定性分支位级、随机分支统计合规、seed 可控）**通过**。
+
+## 7. P800（p800-kunlunxin）复验（2026-10-26）
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel 层 | `python3 test/kernel_level.py p800-kunlunxin` | PASS |
+| 框架层 | `python3 test/op_level.py p800-kunlunxin` | PASS；拦截 5 次 |
+| 应用层 | `python3 test/framework_level.py p800-kunlunxin` | PASS（等价 torch API 子进程） |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | 189/189，0 fail |
+| 性能门禁 | `python3 scripts/perf_compare.py --device p800-kunlunxin` | OK |
+
+结论：P800 复验 **通过**。P800 随机分支委托原生 dropout：Triton Philox 流与 bf16 store 未通过统计/复现门禁；channels_last 布局已还原。

@@ -51,7 +51,7 @@ def _app_child(out_path: str, register: bool, device: str) -> None:
 
     if register:
         import register as reg
-        reg.register_a1("PrivateUse1")
+        reg.register_a1("CUDA" if "cuda" in device else "PrivateUse1")
 
     y = _app_forward(device)
 
@@ -97,14 +97,14 @@ def run(profile):
         f"注册前后应用输出不一致: sum {base_meta['sum']} vs {plug_meta['sum']}"
 
     return {"ok": True,
-            "engine": ("vllm" if VLLM_AVAILABLE else
-                       "subprocess-app-fallback (vLLM 未安装)"),
+            "engine": "subprocess-app-fallback (等价 torch API)",
             "calls": calls,
             "output_match": output_match,
-            "detail": (f"{calls} 次命中；基线与注册输出逐位一致"
-                       + ("" if VLLM_AVAILABLE else
-                          "；应用层用等价的 torch API 子进程验证，"
-                          "非真实 vLLM 推理"))}
+            "detail": (f"{calls} 次命中；基线与注册输出逐位一致；"
+                       "应用层用等价的 torch API 子进程验证，"
+                       "非真实 vLLM 推理"
+                       + ("（环境已装 vLLM，但本目录未接 harness）"
+                          if VLLM_AVAILABLE else ""))}
 
 
 if __name__ == "__main__":

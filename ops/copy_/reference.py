@@ -17,4 +17,7 @@ def copy_reference(dst: torch.Tensor, src: torch.Tensor,
         if isinstance(src, (int, float, bool)):
             return dst.fill_(src)
         raise TypeError("unsupported src type for copy_: ", type(src))
+    # P800 原生 copy_ 的广播路径实测错值；物化广播源后走同形 copy_。
+    if src.shape != dst.shape:
+        src = src.expand(dst.shape).contiguous()
     return dst.copy_(src, non_blocking=non_blocking)

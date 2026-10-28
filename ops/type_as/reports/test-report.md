@@ -67,3 +67,15 @@ torch_mlu/triton/flag_gems/numpy/python 全部锁定版本一致）。
 精度位级一致，性能满足微算子需求。遗留：真实 vLLM 应用层、连续 cast
 性能优化、非 dense 窄→宽两阶段 kernel（见
 [reports/development.md](development.md) §7）。
+
+## 7. P800（p800-kunlunxin）复验（2026-10-26）
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel 层 | `python3 test/kernel_level.py p800-kunlunxin` | PASS |
+| 框架层 | `python3 test/op_level.py p800-kunlunxin` | PASS；拦截 8 次 |
+| 应用层 | `python3 test/framework_level.py p800-kunlunxin` | PASS（等价 torch API 子进程） |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device cuda:1` | 111/111，0 fail |
+| 性能门禁 | `python3 scripts/perf_compare.py --device p800-kunlunxin` | OK |
+
+结论：P800 复验 **通过**。目标 bf16 在 P800 走原生 type_as 兜底：fp16→bf16 store 实测 misaligned，fp32→bf16 有舍入偏差；其余 dtype 走 Triton。

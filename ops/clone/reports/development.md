@@ -96,6 +96,16 @@ FlagGems 无 `clone` 算子，无第三方可比。自研与原生基本持平�
 适用层验证通过（C1 等价 torch API），48/48 黄金，精度位级一致、存储独立，性能与原生持平。
 后续: 安装 vLLM 后切真实 harness；如需可尝试大块向量化进一步逼近带宽峰值。
 
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+- 平台呈现：XMLIR 将 XPU 呈现为 CUDA（`device.type == "cuda"`）。
+- A1 拦截：`AutogradCUDA`（兼容 `CUDA`；profile `dispatch_key=CUDA`）。
+- 实现路径：Triton。
+- 三层验证：`python3 example.py p800-kunlunxin` 全绿；op 层拦截 6 次；应用层为等价 torch API 子进程。
+- 黄金：48/48，0 fail。
+- 性能：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0）。
+- 绑定细节与平台差异见 [PLATFORM.md](../PLATFORM.md)，合并流程见 [MERGE.md](../MERGE.md)。
+
 ## 附录: 复现命令
 
 ```bash

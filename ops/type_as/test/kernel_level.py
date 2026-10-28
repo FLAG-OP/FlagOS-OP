@@ -18,7 +18,7 @@ def _sync(dev):
         import torch_mlu  # noqa: F401
         torch.mlu.synchronize()
     elif isinstance(dev, str) and dev.startswith("cuda"):
-        torch.cuda.synchronize()
+        torch.cuda.synchronize(torch.device(dev))
 
 
 def _bench(fn, dev, warmup=20, iters=100):

@@ -26,3 +26,17 @@ python3 scripts/perf_run.py --device cambricon --pattern ops.copy_
 
 入库基线 `ops.copy_.triton` 写入
 [perf/baselines/cambricon.json](../../../perf/baselines/cambricon.json)。
+
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+环境：torch 2.9.0+cu129 / torch_xmlir 1.0.0.1 / Triton 3.6.0 / FlagGems 4.2.1rc0；benchmark 使用空闲物理 P800（逻辑 `cuda:1`），run C 建基线、run D 复核，所有用例偏差 ≤5.9%（0.005 ms 级分配/元数据用例绝对差 <2 µs）。口径与 MLU 相同（warmup 20 + iters 100 + 设备同步）。
+
+| 实现 | 延迟 (ms) |
+|---|---:|
+| reference | 0.245 |
+| torch | 0.365 |
+| triton | 0.482 |
+
+自研 Triton 0.482 ms / 原生 0.245 ms（约 0.51x）；bf16 写出兜底路径功能正确，性能瓶颈同 clone。
+
+基线已写入 `perf/baselines/p800-kunlunxin.json`；`python3 scripts/perf_compare.py --device p800-kunlunxin` → **OK**（FAIL 0 / WARN 0 / NEW 0）。

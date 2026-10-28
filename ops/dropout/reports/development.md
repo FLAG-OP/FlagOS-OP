@@ -93,6 +93,16 @@ channels_last 直用、非连续回退。**#11** device 上下文；无归约不
 `torch.manual_seed` 控制。性能受 Philox 限制，比原生慢 ~5x，与
 FlagGems 持平。后续: 真实 vLLM 应用层、RNG 向量化/更高 unroll 调优。
 
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+- 平台呈现：XMLIR 将 XPU 呈现为 CUDA（`device.type == "cuda"`）。
+- A1 拦截：`AutogradCUDA`（兼容 `CUDA`；profile `dispatch_key=CUDA`）。
+- 实现路径：Triton（P800 随机分支委托原生）。
+- 三层验证：`python3 example.py p800-kunlunxin` 全绿；op 层拦截 5 次；应用层为等价 torch API 子进程。
+- 黄金：189/189，0 fail。
+- 性能：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0）。
+- 绑定细节与平台差异见 [PLATFORM.md](../PLATFORM.md)，合并流程见 [MERGE.md](../MERGE.md)。
+
 ## 附录: 复现命令
 
 ```bash

@@ -8,6 +8,7 @@ import torch
 import triton
 import triton.language as tl
 
+from flag_gems.runtime import device as runtime_device
 from flag_gems.runtime import torch_device_fn  # #11 设备上下文
 
 _FALLBACK_KEYSET = torch._C.DispatchKeySet(
@@ -16,6 +17,13 @@ _FALLBACK_KEYSET = torch._C.DispatchKeySet(
 _SUPPORTED = (torch.float16, torch.float32, torch.bfloat16)
 _INT32_MAX = 2**31 - 1
 _BLOCK = 1024
+
+
+def _is_kunlunxin() -> bool:
+    try:
+        return runtime_device.vendor_name == "kunlunxin"
+    except Exception:
+        return False
 
 
 def _fallback(input, p, train):
@@ -39,17 +47,30 @@ def _suggest_memory_format(t):
 
 def _philox_seed_offset(increment, device):
     """Read and advance the device Philox state（镜像 FlagGems）。"""
+    if device.type == "mlu":
+        idx = device.index
+        if idx is None:
+            idx = torch.mlu.current_device()
+        gen = torch.mlu.default_generators[idx]
+        state = gen.get_state()
+        view = state.view(torch.int64)
+        seed = int(view[0])
+        offset = int(view[1])
+        increment = (increment + 3) // 4 * 4
+        view[1] = offset + increment
+        gen.set_state(state)
+        return seed, offset
+
     idx = device.index
     if idx is None:
-        idx = torch.mlu.current_device()
-    gen = torch.mlu.default_generators[idx]
-    state = gen.get_state()
+        idx = torch.cuda.current_device()
+    state = torch.cuda.get_rng_state(idx)
     view = state.view(torch.int64)
     seed = int(view[0])
     offset = int(view[1])
     increment = (increment + 3) // 4 * 4
     view[1] = offset + increment
-    gen.set_state(state)
+    torch.cuda.set_rng_state(state, idx)
     return seed, offset
 
 
@@ -115,6 +136,21 @@ def dropout_triton(input: torch.Tensor, p: float = 0.5,
     fmt = _suggest_memory_format(input)
     if p == 1.0:
         return torch.zeros_like(input, memory_format=fmt)
+
+    if _is_kunlunxin():
+        # XMLIR Triton 随机流与 bf16 store 未通过统计/复现门禁，P800 委托原生；
+        # 原生路径不保 channels_last，这里按输入布局还原。
+        out = _fallback(input, p, train)
+        if (input.dim() == 4
+                and input.is_contiguous(memory_format=torch.channels_last)
+                and not out.is_contiguous(memory_format=torch.channels_last)):
+            out = out.to(memory_format=torch.channels_last)
+        elif (input.dim() == 5
+                and input.is_contiguous(memory_format=torch.channels_last_3d)
+                and not out.is_contiguous(
+                    memory_format=torch.channels_last_3d)):
+            out = out.to(memory_format=torch.channels_last_3d)
+        return out
 
     n = input.numel()
     if n > _INT32_MAX:

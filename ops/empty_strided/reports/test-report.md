@@ -46,3 +46,16 @@
 ## 6. 结论
 
 Must 项（适用层验证通过（C1 等价 torch API）、元数据一致、注册/拦截）**通过**。
+
+## 7. P800（p800-kunlunxin）复验（2026-10-26）
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel 层 | `python3 test/kernel_level.py p800-kunlunxin` | PASS |
+| 框架层 | `python3 test/op_level.py p800-kunlunxin` | PASS；拦截 2 次 |
+| 应用层 | `python3 test/framework_level.py p800-kunlunxin` | PASS（等价 torch API 子进程） |
+| 应用层 C2 | `tests/framework_level/test_a1_aten_ops.py`（真实 vLLM） | PASS；命中 6299 次，输出逐位一致 |
+| 黄金 | `python3 script/check_accuracy.py --impl torch --device cuda:1` | 30/30，0 fail |
+| 性能门禁 | `python3 scripts/perf_compare.py --device p800-kunlunxin` | OK |
+
+结论：P800 复验 **通过**。元数据分配，P800 直接复用。

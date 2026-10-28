@@ -93,6 +93,16 @@ bf16/fp16/fp32；纯搬运无算术，位级一致；容差 fp32 1e-5 / fp16,bf1
 适用层验证通过（C1 等价 torch API），114/114 黄金，别名语义正确，转置性能经 swiz 修复后接近原生。
 后续: 高 rank 分块、channels_last 自研、真实 vLLM 应用层。
 
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+- 平台呈现：XMLIR 将 XPU 呈现为 CUDA（`device.type == "cuda"`）。
+- A1 拦截：`AutogradCUDA`（兼容 `CUDA`；profile `dispatch_key=CUDA`）。
+- 实现路径：Triton。
+- 三层验证：`python3 example.py p800-kunlunxin` 全绿；op 层拦截 5 次；应用层为等价 torch API 子进程。
+- 应用层 C2：中央真实 vLLM 0.13.0 + vllm_fl 0.1.0 + Qwen2.5-0.5B-Instruct 命中 2208 次，输出 token ids 逐位一致（`USE_FLAGGEMS=0`）。
+- 黄金：114/114，0 fail。
+- 性能：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0）。
+- 绑定细节与平台差异见 [PLATFORM.md](../PLATFORM.md)，合并流程见 [MERGE.md](../MERGE.md)。
 ## 附录: 复现命令
 
 ```bash

@@ -181,6 +181,16 @@ Library 对象保持全局引用；调用计数用于框架层跨进程验证（
 - [ ] 优化连续 cast（更大 BLOCK / 去 mask / 向量化），逼近原生 0.175ms
 - [ ] 非 dense 窄→宽用两阶段 kernel 替掉 `out.copy_` 兜底
 
+## P800（p800-kunlunxin）复验（2026-10-26）
+
+- 平台呈现：XMLIR 将 XPU 呈现为 CUDA（`device.type == "cuda"`）。
+- A1 拦截：`AutogradCUDA`（兼容 `CUDA`；profile `dispatch_key=CUDA`）。
+- 实现路径：Triton（P800 目标 bf16 委托原生）。
+- 三层验证：`python3 example.py p800-kunlunxin` 全绿；op 层拦截 8 次；应用层为等价 torch API 子进程。
+- 黄金：111/111，0 fail。
+- 性能：`perf_compare --device p800-kunlunxin` = OK（FAIL 0 / WARN 0 / NEW 0）。
+- 绑定细节与平台差异见 [PLATFORM.md](../PLATFORM.md)，合并流程见 [MERGE.md](../MERGE.md)。
+
 ## 附录: 复现命令
 
 ```bash

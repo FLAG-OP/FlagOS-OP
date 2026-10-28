@@ -8,6 +8,7 @@ import torch
 import triton
 import triton.language as tl
 
+from flag_gems.runtime import device as runtime_device
 from flag_gems.runtime import torch_device_fn  # #11 设备上下文
 
 _FALLBACK_KEYSET = torch._C.DispatchKeySet(
@@ -15,6 +16,13 @@ _FALLBACK_KEYSET = torch._C.DispatchKeySet(
 )
 _SUPPORTED = (torch.float16, torch.float32, torch.bfloat16)
 _INT32_MAX = 2**31 - 1
+
+
+def _is_kunlunxin() -> bool:
+    try:
+        return runtime_device.vendor_name == "kunlunxin"
+    except Exception:
+        return False
 
 
 def _fallback(dst, src, non_blocking):
@@ -162,6 +170,13 @@ def copy_triton(dst: torch.Tensor, src: torch.Tensor,
                 f"The broadcast shape does not match destination shape "
                 f"{tuple(dst.shape)}")
         src = src.expand(dst.shape)
+
+    if (_is_kunlunxin() and dst.dtype == torch.bfloat16
+            and src.dtype != torch.bfloat16):
+        # XMLIR Triton fp16->bf16 store 实测 misaligned；fp32->bf16 舍入偏差。
+        # 用原生 type_as（redispatch，绕过本算子注册）转换后再做同 dtype copy。
+        src = torch.ops.aten.type_as.default.redispatch(
+            _FALLBACK_KEYSET, src, dst)
 
     with torch_device_fn.device(dst.device):      # ← 硬约束 #11
         if dst.is_contiguous() and src.is_contiguous():

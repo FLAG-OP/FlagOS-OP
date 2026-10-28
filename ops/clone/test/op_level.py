@@ -57,9 +57,11 @@ def run(profile):
     import subprocess
 
     root = str(OP_DIR.parent.parent)
+    bootstrap = "import torch, torch_mlu\n" if "mlu" in dev else (
+        "import torch, torch_xmlir\n" if "cuda" in dev else "import torch\n")
     child = (
-        "import torch, torch_mlu\n"
-        "from ops.clone.register import clone_aten\n"
+        bootstrap
+        + "from ops.clone.register import clone_aten\n"
         f"x = torch.zeros(3, device='{dev}')\n"
         "y = clone_aten(x)\n"
         "assert tuple(y.shape) == (3,), y.shape\n"
