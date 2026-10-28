@@ -123,6 +123,26 @@ xtriton 的 XPU libdevice 表中该 fp32 重载映射到占位符符号
 FlagOS-OP 的修复范围。本仓库保留复现条件、影响和文档说明；后续跟踪见
 [issue #30](https://github.com/FLAG-OP/FlagOS-OP/issues/30)。
 
+**2026-10-27 更新（#30 三条 done criteria）**：
+
+1. **栈与版本**：复现于 P800（XMLIR）+ FlagGems **4.2.1rc0**（xtriton 随包，
+   XPU libdevice 表）。同一 P800 硬件、FlagGems **5.0.0**（5.0 复测栈
+   `flagos-p800-gems5-vllm0202-dev`，torch 2.9.0+cu129 / torch_xmlir
+   1.0.0.1）实测 `gelu(none)` 与 `gelu(approximate="tanh")` 均通过
+   （`max_diff=0.000e+00`），tanh 路径在 5.0 已修复：
+
+   ```bash
+   python3 -c "import torch,flag_gems;flag_gems.enable();x=torch.randn(64,128,device='cuda:0');y=flag_gems.gelu(x,approximate='tanh');r=torch.nn.functional.gelu(x,approximate='tanh');print((y-r).abs().max())"
+   ```
+
+2. **组件归属**：FlagGems 4.2 捆绑 xtriton 的 **XPU libdevice 符号表**——
+   fp32 `tanh` 重载映射到占位符 `"Unsupported"`，`xpu*-elfconv` 链接报
+   `undefined symbol: Unsupported`（另有 known-issues #14 会把该报错掩盖为
+   `NameError: sys`）。属 FlagGems/xtriton XPU backend 侧，非 FlagOS-OP。
+3. **修复/规避**：升级 FlagGems 5.0（上文实测）即外部修复；4.2 栈保留
+   自研 kernel 手写 tanh（`1 - 2/(exp(2x)+1)`）规避，A1/A2 在 4.2 上仍无
+   同语义 FlagGems 基线的结论不变。
+
 ### 14. XPU Triton 编译错误被 `NameError: sys` 掩盖
 两因叠加: ① xtriton `backends/xpu/compiler.py` 的 `run_cmd()` 使用了
 未 import 的 `sys`；② torch_xmlir 符号改写会重新导入 xpu backend，

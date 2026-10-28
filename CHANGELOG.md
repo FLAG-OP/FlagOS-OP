@@ -31,6 +31,11 @@
   A2 插件与内置 backend impl_id 冲突）与 #5 的 XPU1 Xid 补注
 
 ### Changed
+- **known-issues #13 / issue #30 跟进（2026-10-27）**: 补 GELU
+  `approximate="tanh"` 链接失败的组件归属与修复状态——4.2.1rc0 根因为
+  xtriton XPU libdevice 表 fp32 tanh 占位符 `Unsupported`（报错另会被
+  #14 掩盖为 `NameError: sys`）；同硬件 FlagGems 5.0.0 实测 tanh 路径
+  已修复（`max_diff=0.000e+00`），4.2 栈规避为升级 5.0 或自研手写 tanh
 - 昆仑芯环境指南区分 FlagGems 4.2 基线与 5.0 复测栈，明确中央 profile、
   独立算子别名、模型核验和框架子进程卡号覆盖；安装/快速开始/环境与镜像
   索引同步链接，复测页区分历史与整改后单测数，说明 5.0 框架黄金缺失、
