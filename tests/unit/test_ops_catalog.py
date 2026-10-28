@@ -33,7 +33,7 @@ def test_catalog_models_six_incremental_platform_families():
 
     thead = catalog["platform_families"]["thead"]
     assert thead["status"] == "partial"
-    assert thead["current_profiles"] == ["thead-ppu"]
+    assert thead["current_profiles"] == ["thead-ppu", "thead-ppu-c2"]
 
 
 def test_catalog_is_valid_and_covers_every_operator_directory():

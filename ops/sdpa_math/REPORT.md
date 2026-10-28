@@ -3,7 +3,8 @@
 > **职责与证据等级**：本页是当前验证矩阵；`README.md` 负责使用入口，
 > `PLATFORM.md` 负责平台绑定，`reports/` 保存带日期的实验和原始数据。
 > 当前为 Ascend910/P800/thead-ppu 三个硬件交付，CPU 仅作 ATen 对照。FlagOS E2E 使用
-> mini-LLM harness，不等同于真实 vLLM；真实 vLLM 仍待专门环境复验。
+> mini-LLM harness；**thead-ppu-c2 已补真实 vLLM EngineCore C2**（显式 MATH 路径，
+> 见 [reports/thead-ppu-c2.md](reports/thead-ppu-c2.md)）。
 
 > 定位: 一页看全一个算子——实现矩阵、验证矩阵、关键数字。
 > 分册在 [reports/](reports/)。
@@ -13,7 +14,7 @@
 | 算子名称 | `aten::_scaled_dot_product_attention_math`（SDPA **math 后端**，双输出 `(out, attn_probs)`） |
 | 语义 | [reference.py](reference.py)（GQA / causal / bool·float mask / dropout 双规则 / fp32 内部；P800 半精度 fast path 有保守回退） |
 | 目标设备 / 路线 | `ascend910` + `p800-kunlunxin` + `thead-ppu` + `cpu` / **A1** ☑（aten 拦截，成对注册 `Autograd*` + 纯设备键） |
-| 日期 / 状态 | 2026-10-01 定稿 / 2026-10-12 文档复核 / 2026-10-24 thead-ppu |
+| 日期 / 状态 | 2026-10-01 定稿 / 2026-10-12 文档复核 / 2026-10-24 thead-ppu / 2026-10-28 thead-ppu-**c2** 真实 vLLM PASS |
 
 ## 实现矩阵（三级）
 
@@ -43,6 +44,7 @@ thead fast 均过同一 175 组黄金。
 | P800 | `python3 example.py p800-kunlunxin` | ☑ kernel 52 · 黄金 175/175 · A1 22 · FlagGems 应用层 9 | [reports/perf_p800-kunlunxin.json](reports/perf_p800-kunlunxin.json) |
 | thead-ppu | `python3 example.py thead-ppu` | ☑ kernel 52 · tail 47 · 黄金 175/175 · A1 21 · framework 8 · perf gate OK | [reports/thead-ppu.md](reports/thead-ppu.md) |
 | FlagOS E2E | `python3 script/e2e_flagos.py --device cuda:1` | ☑ 4 层 mini-LLM · forward/backward/generate · A1 拦截 856 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
+| **真实 vLLM C2** | `python3 script/e2e_vllm_c2.py --model ... --model-impl transformers` | ☑ EngineCore 内 MATH 路径命中 20 · token 与同路径基线一致 · profile `thead-ppu-c2` | [reports/e2e_vllm_c2_thead-ppu-c2.json](reports/e2e_vllm_c2_thead-ppu-c2.json) · [reports/thead-ppu-c2.md](reports/thead-ppu-c2.md) |
 
 ## 关键数字
 

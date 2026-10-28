@@ -9,8 +9,29 @@ T-head PPU ZW810E (``AutogradCUDA``, cuda 双候选按栈身份路由).
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 
 import torch
+
+# C2 跨进程计数: EngineCore/Worker 子进程各写自己的 pid 分片文件
+# （clone/register.py 同款; 主进程汇总 {base}.{pid} JSON）。
+_COUNT_BASE = os.environ.get("A1_EMBEDDING_COUNT_FILE")
+COUNT_FILE = f"{_COUNT_BASE}.{os.getpid()}" if _COUNT_BASE else None
+
+
+def _bump_count_file() -> None:
+    if not COUNT_FILE:
+        return
+    counts = {}
+    try:
+        with open(COUNT_FILE) as f:
+            counts = json.load(f)
+    except (OSError, ValueError):
+        pass
+    counts["aten::embedding"] = counts.get("aten::embedding", 0) + 1
+    with open(COUNT_FILE, "w") as f:
+        json.dump(counts, f)
 
 # wt 2026-09-23-fix 第二平台: 按 profile/dispatch_key 选择 backend
 # （sdpa 的 kernel/backends 选择器同款惯例, 保持单文件轻量形态）
@@ -133,6 +154,7 @@ def register_a1(dispatch_key: str = "AutogradCUDA",
              sparse=False):
         if counter is not None:
             counter["n"] = counter.get("n", 0) + 1
+        _bump_count_file()
         return _EmbeddingA1Function.apply(
             weight, indices, padding_idx, scale_grad_by_freq, sparse
         )

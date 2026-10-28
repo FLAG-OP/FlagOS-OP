@@ -181,3 +181,10 @@ python3 script/bench_dispatch.py --device cuda:6 \
 python3 scripts/perf_run.py --device thead-ppu --pattern ops.embedding
 python3 scripts/perf_compare.py --device thead-ppu
 ```
+
+## 8. C2 真实 vLLM（thead-ppu-c2）
+
+2026-10-28 在真实引擎基座（`flagos-ppu-c2` / `thead-ppu-c2` profile）补齐
+C2 证据：EngineCore 内 `aten::embedding` A1 命中 **10** 次，生成 token 与
+无注入基线逐位一致。详见 [thead-ppu-c2.md](thead-ppu-c2.md) 与
+[e2e_vllm_c2_thead-ppu-c2.json](e2e_vllm_c2_thead-ppu-c2.json)。

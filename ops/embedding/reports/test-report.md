@@ -136,8 +136,10 @@ python3 -m pytest tests/unit -q
 | 单测 | ✅ `pytest tests/unit -q` 46 passed |
 | perf gate | ✅ `FAIL 0 · WARN 0`（`ops.embedding.thead-ppu.forward` 0.033ms / 255.0 GB/s） |
 | 仓库一致性 | ◐ `run.py --consistency` FAIL：`ModuleNotFoundError: flag_gems`（dev 栈结构性缺证，同 T1 sdpa） |
+| C2 真实 vLLM（thead-ppu-c2） | ✅ EngineCore 内 A1 命中 10；token 与基线一致（[e2e_vllm_c2_thead-ppu-c2.json](e2e_vllm_c2_thead-ppu-c2.json)、[thead-ppu-c2.md](thead-ppu-c2.md)） |
 
 ## 8. 结论
 
 kernel 层、op 层、应用层、黄金与性能门禁在 **p800-kunlunxin、cambricon 与
-thead-ppu 三个平台上全部通过**；建议合入。
+thead-ppu 三个平台上全部通过**；thead 另有 **thead-ppu-c2 真实 vLLM C2** 证据。
+建议合入。

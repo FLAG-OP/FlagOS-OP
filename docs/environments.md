@@ -216,6 +216,46 @@ python3 scripts/build_env_index.py --check
 
 备注：本锁对应 FlagGems 4.2 基线；5.0 复测栈使用独立的 `p800-kunlunxin-gems5` profile 与环境锁。选择与运行步骤见 [昆仑芯环境配置](installation.md#kunlunxin)。 flag_gems 与 vllm-plugin-fl 在共享镜像中为本地路径安装 （/env/FlagGems、/env/xvllm-plugin-FL），核对版本即可， 不建议 pip 覆盖安装。硬件快照来自 2026-10-16 的 `xpu-smi -q` 与 `scripts/env_snapshot.py --device p800-kunlunxin`。 `torch_xmlir` 对应发行包名 `xmlir`；`xtorch_ops` 对应发行包名 `XTorch-Ops`。
 
+<a id="thead-ppu-c2"></a>
+### T-Head PPU ZW810E 真实 vLLM C2 栈（flag_gems + vllm-plugin-FL）实测版本
+
+| 项 | 声明 |
+|---|---|
+| profile | [`thead-ppu-c2`](../configs/devices/thead-ppu-c2.yaml) |
+| 平台家族 | `thead` |
+| 硬件 | PPU-ZW810E ×16 · 98304 MiB/卡 · 驱动: 1.5.1-1d747a · 固件: 未暴露版本 · 运行时: HGGC 13.0（容器内 PPU-SMI 1.28） · 监控工具: ppu-smi · 可见设备: 容器 --privileged 16卡全见；C2 用卡 10,14（实测 10MiB/0% 空闲） |
+| 系统 / 内核 | Linux / 5.10.134-17.2.al8.x86_64 |
+| Python | `3.12.3` |
+| 声明采集时间 | 软件栈 2026-10-28 · 硬件快照 2026-10-28 |
+| 环境锁 | [`thead-ppu-c2.lock.yaml`](../configs/env/thead-ppu-c2.lock.yaml) |
+| 基座镜像 | 未登记 |
+
+适用范围：
+
+- ops/embedding C2（真实 vLLM EngineCore 消费 aten::embedding）
+- ops/sdpa_math C2（真实 vLLM EngineCore 经显式 MATH 路径消费 aten::_scaled_dot_product_attention_math）
+- framework 级冒烟（tiny Llama / FLAGOS_MODEL_PATH 覆盖）
+
+| 软件包 / 组件 | 锁定版本 |
+|---|---|
+| `torch` | `2.11.0+v0.1.0.ppu2.1.0.oe` |
+| `triton` | `3.5.0+gitcc5446cf` |
+| `flagtree` | `0.7.0+ppu.gitf51dde96` |
+| `flag_gems` | `5.4.0+g0d95c2092` |
+| `vllm` | `0.24.0+empty` |
+| `vllm-plugin-fl` | `0.3.0rc2.post3` |
+| `transformers` | `5.19.0` |
+
+证据入口：
+
+- [ops/embedding/reports/e2e_vllm_c2_thead-ppu-c2.json](../ops/embedding/reports/e2e_vllm_c2_thead-ppu-c2.json)：embedding C2 真实 vLLM EngineCore 双跑（hits=10，token 与基线一致）
+- [ops/sdpa_math/reports/e2e_vllm_c2_thead-ppu-c2.json](../ops/sdpa_math/reports/e2e_vllm_c2_thead-ppu-c2.json)：sdpa_math C2 真实 vLLM EngineCore 双跑（hits=20，token 与 MATH 基线一致）
+- [ops/embedding/reports/thead-ppu-c2.md](../ops/embedding/reports/thead-ppu-c2.md)：embedding C2 叙述报告
+- [ops/sdpa_math/reports/thead-ppu-c2.md](../ops/sdpa_math/reports/thead-ppu-c2.md)：sdpa_math C2 叙述报告
+- [docs/base-images.md](../docs/base-images.md)：本锁对应容器镜像登记（flagrelease_ppu_vllm024_gems_540:1012）
+
+备注：镜像 flagrelease-public/flagrelease_ppu_vllm024_gems_540:1012（容器 flagos-ppu-c2）。 vllm 与 vllm-plugin-FL 为 editable 安装（/opt/vllm、/opt/vllm-plugin-FL）。 FL 插件激活后默认 attention_backend=flagos→vendor→reference（FA3 wheel）， **默认路径不消费** aten::_scaled_dot_product_attention_math；sdpa_math C2 用 sitecustomize 把 transformers backend 的 ALL_ATTENTION_FUNCTIONS["vllm"] 换成 F.sdpa+MATH 作为显式消费路径（见 ops/sdpa_math/script/e2e_vllm_c2.py）。 模型权重不在镜像内；C2 证据用 _aten_harness.ensure_model() 生成的 tiny Llama /tmp/flagos_tiny_llama（LlamaForCausalLM，hidden 64、2 层）。 卡况（2026-10-28 快照）: 空闲 2,6,7,10,14（10MiB/0%）；4/5/12/13/15 高占用勿用。torch import 版本 2.11.0+v0.1.0.ppu2.1.0.oe（与 pip metadata 一致）。
+
 <a id="thead-ppu"></a>
 ### T-Head PPU ZW810E dev 基座（未装 FlagGems）实测版本
 
@@ -251,7 +291,7 @@ python3 scripts/build_env_index.py --check
 - [ops/embedding/reports/thead-ppu.md](../ops/embedding/reports/thead-ppu.md)：embedding thead-ppu 移植与验证报告（三层/黄金/perf 基线证据）
 - [ops/sdpa_math/reports/thead-ppu.md](../ops/sdpa_math/reports/thead-ppu.md)：sdpa_math thead-ppu 移植与验证报告（三层/黄金/perf 基线证据）
 
-备注：本栈无 flag_gems、无 vllm-plugin-fl；A2/framework 级证据计划由 thead-ci 镜像 （harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:v0.24.0-thead-ci，在用实例含 flag_gems 5.3.4 + 插件 0.3.0rc2.post1，vllm 0.24.0+empty、triton pip=3.5.0 与 import=3.6.0 自相矛盾待独立实例复核）第二 profile/锁补，仿 p800-kunlunxin 与 p800-kunlunxin-gems5 双 profile 先例。 ⚠️ 基座缺陷：flagtree 0.6.1+ppu3.6 wheel 损坏——pip show 在册但 import ModuleNotFoundError；pip show -f 可见条目仅 dist-info 与 proton 两 bin； torch/triton 不受影响。 卡况（2026-10-23 快照）：4/11 100% 占用、5 占 76G 勿用； 空闲 6,7,8,9,10,13,14,15（2MiB/0%）。 登记基座干净实例（registry_reference 镜像）无 triton/flagtree——本锁钉的是 dev 基座实测实例；sdpa 交付后 thead-ppu-runtime-v1 已改为 version-aligned + related_profiles: [thead-ppu]（主版本线 python 3.12.3/torch 2.10.0/ triton 3.6.0 对齐），锁内 base_images 段同步补关联。 登记基座干净实例组件集与 dev 栈不同（缺 triton/flagtree）， 未验同镜像实例，不作 validated-in-image 声明。
+备注：本栈无 flag_gems、无 vllm-plugin-fl；A2/framework 级证据由 **thead-ppu-c2** 第二 profile/锁承接（2026-10-28 已交付，镜像 flagrelease_ppu_vllm024_gems_540:1012，含 flag_gems 5.4.0 + 插件 0.3.0rc2.post3 + vllm 0.24.0；仿 p800-kunlunxin 与 p800-kunlunxin-gems5 双 profile 先例， 见 thead-ppu-c2.lock.yaml）。 ⚠️ 基座缺陷：flagtree 0.6.1+ppu3.6 wheel 损坏——pip show 在册但 import ModuleNotFoundError；pip show -f 可见条目仅 dist-info 与 proton 两 bin； torch/triton 不受影响。 卡况（2026-10-23 快照）：4/11 100% 占用、5 占 76G 勿用； 空闲 6,7,8,9,10,13,14,15（2MiB/0%）。 登记基座干净实例（registry_reference 镜像）无 triton/flagtree——本锁钉的是 dev 基座实测实例；sdpa 交付后 thead-ppu-runtime-v1 已改为 version-aligned + related_profiles: [thead-ppu]（主版本线 python 3.12.3/torch 2.10.0/ triton 3.6.0 对齐），锁内 base_images 段同步补关联。 登记基座干净实例组件集与 dev 栈不同（缺 triton/flagtree）， 未验同镜像实例，不作 validated-in-image 声明。
 
 <a id="not-validated"></a>
 ## 未登记为实测环境

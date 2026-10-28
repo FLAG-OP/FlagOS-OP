@@ -4,7 +4,7 @@
 |---|---|
 | 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ thead fast（thead-ppu）+ torch（CPU/fallback） |
 | 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `thead-ppu` · `cpu` / 2026-09-30~10-02 · 2026-10-24 |
-| 结论 | **通过**（Must 清单全勾；应用证据按 profile 拆分见 §6——p800 FlagOS E2E ☑、thead C1 ☑ 而 e2e/consistency 缺证、C2 全缺（#37）） |
+| 结论 | **通过**（Must 清单全勾；应用证据按 profile 拆分见 §6——p800 FlagOS E2E ☑、thead C1 ☑、**thead-ppu-c2 真实 vLLM C2 ☑**（#37）） |
 
 ## 1. 测试范围
 
@@ -20,7 +20,7 @@
 | 跨层一致性 | ☑ | 黄金生成的三重互验（§3） | 参考 vs `F.sdpa(MATH)` vs 原生直调 vs 自洽式，全一致 |
 | FlagOS E2E（C1，p800-kunlunxin） | ☑ | `script/e2e_flagos.py` | PASS：4 层 mini-LLM / 前向 / 反向 / 生成 / 概率图熵正则（§4.1） |
 | FlagOS E2E（thead-ppu） | ✗ | `script/e2e_flagos.py` | 缺证：dev 栈无 flag_gems，结构性缺证（同 T1/T2，跟踪 #37） |
-| C2 真实引擎 | ✗ | — | 本报告无真实 vLLM/EngineCore 证据（PPU 侧跟踪 #37，PR36 合并门槛） |
+| **C2 真实引擎（thead-ppu-c2）** | ☑ | `script/e2e_vllm_c2.py --model ... --model-impl transformers` | PASS：EngineCore 内 MATH 路径 A1 命中 20；token 与同路径基线一致（[e2e_vllm_c2_thead-ppu-c2.json](e2e_vllm_c2_thead-ppu-c2.json)、[thead-ppu-c2.md](thead-ppu-c2.md)） |
 | 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin\|thead-ppu]` | 三层全绿 |
 
 ## 2. 环境
@@ -34,6 +34,9 @@ P800 复验环境为 torch `2.9.0+cu129` + torch_xmlir
 （详见 development §1.1）。thead-ppu 复验环境为 torch `2.10.0` +
 triton `3.6.0`（flagtree wheel 损坏），dev 容器 `flagos-ppu-wt-dev`，
 设备 `cuda:6`（详见 [configs/env/thead-ppu.lock.yaml](../../../configs/env/thead-ppu.lock.yaml)）。
+C2 真实引擎环境为镜像 `flagrelease_ppu_vllm024_gems_540:1012`
+（vllm 0.24.0 + flag_gems 5.4.0 + vllm-plugin-FL 0.3.0rc2.post3，
+profile `thead-ppu-c2`，见 [configs/env/thead-ppu-c2.lock.yaml](../../../configs/env/thead-ppu-c2.lock.yaml)）。
 
 ## 3. 精度结果
 
@@ -186,7 +189,8 @@ backward、8 步贪心生成。
 | profile | C1 mini consumer | C2 真实引擎 |
 |---|---|---|
 | p800-kunlunxin | ☑ framework 层 8-9 项 + FlagOS E2E（4 层 mini-LLM，§4.1） | ✗ 本报告无 |
-| thead-ppu | ☑ framework 层 8-9 项（mini-decoder + 概率图消费者）；e2e_flagos.py / run.py --consistency 缺证（dev 栈无 flag_gems） | ✗ 跟踪 #37（PR36 合并门槛） |
+| thead-ppu | ☑ framework 层 8-9 项（mini-decoder + 概率图消费者）；e2e_flagos.py / run.py --consistency 缺证（dev 栈无 flag_gems） | ✗ 跟踪 #37 |
+| **thead-ppu-c2** | —（同硬件 C1 已由 thead-ppu 覆盖） | ☑ 真实 vLLM EngineCore：MATH 路径 A1 命中 20；token 一致（[e2e_vllm_c2_thead-ppu-c2.json](e2e_vllm_c2_thead-ppu-c2.json)） |
 
 Should 项（三方对比中 FlagGems 缺席）已给出
 原因：无同语义（返回概率图）实现。

@@ -1,7 +1,7 @@
 # 算子总体报告: embedding（aten::embedding）
 
 > **当前汇总**：本页以下的当前交付为 P800/Kunlunxin、Cambricon MLU590 与
-> T-head PPU ZW810E。文件中的 Ascend910 段落是历史实验记录，保留用于追溯，
+> T-head PPU ZW810E（dev + **C2 真实 vLLM** 双栈）。文件中的 Ascend910 段落是历史实验记录，保留用于追溯，
 > 不计入当前平台矩阵。当前验证以本页的 P800/MLU/PPU 表和对应 `reports/*.json`
 > 为准；`README.md` 负责使用入口，`PLATFORM.md` 负责平台绑定，详细实验
 > 保留在 `reports/`。
@@ -10,9 +10,9 @@
 |---|---|
 | 算子名称 | `aten::embedding`（稠密查表 + dense 反向） |
 | 语义 | [reference.py](reference.py)（`weight[index]` 任意 index 形状；padding/scale_grad/sparse 不改前向） |
-| 当前硬件平台 | **3 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托）· thead-ppu / PPU ZW810E（厂商委托） |
+| 当前硬件平台 | **3 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托）· thead-ppu / PPU ZW810E（厂商委托 + C2） |
 | 路线 | **A1**（aten 拦截） |
-| 日期 / 状态 | 2026-10-23 / 当前三平台交付；Ascend910 记录见下方历史章节 |
+| 日期 / 状态 | 2026-10-23 三平台交付；2026-10-28 thead-ppu **C2 真实 vLLM PASS**；Ascend910 见下方历史章节 |
 
 ## 历史 Ascend910 记录
 
@@ -104,6 +104,7 @@ gather，行采集是厂商库强项，**生产委托是两平台一致的工程
 | 黄金 | `script/check_accuracy.py --impl thead-ppu --device cuda:6` | 174/174，worst=0（逐位） |
 | A1 op | `test/op_level.py thead-ppu` | 拦截 5 次；hooked=direct 逐位；dense/scale grad 0 error；sparse fwd 接受 / bwd 拒绝 |
 | 应用层 | `test/framework_level.py thead-ppu` | 拦截 8 次；logits 0 diff；贪心一致率 1.00（flag_gems 缺证, 纯 A1 拦截口径） |
+| **C2 真实 vLLM** | `script/e2e_vllm_c2.py`（profile `thead-ppu-c2`） | PASS：EngineCore 内 A1 命中 10；token 与基线一致（[reports/e2e_vllm_c2_thead-ppu-c2.json](reports/e2e_vllm_c2_thead-ppu-c2.json)） |
 | 性能 | `script/bench_perf.py --device cuda:6` | 见下表；gate `FAIL 0 · WARN 0` |
 | dispatch | `script/bench_dispatch.py --device cuda:6` | A1 − native ≈ **+0.016ms** |
 | 单测 | `pytest tests/unit -q` | 46 passed |

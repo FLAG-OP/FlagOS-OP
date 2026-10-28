@@ -133,3 +133,10 @@ python3 ops/sdpa_math/script/bench_perf.py --device cuda:6 --register \
 python3 scripts/perf_run.py --device thead-ppu --pattern ops.sdpa_math
 python3 scripts/perf_compare.py --device thead-ppu
 ```
+## 8. C2 真实 vLLM（thead-ppu-c2）
+
+2026-10-28 在真实引擎基座补齐 C2 证据：默认 flagos/FA3 路径**不**消费
+math composite；经显式 MATH 路径（sitecustomize 改
+`ALL_ATTENTION_FUNCTIONS["vllm"]`）在 EngineCore 内 A1 命中 **20** 次，
+token 与同路径基线一致。详见 [thead-ppu-c2.md](thead-ppu-c2.md) 与
+[e2e_vllm_c2_thead-ppu-c2.json](e2e_vllm_c2_thead-ppu-c2.json)。

@@ -33,11 +33,11 @@ packages:
   flagtree: "0.6.1+ppu3.6"
   vllm: "0.19.0+cu130"
 notes: |-
-  本栈无 flag_gems、无 vllm-plugin-fl；A2/framework 级证据计划由 thead-ci 镜像
-  （harbor.baai.ac.cn/flagos-dev/vllm-plugin-fl:v0.24.0-thead-ci，在用实例含
-  flag_gems 5.3.4 + 插件 0.3.0rc2.post1，vllm 0.24.0+empty、triton pip=3.5.0
-  与 import=3.6.0 自相矛盾待独立实例复核）第二 profile/锁补，仿 p800-kunlunxin
-  与 p800-kunlunxin-gems5 双 profile 先例。
+  本栈无 flag_gems、无 vllm-plugin-fl；A2/framework 级证据由 **thead-ppu-c2**
+  第二 profile/锁承接（2026-10-28 已交付，镜像
+  flagrelease_ppu_vllm024_gems_540:1012，含 flag_gems 5.4.0 + 插件 0.3.0rc2.post3 +
+  vllm 0.24.0；仿 p800-kunlunxin 与 p800-kunlunxin-gems5 双 profile 先例，
+  见 thead-ppu-c2.lock.yaml）。
   ⚠️ 基座缺陷：flagtree 0.6.1+ppu3.6 wheel 损坏——pip show 在册但 import
   ModuleNotFoundError；pip show -f 可见条目仅 dist-info 与 proton 两 bin；
   torch/triton 不受影响。

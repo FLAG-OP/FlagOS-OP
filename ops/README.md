@@ -38,7 +38,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 | 华为昇腾（`ascend`） | 部分交付 | 2 | `ascend910` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
 | 昆仑芯（`kunlunxin`） | 部分交付 | 3 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
-| 平头哥（`thead`） | 部分交付 | 3 | `thead-ppu` |
+| 平头哥（`thead`） | 部分交付 | 3 | `thead-ppu` · `thead-ppu-c2` |
 | 燧原 GCU（`enflame`） | 规划中 | 0 | 计划覆盖：GCU300 / GCU400 / GCU410 |
 | 壁仞（`biren`） | 规划中 | 0 | 待首个交付算子确定 |
 

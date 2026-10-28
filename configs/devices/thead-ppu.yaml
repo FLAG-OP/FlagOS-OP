@@ -26,7 +26,7 @@ device:
   #   （换算说明见 docs/device-profiles.md「昆仑芯卡号与入口选择」表）。
   torch_device: "cuda:6"          # kernel/op 与算子框架层测试设备（PPU 经 CUDA 兼容路径直曝 16 卡 cuda:0-15）
   visible_devices: "6,7"          # 中央 framework harness 暴露的物理卡对（实测 2MiB/0% 空闲; 避 4/11 100%、5 占 76G）
-                                  # 中央 vLLM framework 证据仍待 thead-ci 第二 profile 承接（model_path 占位）
+                                  # 中央 vLLM framework 证据由 thead-ppu-c2 第二 profile 承接（model_path 占位）
   dispatch_key: CUDA              # 中央 A1 注册 key（基键口径, PR36 条目 2 取证后有意保留）
                                   # 中央消费点: common/device.py → tests/framework_level/
                                   #   _harness.py|_aten_harness.py 写 A1_DISPATCH_KEY →
@@ -52,7 +52,7 @@ framework:
   load_format: safetensors
   seed: 20260823
   # 冒烟模型未就绪: 用 FLAGOS_MODEL_PATH 覆盖（见 docs/device-profiles.md#模型路径覆盖）；
-  # framework 级证据待 thead-ci 栈 profile。
+  # framework 级证据由 thead-ppu-c2 栈 profile 承接。
   model_path: /path/to/placeholder-model
   quirks:
     keep_default_prefer: true     # known-issues #1: 禁设 VLLM_FL_PREFER=flagos（PPU 栈无该插件配置，保守沿用）

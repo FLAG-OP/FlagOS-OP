@@ -1,0 +1,63 @@
+# thead-ppu-c2 环境锁定（2026-10-28 flagos-ppu-c2 实测采集）
+#
+# 用途: 真实 vLLM C2 栈的环境核对
+#       python3 scripts/check_env.py --device thead-ppu-c2
+#       （dev 基座锁仍在 thead-ppu.lock.yaml；双 profile 先例:
+#        p800-kunlunxin 与 p800-kunlunxin-gems5）
+# wt-2026-10-26-fix  wt <31944766+TruNcat3@users.noreply.github.com>
+name: thead-ppu-c2
+schema: 1
+description: T-Head PPU ZW810E 真实 vLLM C2 栈（flag_gems + vllm-plugin-FL）实测版本
+collected_at: "2026-10-28"
+hardware_collected_at: "2026-10-28"
+family: thead
+scope:
+  - ops/embedding C2（真实 vLLM EngineCore 消费 aten::embedding）
+  - ops/sdpa_math C2（真实 vLLM EngineCore 经显式 MATH 路径消费
+    aten::_scaled_dot_product_attention_math）
+  - framework 级冒烟（tiny Llama / FLAGOS_MODEL_PATH 覆盖）
+hardware:
+  model: PPU-ZW810E
+  count: 16
+  memory_per_device: 98304 MiB
+  driver: "1.5.1-1d747a"
+  firmware: "未暴露版本"
+  runtime: "HGGC 13.0（容器内 PPU-SMI 1.28）"
+  monitoring: "ppu-smi"
+  visible_device: "容器 --privileged 16卡全见；C2 用卡 10,14（实测 10MiB/0% 空闲）"
+system:
+  os: Linux
+  kernel: "5.10.134-17.2.al8.x86_64"
+python: "3.12.3"
+packages:
+  torch: "2.11.0+v0.1.0.ppu2.1.0.oe"
+  # pip metadata 3.5.0+gitcc5446cf 与 import triton.__version__=3.6.0 不一致
+  # （site-packages 里是 3.6.0 源码树；与 thead-ppu.lock 同型矛盾，记录双方）。
+  triton: "3.5.0+gitcc5446cf"
+  flagtree: "0.7.0+ppu.gitf51dde96"
+  flag_gems: "5.4.0+g0d95c2092"
+  vllm: "0.24.0+empty"
+  vllm-plugin-fl: "0.3.0rc2.post3"
+  transformers: "5.19.0"
+notes: |-
+  镜像 flagrelease-public/flagrelease_ppu_vllm024_gems_540:1012（容器 flagos-ppu-c2）。
+  vllm 与 vllm-plugin-FL 为 editable 安装（/opt/vllm、/opt/vllm-plugin-FL）。
+  FL 插件激活后默认 attention_backend=flagos→vendor→reference（FA3 wheel），
+  **默认路径不消费** aten::_scaled_dot_product_attention_math；sdpa_math C2
+  用 sitecustomize 把 transformers backend 的 ALL_ATTENTION_FUNCTIONS["vllm"]
+  换成 F.sdpa+MATH 作为显式消费路径（见 ops/sdpa_math/script/e2e_vllm_c2.py）。
+  模型权重不在镜像内；C2 证据用 _aten_harness.ensure_model() 生成的
+  tiny Llama /tmp/flagos_tiny_llama（LlamaForCausalLM，hidden 64、2 层）。
+  卡况（2026-10-28 快照）: 空闲 2,6,7,10,14（10MiB/0%）；4/5/12/13/15
+  高占用勿用。torch import 版本 2.11.0+v0.1.0.ppu2.1.0.oe（与 pip metadata 一致）。
+evidence:
+  - path: ops/embedding/reports/e2e_vllm_c2_thead-ppu-c2.json
+    note: embedding C2 真实 vLLM EngineCore 双跑（hits=10，token 与基线一致）
+  - path: ops/sdpa_math/reports/e2e_vllm_c2_thead-ppu-c2.json
+    note: sdpa_math C2 真实 vLLM EngineCore 双跑（hits=20，token 与 MATH 基线一致）
+  - path: ops/embedding/reports/thead-ppu-c2.md
+    note: embedding C2 叙述报告
+  - path: ops/sdpa_math/reports/thead-ppu-c2.md
+    note: sdpa_math C2 叙述报告
+  - path: docs/base-images.md
+    note: 本锁对应容器镜像登记（flagrelease_ppu_vllm024_gems_540:1012）
