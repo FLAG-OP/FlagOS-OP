@@ -20,6 +20,10 @@ OUTPUT_PATH = ROOT / "ops" / "README.md"
 EXPECTED_SCHEMA = 1
 VALID_PLATFORM_STATUSES = {"partial", "planned"}
 VALID_GROUP_KINDS = {"core", "foundation"}
+# C0 契约 / C1 最小消费者 / C2 真实引擎 / C2-routing-boundary（真实引擎
+# 可跑但默认路由未命中目标算子，见 docs/testing.md 与 issue #38/#41）
+VALID_EVIDENCE_LEVELS = {"C0", "C1", "C2", "C2-routing-boundary"}
+C2_LEVELS = {"C2", "C2-routing-boundary"}
 
 
 def load_catalog(path: Path = CATALOG_PATH) -> dict:
@@ -30,6 +34,41 @@ def _require_mapping(value, name: str) -> dict:
     if not isinstance(value, dict) or not value:
         raise ValueError(f"{name} must be a non-empty mapping")
     return value
+
+
+def _validate_evidence(op_name: str, family: str, platform: dict,
+                       root: Path) -> None:
+    """校验 platforms.<family>.evidence（issue #41）。
+
+    - level 必须在 C0/C1/C2/C2-routing-boundary；
+    - C2 / C2-routing-boundary 必须提供 evidence.report 且路径存在；
+    - 若提供 report，无论 level 都必须存在（禁止占位证据）。
+    """
+    evidence = platform.get("evidence")
+    if evidence is None:
+        return
+    if not isinstance(evidence, dict) or not evidence:
+        raise ValueError(
+            f"operator {op_name}/{family}.evidence must be a non-empty mapping")
+    level = evidence.get("level")
+    if level not in VALID_EVIDENCE_LEVELS:
+        raise ValueError(
+            f"operator {op_name}/{family}.evidence.level must be one of "
+            f"{sorted(VALID_EVIDENCE_LEVELS)}, got {level!r}")
+    report = evidence.get("report")
+    if level in C2_LEVELS and not report:
+        raise ValueError(
+            f"operator {op_name}/{family} evidence.level={level} requires "
+            "evidence.report (真实引擎证据必须可追溯)")
+    if report is not None:
+        if not isinstance(report, str) or not report:
+            raise ValueError(
+                f"operator {op_name}/{family}.evidence.report must be a "
+                "non-empty string")
+        if not (root / report).is_file():
+            raise ValueError(
+                f"operator {op_name}/{family}.evidence.report does not "
+                f"exist: {report}")
 
 
 def validate_catalog(catalog: dict, root: Path = ROOT) -> None:
@@ -136,6 +175,7 @@ def validate_catalog(catalog: dict, root: Path = ROOT) -> None:
                     f"{unknown_profiles}"
                 )
             family_counts[family] += 1
+            _validate_evidence(name, family, platform, root)
         if len(platforms) > 1:
             operator_dir = root / "ops" / directory
             if not (operator_dir / "PLATFORM.md").is_file():
@@ -210,7 +250,8 @@ def _core_rows(catalog: dict) -> list[str]:
             continue
         platforms = " · ".join(
             f"{families[family]['display_name']}"
-            f"（{' / '.join(platform['profiles'])}）"
+            f"（{' / '.join(platform['profiles'])}"
+            f"{_evidence_suffix(platform)}）"
             for family, platform in op["platforms"].items()
         )
         rows.append(
@@ -218,6 +259,14 @@ def _core_rows(catalog: dict) -> list[str]:
             f"{op['key_result']} |"
         )
     return rows
+
+
+def _evidence_suffix(platform: dict) -> str:
+    evidence = platform.get("evidence") or {}
+    level = evidence.get("level")
+    if not level:
+        return ""
+    return f" · {level}"
 
 
 def _foundation_rows(catalog: dict, group: str) -> list[str]:

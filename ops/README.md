@@ -48,9 +48,9 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 算子 | 作用 | 平台 | 关键结论 |
 |---|---|---|---|
-| [sdpa](sdpa/) | 标准 scaled-dot-product attention 前向路径。 | 华为昇腾（ascend910） · 昆仑芯（p800-kunlunxin） · 寒武纪（mlu590） | 三平台黄金覆盖 397/397。 |
-| [sdpa_math](sdpa_math/) | 私有 SDPA math 后端，同时返回完整概率图。 | 华为昇腾（ascend910） · 昆仑芯（p800-kunlunxin） | 四份实现通过同一组 175 例黄金数据。 |
-| [embedding](embedding/) | 稠密 embedding 前向和 dense backward。 | 昆仑芯（p800-kunlunxin） · 寒武纪（cambricon） | 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。 |
+| [sdpa](sdpa/) | 标准 scaled-dot-product attention 前向路径。 | 华为昇腾（ascend910 · C1） · 昆仑芯（p800-kunlunxin · C1） · 寒武纪（mlu590 · C1） | 三平台黄金覆盖 397/397。 |
+| [sdpa_math](sdpa_math/) | 私有 SDPA math 后端，同时返回完整概率图。 | 华为昇腾（ascend910 · C2-routing-boundary） · 昆仑芯（p800-kunlunxin · C1） | 四份实现通过同一组 175 例黄金数据。 |
+| [embedding](embedding/) | 稠密 embedding 前向和 dense backward。 | 昆仑芯（p800-kunlunxin · C1） · 寒武纪（cambricon · C1） | 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。 |
 
 ## 基础 ATen 算子
 
