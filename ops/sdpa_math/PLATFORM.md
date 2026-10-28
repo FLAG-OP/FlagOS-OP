@@ -22,6 +22,10 @@
 - 与 sdpa 全量版的关系：本算子是 `_scaled_dot_product_math` 的
   exact-P 分解路线；形状路由建议沿用 sdpa `kernel/auto_dispatch.py`
   的截流范式（大 S 走原生）
+- **C2（vLLM-Ascend）路由边界**（issue #38，2026-10-28）: 真实前向
+  注意力走 `npu_fusion_attention`，math 后端 forward_hits=0；
+  A1 注册链 probe 可用。sitecustomize 全进程注入与 NPU fork
+  冲突（见 [reports/c2_ascend910.md](reports/c2_ascend910.md)）。
 
 ## 3. p800-kunlunxin 绑定
 

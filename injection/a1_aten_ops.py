@@ -93,6 +93,38 @@ def _wrap(fn, saved):
     return wrapper
 
 
+def _maybe_counter(op: str):
+    """若设置了 FLAGOS_C2_COUNT_DIR，则返回 (counter, dump_fn)。
+
+    计数文件按 pid 分片（docs/testing.md: TP worker 并发写同一文件会
+    低估约 35 倍）。dump 在 atexit 与每次递增后触发，进程崩溃也能留痕。
+    """
+    count_dir = os.environ.get("FLAGOS_C2_COUNT_DIR")
+    if not count_dir:
+        return None, None
+    import atexit
+    import json as _json
+    from datetime import datetime, timezone
+
+    cpath = Path(count_dir) / f"{op}_hits_{os.getpid()}.json"
+    Path(count_dir).mkdir(parents=True, exist_ok=True)
+    counter = {"n": 0}
+
+    def dump():
+        cpath.write_text(_json.dumps({
+            "pid": os.getpid(),
+            "op": op,
+            "aten": "aten::_scaled_dot_product_attention_math"
+                    if op == "sdpa_math" else op,
+            "hits": counter["n"],
+            "dumped_at": datetime.now(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"),
+        }))
+
+    atexit.register(dump)
+    return counter, dump
+
+
 def register_all(dispatch_key: str = "PrivateUse1",
                  root: str | None = None) -> list[str]:
     """注册本仓库的 A1 aten 算子，返回成功注册的算子名列表。"""
@@ -108,7 +140,15 @@ def register_all(dispatch_key: str = "PrivateUse1",
             if callable(fn) and name.endswith("_aten"):
                 setattr(mod, name, _wrap(fn, saved))
         try:
-            mod.register_a1(dispatch_key)
+            counter, _dump = _maybe_counter(op)
+            if counter is not None:
+                try:
+                    mod.register_a1(dispatch_key, counter=counter)
+                except TypeError:
+                    # 个别算子 register_a1 未升级 counter 参数时退回无计数
+                    mod.register_a1(dispatch_key)
+            else:
+                mod.register_a1(dispatch_key)
             registered.append(op)
         except Exception:
             pass

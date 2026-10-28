@@ -3,7 +3,10 @@
 > **职责与证据等级**：本页是当前验证矩阵；`README.md` 负责使用入口，
 > `PLATFORM.md` 负责平台绑定，`reports/` 保存带日期的实验和原始数据。
 > 当前为 Ascend910/P800 两个硬件交付，CPU 仅作 ATen 对照。FlagOS E2E 使用
-> mini-LLM harness，不等同于真实 vLLM；真实 vLLM 仍待专门环境复验。
+> mini-LLM harness（C1），不等同于真实 vLLM。**C2（vLLM-Ascend）已实测**:
+> 双跑完成、输出逐位一致，但默认路由经 `npu_fusion_attention`、
+> math 后端 **forward_hits=0**（routing boundary，issue #38）——
+> 详见 [reports/c2_ascend910.md](reports/c2_ascend910.md)。
 
 > 定位: 一页看全一个算子——实现矩阵、验证矩阵、关键数字。
 > 分册在 [reports/](reports/)。

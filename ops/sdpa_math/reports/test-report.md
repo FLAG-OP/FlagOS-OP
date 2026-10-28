@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 算子名称 / 路线 / 级别 | `aten::_scaled_dot_product_attention_math` / **A1** / Triton（NPU）+ P800 fast（P800）+ torch（CPU/fallback） |
-| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `cpu` / 2026-09-30~10-02 |
+| 目标设备 / 测试日期 | `ascend910` · `p800-kunlunxin` · `cpu` / 2026-09-30~10-02 · C2 补测 2026-10-28 |
 | 结论 | **通过**（Must 清单全勾：必测矩阵 ☑ · 哨兵 ☑ · 黄金 100% ☑ · 三层全绿 ☑ · perf 门禁 FAIL 0 ☑ · FlagOS E2E ☑ · 四件套 ☑） |
 
 ## 1. 测试范围
@@ -18,6 +18,7 @@
 | 语义证据 | ☑ | `probes/native_semantics.py [ascend910\|cpu]` | 6 节全过（schema / dropout 双规则表 / bool 怪癖 / 冲突边界 / F.sdpa 参数形态 / 注册键） |
 | 跨层一致性 | ☑ | 黄金生成的三重互验（§3） | 参考 vs `F.sdpa(MATH)` vs 原生直调 vs 自洽式，全一致 |
 | FlagOS E2E | ☑ | `script/e2e_flagos.py` | PASS：4 层 mini-LLM / 前向 / 反向 / 生成 / 概率图熵正则（§4.1） |
+| C2 真实 vLLM-Ascend | ☑ | `script/c2_real_vllm_ascend.py` | **routing boundary**：双跑 OK、token_ids 逐位一致；A1 probe 命中 1；真实前向 forward_hits=0（`npu_fusion_attention`，#19）。见 [c2_ascend910.md](c2_ascend910.md) |
 | 一键 | ☑ | `python3 example.py [ascend910\|cpu\|p800-kunlunxin]` | 三层全绿 |
 
 ## 2. 环境

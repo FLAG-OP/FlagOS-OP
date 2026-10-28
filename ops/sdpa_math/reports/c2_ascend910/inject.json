@@ -1,0 +1,36 @@
+{
+  "mode": "inject",
+  "ok": true,
+  "torch": "2.10.0+cpu",
+  "torch_npu": "2.10.0",
+  "npu_available": true,
+  "npu_count": 16,
+  "registered_libs": 2,
+  "vllm": "0.20.2",
+  "vllm_ascend": "source",
+  "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
+  "init_s": 16.12,
+  "generate_s": 0.37,
+  "text": " the city of Paris. It is the",
+  "token_ids": [
+    260,
+    2240,
+    282,
+    7042,
+    30,
+    657,
+    314,
+    260
+  ],
+  "forward_hits_before_probe": 0,
+  "probe_hits_after_direct_call": 1,
+  "probe_out_shape": [
+    1,
+    4,
+    8,
+    16
+  ],
+  "probe_out_dtype": "torch.float16",
+  "rc": 0,
+  "wall_s": 37.65
+}

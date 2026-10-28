@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "date": "2026-10-28T14:45:27Z",
+  "profile": "ascend910",
+  "engine": "vllm-ascend",
+  "commit": "726df053aef664cef6cd176447de7b5d75aab2d3",
+  "model": "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "prompt": "The capital of France is",
+  "python": "3.11.15",
+  "baseline": {
+    "mode": "baseline",
+    "ok": true,
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0",
+    "npu_available": true,
+    "npu_count": 16,
+    "vllm": "0.20.2",
+    "vllm_ascend": "source",
+    "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
+    "init_s": 12.48,
+    "generate_s": 0.38,
+    "text": " the city of Paris. It is the",
+    "token_ids": [
+      260,
+      2240,
+      282,
+      7042,
+      30,
+      657,
+      314,
+      260
+    ],
+    "rc": 0,
+    "wall_s": 24.81
+  },
+  "inject": {
+    "mode": "inject",
+    "ok": true,
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0",
+    "npu_available": true,
+    "npu_count": 16,
+    "registered_libs": 2,
+    "vllm": "0.20.2",
+    "vllm_ascend": "source",
+    "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
+    "init_s": 16.12,
+    "generate_s": 0.37,
+    "text": " the city of Paris. It is the",
+    "token_ids": [
+      260,
+      2240,
+      282,
+      7042,
+      30,
+      657,
+      314,
+      260
+    ],
+    "forward_hits_before_probe": 0,
+    "probe_hits_after_direct_call": 1,
+    "probe_out_shape": [
+      1,
+      4,
+      8,
+      16
+    ],
+    "probe_out_dtype": "torch.float16",
+    "rc": 0,
+    "wall_s": 37.65
+  },
+  "hit_files": [
+    {
+      "pid": 2632222,
+      "op": "sdpa_math",
+      "aten": "aten::_scaled_dot_product_attention_math",
+      "hits": 1,
+      "dumped_at": "2026-10-28T14:45:21Z"
+    }
+  ],
+  "forward_hits": 0,
+  "total_hits_all_incl_probe": 1,
+  "probe_hits_after_direct_call": 1,
+  "outputs_equal": true,
+  "c2_status": "c2-routing-boundary",
+  "notes": [
+    "A1 注册链在 NPU 进程内可用（probe 命中），但真实前向 forward_hits=0：注意力经 npu_fusion_attention，不调用 aten math 后端（known-issues #19）。不把默认路由声明为 C2 命中。另: sitecustomize 全进程注入在 NPU fork EngineCore 上触发 torch.npu 再初始化失败，本 harness 仅做主进程 probe（见 reports/c2_ascend910.md）。"
+  ]
+}
