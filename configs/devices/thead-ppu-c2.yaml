@@ -1,0 +1,46 @@
+# 设备 Profile: 平头哥 PPU ZW810E — 真实 vLLM C2 栈
+# 与 thead-ppu 同硬件；仅软件栈不同（含 flag_gems + vllm-plugin-FL，见
+# configs/env/thead-ppu-c2.lock.yaml）。双 profile 先例: p800-kunlunxin{,-gems5}。
+# 用途: embedding / sdpa_math 的 C2（真实 vLLM EngineCore）证据复跑。
+# wt-2026-10-26-fix  wt <31944766+TruNcat3@users.noreply.github.com>
+name: thead-ppu-c2
+vendor: thead
+
+auto_detect:
+  module: flagtree                 # 本栈 flagtree 可 import（dev 基座 wheel 损坏不可 import）
+  enabled: false                   # 同硬件可挂 dev / C2 多软件栈，探测不区分版本——仅显式选择
+
+device:
+  # 设备编号口径与 thead-ppu 相同: 字段均为物理卡号（见 thead-ppu.yaml 注释）。
+  # 2026-10-28 C2 实测用卡 10,14（10MiB/0% 空闲；4/5/12/13 占用勿用）。
+  torch_device: "cuda:10"          # kernel/op 层测试设备
+  visible_devices: "10,14"         # framework / C2 e2e 暴露的物理卡对
+  dispatch_key: CUDA               # 中央 A1 注册 key（与 thead-ppu 同基键口径）
+
+framework:
+  tensor_parallel_size: 1          # C2 tiny-Llama 冒烟用 tp=1（真实 8B 可改 2）
+  distributed_executor_backend: mp
+  max_model_len: 4096
+  max_num_seqs: 50
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  enable_prefix_caching: false
+  load_format: safetensors
+  seed: 20260823
+  # C2 证据使用的 tiny Llama 由 tests/framework_level/_aten_harness.ensure_model()
+  # 生成（默认 /tmp/flagos_tiny_llama）。换真实权重用 FLAGOS_MODEL_PATH 覆盖。
+  model_path: /tmp/flagos_tiny_llama
+  quirks:
+    keep_default_prefer: true      # 禁设 VLLM_FL_PREFER=flagos（沿用 thead-ppu 保守口径）
+    require_two_visible_devices: false
+    # sdpa_math C2 需要 model_impl=transformers（sitecustomize 才能改
+    # ALL_ATTENTION_FUNCTIONS["vllm"] 走 MATH）；embedding C2 用原生 vLLM。
+    # e2e 脚本自行传参，不强制写入中央 harness。
+
+vendor_delegate: null
+
+reference_fallback: reference.torch
+
+# 厂商硬件 kernel 直测清单（本 profile 仅承接 C2 framework 证据，不新增）
+vendor_kernels: []

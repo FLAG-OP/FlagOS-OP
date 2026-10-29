@@ -1,0 +1,147 @@
+{
+  "device": "cuda:6",
+  "device_name": "PPU-ZW810E",
+  "is_ppu": true,
+  "schemas": {
+    "_scaled_dot_product_flash_attention": "aten::_scaled_dot_product_flash_attention(Tensor query, Tensor key, Tensor value, float dropout_p=0., bool is_causal=False, bool return_debug_mask=False, *, float? scale=None) -> (Tensor output, Tensor logsumexp, Tensor cum_seq_q, Tensor cum_seq_k, SymInt max_q, SymInt max_k, Tensor rng_state, Tensor unused, Tensor debug_attn_mask)",
+    "_scaled_dot_product_efficient_attention": "aten::_scaled_dot_product_efficient_attention(Tensor query, Tensor key, Tensor value, Tensor? attn_bias, bool compute_log_sumexp, float dropout_p=0., bool is_causal=False, *, float? scale=None) -> (Tensor output, Tensor log_sumexp, Tensor philox_seed, Tensor philox_offset)"
+  },
+  "exact_p_half": [
+    {
+      "tag": "basic",
+      "dtype": "float16",
+      "mask": null,
+      "out_err": 0.0001220703125,
+      "P_err": 6.103515625e-05,
+      "ok_half": true
+    },
+    {
+      "tag": "basic",
+      "dtype": "bfloat16",
+      "mask": null,
+      "out_err": 0.0009765625,
+      "P_err": 0.0006103515625,
+      "ok_half": true
+    },
+    {
+      "tag": "causal",
+      "dtype": "float16",
+      "mask": null,
+      "out_err": 0.00048828125,
+      "P_err": 0.00048828125,
+      "ok_half": true
+    },
+    {
+      "tag": "causal",
+      "dtype": "bfloat16",
+      "mask": null,
+      "out_err": 0.00390625,
+      "P_err": 0.001953125,
+      "ok_half": true
+    },
+    {
+      "tag": "gqa",
+      "dtype": "float16",
+      "mask": null,
+      "out_err": 0.00048828125,
+      "P_err": 0.00048828125,
+      "ok_half": true
+    },
+    {
+      "tag": "gqa",
+      "dtype": "bfloat16",
+      "mask": null,
+      "out_err": 0.00390625,
+      "P_err": 0.00390625,
+      "ok_half": true
+    },
+    {
+      "tag": "vit-d80",
+      "dtype": "float16",
+      "mask": null,
+      "out_err": 0.00048828125,
+      "P_err": 0.000244140625,
+      "ok_half": true
+    },
+    {
+      "tag": "vit-d80",
+      "dtype": "bfloat16",
+      "mask": null,
+      "out_err": 0.00390625,
+      "P_err": 0.001953125,
+      "ok_half": true
+    },
+    {
+      "tag": "boolmask",
+      "dtype": "float16",
+      "mask": "bool",
+      "out_err": 0.0001220703125,
+      "P_err": 9.1552734375e-05,
+      "ok_half": true
+    },
+    {
+      "tag": "boolmask",
+      "dtype": "bfloat16",
+      "mask": "bool",
+      "out_err": 0.0009765625,
+      "P_err": 0.0008544921875,
+      "ok_half": true
+    },
+    {
+      "tag": "floatmask",
+      "dtype": "float16",
+      "mask": "float",
+      "out_err": 0.0001220703125,
+      "P_err": 0.00617218017578125,
+      "ok_half": true
+    },
+    {
+      "tag": "floatmask",
+      "dtype": "bfloat16",
+      "mask": "float",
+      "out_err": 0.0009765625,
+      "P_err": 0.00616455078125,
+      "ok_half": true
+    }
+  ],
+  "fp32_delegate": [
+    {
+      "path": "flash",
+      "error": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "path": "flash-mild",
+      "error": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    }
+  ],
+  "flash_lse_meta": {
+    "out_shape": [
+      1,
+      2,
+      16,
+      8
+    ],
+    "lse_shape": [
+      1,
+      2,
+      16
+    ],
+    "lse_dtype": "torch.float32",
+    "out_contiguous": true
+  },
+  "efficient_lse_meta": {
+    "out_shape": [
+      1,
+      2,
+      16,
+      8
+    ],
+    "lse_shape": [
+      1,
+      2,
+      32
+    ],
+    "lse_dtype": "torch.float32",
+    "out_contiguous": false
+  }
+}

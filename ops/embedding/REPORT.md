@@ -1,17 +1,18 @@
 # 算子总体报告: embedding（aten::embedding）
 
-> **当前汇总**：本页以下的当前交付为 P800/Kunlunxin 与 Cambricon MLU590。
-> 文件中的 Ascend910 段落是历史实验记录，保留用于追溯，不计入当前平台矩阵。
-> 当前验证以本页的 P800/MLU 表和对应 `reports/*.json` 为准；`README.md` 负责
-> 使用入口，`PLATFORM.md` 负责平台绑定，详细实验保留在 `reports/`。
+> **当前汇总**：本页以下的当前交付为 P800/Kunlunxin、Cambricon MLU590 与
+> T-head PPU ZW810E（dev + **C2 真实 vLLM** 双栈）。文件中的 Ascend910 段落是历史实验记录，保留用于追溯，
+> 不计入当前平台矩阵。当前验证以本页的 P800/MLU/PPU 表和对应 `reports/*.json`
+> 为准；`README.md` 负责使用入口，`PLATFORM.md` 负责平台绑定，详细实验
+> 保留在 `reports/`。
 
 | 项 | 值 |
 |---|---|
 | 算子名称 | `aten::embedding`（稠密查表 + dense 反向） |
 | 语义 | [reference.py](reference.py)（`weight[index]` 任意 index 形状；padding/scale_grad/sparse 不改前向） |
-| 当前硬件平台 | **2 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托） |
+| 当前硬件平台 | **3 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托）· thead-ppu / PPU ZW810E（厂商委托 + C2） |
 | 路线 | **A1**（aten 拦截） |
-| 日期 / 状态 | 2026-09-24 / 当前两平台交付；Ascend910 记录见下方历史章节 |
+| 日期 / 状态 | 2026-10-23 三平台交付；2026-10-28 thead-ppu **C2 真实 vLLM PASS**；Ascend910 见下方历史章节 |
 
 ## 历史 Ascend910 记录
 
@@ -62,7 +63,8 @@ gather，行采集是厂商库强项，**生产委托是两平台一致的工程
 |---|---|---|---|
 | P800 厂商委托 | [kernel/p800_kunlunxin.py](kernel/p800_kunlunxin.py) | ✅ | forward 走 native `index_select`；dense backward 走 native `embedding_backward`；XPU 缺 `scale_grad_by_freq` → 自实现 inverse-frequency 补偿 |
 | Cambricon MLU 委托 | [kernel/cambricon.py](kernel/cambricon.py) | ✅ | forward 走 native `index_select`；backward 走 native `embedding_backward`（`padding_idx`/`scale_grad_by_freq` 完整，无需补偿）；`sparse=True` backward 显式拒绝 |
-| 多平台门面 | [kernel/platform.py](kernel/platform.py) | ✅ | 按 `tensor.device.type` 路由后端，附 `dispatch_key_for` / `synchronize`；测试与 A1 注册共用 |
+| T-head PPU 委托 | [kernel/thead_ppu.py](kernel/thead_ppu.py) | ✅ | forward `index_select`；backward 走 native `embedding_backward`（原生完整、零补偿）；sparse 拒绝 |
+| 多平台门面 | [kernel/platform.py](kernel/platform.py) | ✅ | 按 `tensor.device.type` 路由后端（cuda 双候选按栈身份，进程级缓存），附 `dispatch_key_for` / `synchronize` |
 | Triton 级 | [kernel/triton_level.py](kernel/triton_level.py) | ✅ 探针 | 正确但比 native gather 慢，未接入生产 |
 | torch 级 | [kernel/torch_level.py](kernel/torch_level.py) | ✅ | 独立 index-select 参考/对照 |
 | 硬件级 | [kernel/hardware_level/README.md](kernel/hardware_level/README.md) | ⬜ 置空 | native row-gather 已达到生产水位，暂无重写收益 |
@@ -91,6 +93,22 @@ gather，行采集是厂商库强项，**生产委托是两平台一致的工程
 | 性能 | `script/bench_perf.py --device mlu:0` | 见下表；gate `FAIL 0 · WARN 0 · NEW 0` |
 | dispatch | `script/bench_dispatch.py --device mlu:0` | A1 − native ≈ **+0.059ms**（3 轮 0.059/0.060/0.061） |
 | 单测 | `pytest tests/unit -q` | 20 passed |
+
+## 验证矩阵（三层，thead-ppu / PPU ZW810E）
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel forward | `test/kernel_level.py thead-ppu` | 20/20，FP32/FP16/BF16 全部 0 error |
+| kernel backward | 同上 | 6/6 全部 `err=0`（原生直通, 含 `scale_grad_by_freq`）；守卫 2 项通过 |
+| tail 补充（§2d） | `test/kernel_level_tail_thead_ppu.py thead-ppu` | 37/37：3072/5000/5120 × 3 dtype × 3 seed + zeros/large/boundary 全 err=0 |
+| 黄金 | `script/check_accuracy.py --impl thead-ppu --device cuda:6` | 174/174，worst=0（逐位） |
+| A1 op | `test/op_level.py thead-ppu` | 拦截 5 次；hooked=direct 逐位；dense/scale grad 0 error；sparse fwd 接受 / bwd 拒绝 |
+| 应用层 | `test/framework_level.py thead-ppu` | 拦截 8 次；logits 0 diff；贪心一致率 1.00（flag_gems 缺证, 纯 A1 拦截口径） |
+| **C2 真实 vLLM** | `script/e2e_vllm_c2.py`（profile `thead-ppu-c2`） | PASS：EngineCore 内 A1 命中 10；token 与基线一致（[reports/e2e_vllm_c2_thead-ppu-c2.json](reports/e2e_vllm_c2_thead-ppu-c2.json)） |
+| 性能 | `script/bench_perf.py --device cuda:6` | 见下表；gate `FAIL 0 · WARN 0` |
+| dispatch | `script/bench_dispatch.py --device cuda:6` | A1 − native ≈ **+0.016ms** |
+| 单测 | `pytest tests/unit -q` | 46 passed |
+| 平台报告 | [reports/thead-ppu.md](reports/thead-ppu.md) | 首测/验证/性能全记录 |
 
 ## 性能速览（fp16）
 
@@ -141,19 +159,42 @@ cambricon backward 16k×D128：
 `ops.embedding.native.forward` 0.045ms / 187.9 GB/s；`perf/baselines/cambricon.json`
 共 33 条 case。
 
+thead-ppu forward（fp16，[perf_fp16_thead-ppu.json](reports/perf_fp16_thead-ppu.json)）：
+
+| shape | ours | native | ours/native |
+|---|---:|---:|---:|
+| 1k×D128 | 0.0286ms | 0.0239ms | 0.833x |
+| 16k×D128 | 0.0359ms | 0.0307ms | 0.855x |
+| 131k×D128 | 0.1033ms | 0.0982ms | 0.951x |
+| 16k×D512 | 0.0359ms | 0.0307ms | 0.855x |
+| vocab128k 16k×D128 | 0.0360ms | 0.0275ms | 0.764x |
+
+thead-ppu backward 16k×D128：
+
+| mode | ours | native | ours/native |
+|---|---:|---:|---:|
+| dense | 0.1669ms | 0.1597ms | 0.957x |
+| scale_grad_by_freq | 0.1842ms | 0.1771ms | 0.962x |
+
+性能门禁（thead-ppu）：`ops.embedding.thead-ppu.forward` 0.033ms / 254.97 GB/s，
+`ops.embedding.native.forward` 0.030ms / 286.90 GB/s；`perf/baselines/thead-ppu.json`
+共 6 条 case（含 T1 sdpa 4 条）。
+
 ## 结论与遗留
 
 ## 结论
 
-当前两平台按 MERGE 流程合入：生产路径与 P800 同构（厂商委托），
+当前三平台按 MERGE 流程合入：生产路径与 P800 同构（厂商委托），
 三层 + 黄金 + 性能全绿，委托实现 err=0.0。Triton 探针数据进一步
-佐证两平台一致的结论——embedding 峰值属厂商库，Triton 价值在
+佐证各平台一致的结论——embedding 峰值属厂商库，Triton 价值在
 长尾与可移植（若未来需要自定义 padding 语义/量化查表再启用）。
 
-第二平台（cambricon）进一步印证：**原生算子能力决定实现复杂度**——MLU 的
-`embedding_backward` 完整，MLU 后端因此是纯委托（零补偿代码）；XPU 缺
-`scale_grad_by_freq`，P800 后端才需要 inverse-frequency 补偿。两平台共用同一
-套三层测试与 174 条黄金数据，逐位判据一致。
+第二平台（cambricon）与第三平台（thead-ppu）进一步印证：**原生算子能力
+决定实现复杂度**——MLU/PPU 的 `embedding_backward` 完整，后端因此是纯
+委托（零补偿代码）；XPU 缺 `scale_grad_by_freq`，P800 后端才需要
+inverse-frequency 补偿。三平台共用同一套三层测试与 174 条黄金数据，
+逐位判据一致。thead-ppu 的接入同时验证了 cuda 双候选路由（XMLIR/PPU
+按栈身份探测）——未来再有伪装 CUDA 的栈按 MERGE.md 探测链扩展即可。
 
 ## 交付物清单
 
@@ -163,6 +204,7 @@ cambricon backward 16k×D128：
 | 语义参考 | [reference.py](reference.py) |
 | P800 backend | [kernel/p800_kunlunxin.py](kernel/p800_kunlunxin.py) |
 | Cambricon backend | [kernel/cambricon.py](kernel/cambricon.py) |
+| T-head PPU backend | [kernel/thead_ppu.py](kernel/thead_ppu.py) |
 | 多平台门面 | [kernel/platform.py](kernel/platform.py) |
 | A1 注册 | [register.py](register.py) |
 | 一键三层 | [example.py](example.py) |
@@ -171,9 +213,12 @@ cambricon backward 16k×D128：
 | 性能报告 | [reports/performance.md](reports/performance.md) |
 | 开发报告 | [reports/development.md](reports/development.md) |
 | cambricon 平台报告 | [reports/cambricon.md](reports/cambricon.md) |
+| thead-ppu 平台报告 | [reports/thead-ppu.md](reports/thead-ppu.md) |
 | cambricon 性能原始数据 | [reports/perf_fp16_cambricon.json](reports/perf_fp16_cambricon.json) |
 | cambricon dispatch 原始数据 | [reports/dispatch_cambricon.json](reports/dispatch_cambricon.json) |
-| perf 门禁基线 | `perf/baselines/cambricon.json`（33 case，含本算子 2 条） |
+| thead-ppu 性能原始数据 | [reports/perf_fp16_thead-ppu.json](reports/perf_fp16_thead-ppu.json) |
+| thead-ppu dispatch 原始数据 | [reports/dispatch_thead-ppu.json](reports/dispatch_thead-ppu.json) |
+| perf 门禁基线 | `perf/baselines/cambricon.json`（33 case）、`perf/baselines/thead-ppu.json`（6 case） |
 
 ## 遗留
 

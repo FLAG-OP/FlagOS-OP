@@ -3,13 +3,16 @@
 > 新平台实现合入本目录的固定流程（裁剪自 ops/sdpa/MERGE.md 与
 > ops/embedding/MERGE.md 范式）。核心原则：**黄金/测试/注册链复用，
 > 只写 kernel 本体**。
+> 当前已合并: ascend910（Triton）、p800-kunlunxin（vendor O/LSE）、
+> thead-ppu（flash/efficient 分流 + exact-P）。
 
 ## 七步流程
 
 1. **黄金复用**: `goldendata/` 平台无关（CPU 生成），新平台直接跑
    `script/check_accuracy.py`——不过黄金不谈合并
 2. **kernel 本体**: `kernel/<platform>_level.py`（现有：
-   `triton_level.py` ascend910 路线 / `p800_fast_level.py` vendor 路线）
+   `triton_level.py` ascend910 路线 / `p800_fast_level.py` vendor 路线 /
+   `thead_fast_level.py` thead 分流路线）
 3. **register 平台分发**: `register.py` 的 `_fwd`/backend 选择加平台
    分支（含 `_DEVICE_PROBE` 能力守卫参考 ops/embedding）
 4. **_profile 探测链**: 平台 try-import 段（对齐 sdpa/embedding 顺序）
@@ -28,4 +31,4 @@
 ## 绑定速查
 
 见 [PLATFORM.md](PLATFORM.md)（ascend910 64×64 tile 上限 / p800
-vendor O/LSE + exact-P）。
+vendor O/LSE + exact-P / thead flash·efficient 分流 + LSE pad 切片）。

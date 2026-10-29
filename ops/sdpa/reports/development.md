@@ -49,7 +49,8 @@
 ```
 out = softmax(Q·Kᵀ·scale + mask_bias) · V
   scale 缺省 1/√D
-  is_causal: Sq==Skv 下三角遮蔽（与 aten 一致）
+  is_causal: 左上 tril 遮蔽（= aten 的 tril(ones(Sq, Skv))，Sq≠Skv 同规则
+             → PLATFORM.md §3c-3 / probes/thead_nonsq_causal_probe.json）
   attn_mask: bool → False 位 -inf；float → 加性 bias
   GQA: Hq≠Hkv 时 K/V 按 Hq/Hkv 组广播
 ```
@@ -211,7 +212,12 @@ vs FlagGems: **3.3-17.6x 加速**。vs 原生差距的根因分解见性能分�
 | 1 | torch.library 注册进程内不可撤销 | 长驻进程混跑多实现需子进程隔离 | op 层测试已用子进程；文档标注 |
 | 2 | 大 BM/BN 编译失败（UB 192KB） | tile 调优空间封死在 64×64 | 性能分册记录；待 BiShengIR 演进 |
 | 3 | 共享服务器 bench 扰动 | 绝对值 ±15µs 级 | 相对比值口径；空闲时段采集 |
-| 4 | Sq≠Skv 的 causal 语义未实现（aten 本身限制性语义） | 极端形状用例 | wrapper 断言拒绝，与参考一致 |
+| 4 | Sq≠Skv causal：旧结论「未实现/拒绝」不成立（aten 按 top-tril 支持） | 非方阵 causal 全被拒，原生可算 | **PR36 条目 4 已接入**，细节见下 |
+
+条目 4 接入细节（2026-10-25）：thead-ppu 删拒绝行、maskless 非方阵 causal
+改道 efficient 委托（探针 6 形状 × 3 dtype 全对）、拆 register.py 的
+Sq==Skv 梯度门、reference 改 top-tril；p800/mlu590/ascend 保持显式拒绝
+（ascend 原为静默降级成不遮蔽，已补同款拒绝）。详见 PLATFORM.md §3c-3。
 
 ## 7. 结论与路线
 
@@ -311,3 +317,45 @@ PER_OP 钉选的设计意图**，生态分工见 §8.2。
 - 两个真断层被四阶段验证逐关拦下: 跨芯片方言编译失败、mask 语义浅
 - 详见 [intake_llm/REPORT.md](../intake_llm/REPORT.md)（本地模拟）与
   [REPORT_KG.md](../intake_llm/REPORT_KG.md)（官方 MCP，含调试方法论记录）
+
+## 9. thead-ppu 移植记录（2026-10-23）
+
+第四个交付平台：平头哥 PPU-ZW810E（CUDA 兼容层，torch 2.10.0 /
+triton 3.6.0，profile `thead-ppu`）。完整证据链见
+[thead-ppu.md](thead-ppu.md)，绑定结论见 PLATFORM.md §3c。
+
+### 9.1 路线决策（七步执行摘要）
+
+| 步骤 | 结论 |
+|---|---|
+| a. 分叉判定 | 结构级：新 backend 文件 `kernel/backends/thead_ppu.py` + 三候选路由 |
+| b. 首测 | Triton-on-PPU 可编译运行（tl.dot rel≈7e-4）；efficient/flash 存在、cudnn BAD_PARAM；key AutogradCUDA 6/7（inference_mode 零命中 #19）；bias 16B 两规则钉死 |
+| c. 实现 | fp32→ATen 组合（无 bmm bug、无需 pad）；fp16/bf16→厂商 overload 直调；GQA `repeat_interleave`；bool→additive；全遮蔽行 NaN；可微 mask→A1 数学 backward |
+| d. kernel 直测 | 37/37 + tail 覆盖 88/88（3072/5000/5120 尾块 ×3 seed + zeros/large/boundary；**2026-10-25 PR36 条目 4 增补非方阵 causal 48 案例 + 原生 parity 3 例**） |
+| e. A1 注册 | `AutogradCUDA` 拦截、注册=直调逐位、梯度 vs 原生通过 |
+| f. 三层+一致 | `example.py thead-ppu` 三层全绿；`run.py --consistency` 因 dev 栈无 flag_gems 结构性缺证（非本算子缺陷） |
+| g. 黄金 | 397/397（worst 7.812e-3 bf16） |
+| h. 性能 | 首版 4.07x 倒挂 → 定位两根因收口 → **1.10x 原生**，基线入库 |
+
+### 9.2 首版性能倒挂的两根因（方法论教训）
+
+1. **"照抄 p800 全走 efficient"在 PPU 不成立**。TorchDispatchMode 实证
+   PPU 原生 `F.sdpa` 内部只调 `_scaled_dot_product_flash_attention`；
+   efficient kernel 更慢且输出非连续（D-major，`reshape` 触发整份拷贝）。
+   ——移植时先证明"与原生同 kernel"再定主路径，厂商委托的"厂商"要指名。
+2. **平台选择器每调用 `find_spec` 是隐藏税**。`backends.get_impl()`
+   三候选解析 ~80-100 µs/调用（cProfile 定位），在 0.02 ms 级 kernel
+   面前就是 3-5x。收口：进程级 `_IMPL_CACHE`（栈身份进程内不变），
+   对其他平台同样受益。
+
+### 9.3 移植方法论沉淀
+
+- **schema 逐参数实测**，不按别栈经验猜：PPU efficient 无 `enable_gqa`、
+  flash 无 `attn_mask`、overrideable 是 privateuse1 专用——三条都与
+  "CUDA 栈应该都有"的直觉相反。
+- **报错原文入档**（bias 对齐两种变体、cudnn BAD_PARAM、flash 未知
+  关键字），后来者可直接对号。
+- **平台分化用 parity 口径收口**：bf16 boundary 溢出与原生同行为，
+  判 inf 位置一致 + 有限子集相对精度，而不是拿绝对容差判死自家实现。
+- 探针留档 `probes/thead_*.py` + `probes/out/*.json`，复现命令在
+  thead-ppu.md §7。

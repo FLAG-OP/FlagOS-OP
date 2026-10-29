@@ -16,9 +16,31 @@
 # wt <wangt635@ustc.edu.cn>
 from __future__ import annotations
 
+import json
 import os
 
 import torch
+
+# C2 跨进程计数: EngineCore/Worker 子进程各写自己的 pid 分片文件
+# （clone/register.py 同款; 主进程汇总 {base}.{pid} JSON）。
+_COUNT_BASE = os.environ.get("A1_SDPA_MATH_COUNT_FILE")
+COUNT_FILE = f"{_COUNT_BASE}.{os.getpid()}" if _COUNT_BASE else None
+
+
+def _bump_count_file() -> None:
+    if not COUNT_FILE:
+        return
+    counts = {}
+    try:
+        with open(COUNT_FILE) as f:
+            counts = json.load(f)
+    except (OSError, ValueError):
+        pass
+    counts["aten::_scaled_dot_product_attention_math"] = (
+        counts.get("aten::_scaled_dot_product_attention_math", 0) + 1
+    )
+    with open(COUNT_FILE, "w") as f:
+        json.dump(counts, f)
 
 # wt 2026-10-07-fix 导入改三层链: 包态优先, 脚本态 fallback, 都失败
 # （如 CI 无 triton）时降级为 torch 级+惰性加载——register_a1(impl=)
@@ -29,12 +51,14 @@ try:  # Package-style import: ops.sdpa_math.register
     from .kernel.torch_level import sdpa_math_torch
     from .kernel.triton_level import PLATFORM, sdpa_math_triton
     from .kernel.p800_fast_level import sdpa_math_p800_fast
+    from .kernel.thead_fast_level import sdpa_math_thead_fast
     from .reference import _softmax01, make_dropout_mask, sdpa_math_reference
 except ImportError:  # Standalone import with OP_DIR on sys.path
     try:
         from kernel.torch_level import sdpa_math_torch
         from kernel.triton_level import PLATFORM, sdpa_math_triton
         from kernel.p800_fast_level import sdpa_math_p800_fast
+        from kernel.thead_fast_level import sdpa_math_thead_fast
         from reference import _softmax01, make_dropout_mask, sdpa_math_reference
     except ImportError:
         # 无 triton 环境（CI 包化扫描等）: torch 级兜底, 其余惰性
@@ -42,12 +66,14 @@ except ImportError:  # Standalone import with OP_DIR on sys.path
         PLATFORM = "ascend910"
         sdpa_math_triton = None
         sdpa_math_p800_fast = None
+        sdpa_math_thead_fast = None
         from .reference import _softmax01, make_dropout_mask, sdpa_math_reference  # noqa: F811
 
 _IMPLS = {
     "triton": sdpa_math_triton,
     "torch": sdpa_math_torch,
     "p800": sdpa_math_p800_fast,
+    "thead": sdpa_math_thead_fast,
     "reference": sdpa_math_reference,
 }
 
@@ -339,6 +365,7 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
                  enable_gqa=False):
         if counter is not None:
             counter["n"] += 1
+        _bump_count_file()
         fn = _IMPLS[impl]
         if not torch.is_grad_enabled():
             # no_grad / inference_mode: 不建图，绕开 autograd.Function

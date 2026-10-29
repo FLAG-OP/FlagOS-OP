@@ -25,6 +25,15 @@ def _make(dtype, dev, seed=3, requires_grad=False):
     return q, k, v
 
 
+def _nonsq_inputs(dev, dtype=None, seed=9):
+    """非方阵 causal 输入（Sq=100, Skv=197）—— 注册前后同源。"""
+    import torch
+    dtype = dtype or torch.float16
+    g = torch.Generator(device="cpu").manual_seed(seed)
+    mk = lambda n: (torch.randn(*n, generator=g) * 0.5).to(dtype).to(dev)
+    return mk((1, 4, 100, 64)), mk((1, 4, 197, 64)), mk((1, 4, 197, 64))
+
+
 def run(profile):
     import torch
     if profile.torch_device.startswith("npu"):
@@ -41,9 +50,15 @@ def run(profile):
     # 1) 基线: 注册前（平台原生实现，缓存输出）
     q, k, v = _make(torch.float16, dev)
     out_native = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+    # 非方阵 causal 原生基线（仅 thead-ppu 消费, 其余平台不跑该形状）
+    qn0 = kn0 = vn0 = out_native_ns = None
+    if profile.name == "thead-ppu":
+        qn0, kn0, vn0 = _nonsq_inputs(dev)
+        out_native_ns = F.scaled_dot_product_attention(
+            qn0, kn0, vn0, is_causal=True)
 
     direct_grad_check = "not-applicable"
-    if profile.vendor in ("kunlunxin", "cambricon"):
+    if profile.vendor in ("kunlunxin", "cambricon", "thead"):
         # 厂商/Triton 直调路径平台分化回归: q/k/v 需按需走 A1 数学 backward；
         # 可微 float mask 厂商路径不支持，应回退 A1 数学 backward。
         qd, kd, vd = _make(torch.float16, dev, requires_grad=True)
@@ -104,13 +119,59 @@ def run(profile):
         assert e < tol, f"{name} 梯度误差超容差: {e}"
         print(f"  grad {name}: max_err_vs_native={e:.3e}")
 
+    # 6) PR36 条目 4: 非方阵 causal（Sq≠Skv）经 A1 拦截 + 数学 backward。
+    #    旧行为是 backend 抛 ValueError 拒绝；现 forward 走 efficient 委托、
+    #    backward 走 register.py 的数学实现（原 Sq==Skv 门已拆）。
+    #    梯度判卷: CPU fp32 参考（top-tril）, fp16 容差同本文件第 5 步。
+    nonsq_a1 = "not-applicable"
+    if profile.name == "thead-ppu":
+        from reference import sdpa_reference
+
+        qn = qn0.detach().requires_grad_(True)
+        kn = kn0.detach().requires_grad_(True)
+        vn = vn0.detach().requires_grad_(True)
+        out_ns = F.scaled_dot_product_attention(qn, kn, vn, is_causal=True)
+        assert _CALLS["n"] > 0, "非方阵 causal 未被 A1 拦截"
+        out_ns_direct = sdpa_triton(qn0, kn0, vn0, None, 0.0, True, None,
+                                    False)
+        assert torch.equal(out_ns, out_ns_direct), \
+            "非方阵 causal: 注册路径 ≠ 直调路径"
+        err_ns_native = (out_ns.detach().float() - out_native_ns.float()
+                         ).abs().max().item()
+        assert err_ns_native < 2e-2, \
+            f"非方阵 causal 与原生差异: {err_ns_native}"
+
+        out_ns.float().sum().backward()
+        assert torch.isfinite(qn.grad).all(), "非方阵 causal 反向失败"
+        rq = qn0.detach().cpu().float().requires_grad_(True)
+        rk = kn0.detach().cpu().float().requires_grad_(True)
+        rv = vn0.detach().cpu().float().requires_grad_(True)
+        sdpa_reference(rq, rk, rv, None, 0.0, True, None,
+                       False).sum().backward()
+        gerrs = {
+            "dq": (qn.grad.cpu() - rq.grad).abs().max().item(),
+            "dk": (kn.grad.cpu() - rk.grad).abs().max().item(),
+            "dv": (vn.grad.cpu() - rv.grad).abs().max().item(),
+        }
+        for gname, ge in gerrs.items():
+            assert ge < 2e-2, f"非方阵 causal {gname} 梯度超容差: {ge}"
+            print(f"  nonsq-causal grad {gname}: "
+                  f"max_err_vs_reference={ge:.3e}")
+        nonsq_a1 = {"intercepted": True, "bitwise_vs_direct": True,
+                    "max_diff_vs_native": round(err_ns_native, 8),
+                    "grad_vs_reference": {k2: round(v2, 8)
+                                          for k2, v2 in gerrs.items()}}
+        print(f"  非方阵 causal A1: 注册=直调(逐位) vs 原生 "
+              f"max_diff={err_ns_native:.3e} 梯度 vs 参考全过")
+
     print(f"  拦截命中 count={_CALLS['n']}; 注册=直调(逐位); "
           f"vs 原生 max_diff={err_native:.3e}; autograd 前反向 OK")
     return {"ok": True, "intercepted": _CALLS["n"],
             "bitwise_vs_direct": True,
             "max_diff_vs_native": round(err_native, 8),
             "grad_check": "vs-native-subprocess",
-            "direct_grad_check": direct_grad_check}
+            "direct_grad_check": direct_grad_check,
+            "nonsq_causal_a1": nonsq_a1}
 
 
 if __name__ == "__main__":

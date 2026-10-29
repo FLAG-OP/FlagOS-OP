@@ -1,0 +1,295 @@
+{
+  "task": "T4 补缺证: sdpa bf16 非对齐 bias(_aligned_bias/kv_pad) 等价",
+  "ts": "2026-10-24T09:20:31.761688+00:00",
+  "device": "cuda:6",
+  "leftover_refs": {
+    "t1_commit": "b29a1ac feat(sdpa): thead-ppu 首算子交付",
+    "t1_message_quote": "遗留: bf16 非对齐 kv_pad 未单独验证",
+    "report": "ops/sdpa/reports/thead-ppu.md §6#2/§8（bf16 非对齐 stride 的 kv_pad 未单独验证, §6.2）",
+    "platform": "ops/sdpa/PLATFORM.md §3c bias 16B stride 对齐行（_aligned_bias, 探针里叫 kv_pad）",
+    "meaning": "efficient 委托路径的 attn_bias 16B stride 对齐修复 kernel/backends/thead_ppu.py::_aligned_bias 在 bf16 下未单独验证"
+  },
+  "rule_check": [
+    {
+      "sq": 333,
+      "skv": 333,
+      "dtype": "bfloat16",
+      "head_bytes": 221778,
+      "row_bytes": 666,
+      "observed": " (strideH)",
+      "predicted": [
+        "(strideH)",
+        "(row)"
+      ]
+    },
+    {
+      "sq": 197,
+      "skv": 197,
+      "dtype": "bfloat16",
+      "head_bytes": 77618,
+      "row_bytes": 394,
+      "observed": " (strideH)",
+      "predicted": [
+        "(strideH)",
+        "(row)"
+      ]
+    },
+    {
+      "sq": 1,
+      "skv": 7,
+      "dtype": "bfloat16",
+      "head_bytes": 14,
+      "row_bytes": 14,
+      "observed": " (strideH)",
+      "predicted": [
+        "(strideH)",
+        "(row)"
+      ]
+    },
+    {
+      "sq": 8,
+      "skv": 333,
+      "dtype": "bfloat16",
+      "head_bytes": 5328,
+      "row_bytes": 666,
+      "observed": "",
+      "predicted": [
+        "(row)"
+      ]
+    },
+    {
+      "sq": 333,
+      "skv": 336,
+      "dtype": "bfloat16",
+      "head_bytes": 223776,
+      "row_bytes": 672,
+      "observed": "OK",
+      "predicted": []
+    }
+  ],
+  "equivalence": [
+    {
+      "key": "S333x333/bool/causal=1",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.00390625,
+      "contig_pad_vs_ref": 0.00390625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S333x333/bool/causal=0",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.0009765625,
+      "contig_pad_vs_ref": 0.0009765625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S333x333/float/causal=1",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.00390625,
+      "contig_pad_vs_ref": 0.00390625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S333x333/float/causal=0",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.0009765625,
+      "contig_pad_vs_ref": 0.0009765625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S197x197/bool/causal=1",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.00390625,
+      "contig_pad_vs_ref": 0.00390625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S197x197/float/causal=0",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.0009765625,
+      "contig_pad_vs_ref": 0.0009765625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S1x7/bool/causal=0",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.00390625,
+      "contig_pad_vs_ref": 0.00390625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S1x7/float/causal=0",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned (strideH)",
+      "aligned_bias_vs_ref": 0.001953125,
+      "contig_pad_vs_ref": 0.001953125,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S8x333/bool/causal=0",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned",
+      "aligned_bias_vs_ref": 0.0009765625,
+      "contig_pad_vs_ref": 0.0009765625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S8x333/float/causal=0",
+      "contiguous": "ERROR RuntimeError: attn_bias is not correctly aligned",
+      "aligned_bias_vs_ref": 0.00048828125,
+      "contig_pad_vs_ref": 0.00048828125,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    },
+    {
+      "key": "S333x336/bool/causal=0",
+      "contiguous": 0.0009765625,
+      "aligned_bias_vs_ref": 0.0009765625,
+      "contig_pad_vs_ref": 0.0009765625,
+      "aligned_vs_contig_pad": 0.0,
+      "pass_1e-2": true
+    }
+  ],
+  "golden_regression": {
+    "files": [
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c0_mbool_s0.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c0_mbool_s1.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c0_mbool_s2.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c0_mfloat_s0.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c0_mfloat_s1.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c0_mfloat_s2.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c1_mbool_s0.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c1_mbool_s1.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c1_mbool_s2.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c1_mfloat_s0.pt",
+        "abs_err": 0.0078125,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c1_mfloat_s1.pt",
+        "abs_err": 0.0078125,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B1_H4-4_S128_D64_c1_mfloat_s2.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c0_mbool_s0.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c0_mbool_s1.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c0_mbool_s2.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c0_mfloat_s0.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c0_mfloat_s1.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c0_mfloat_s2.pt",
+        "abs_err": 0.0009765625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c1_mbool_s0.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c1_mbool_s1.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c1_mbool_s2.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c1_mfloat_s0.pt",
+        "abs_err": 0.0078125,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c1_mfloat_s1.pt",
+        "abs_err": 0.00390625,
+        "pass": true
+      },
+      {
+        "file": "data/basic_bfloat16_B2_H4-4_S128_D64_c1_mfloat_s2.pt",
+        "abs_err": 0.0078125,
+        "pass": true
+      }
+    ],
+    "worst": 0.0078125,
+    "worst_case": "data/basic_bfloat16_B1_H4-4_S128_D64_c1_mfloat_s0.pt",
+    "n_files": 24,
+    "n_pass": 24,
+    "no_regression_vs_worst": true
+  },
+  "conclusion": {
+    "aligned_bf16_equiv_1e-2": true,
+    "contig_direct_error_constrained": "非对齐连续 bias 直算被 kernel 拒（报错已留证）",
+    "leftover": "T1 b29a1ac 'bf16 非对齐 kv_pad 未单独验证'",
+    "closed": true
+  }
+}

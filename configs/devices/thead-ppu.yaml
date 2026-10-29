@@ -1,0 +1,67 @@
+# 设备 Profile: 平头哥 PPU ZW810E (ai-server 本机实测 case)
+# wt-2026-10-23-fix  wt <31944766+TruNcat3@users.noreply.github.com>
+name: thead-ppu
+vendor: thead                     # 实测: flag_gems 5.3.4 runtime.backend.device_finder.DeviceDetector().vendor_name = 'thead'
+
+auto_detect:
+  # 厂商栈模块（仅记录）：实测基座 flagtree wheel 损坏不可 import；且 5.3.4 的
+  # vendor 探测路径与 FlagOS-OP common/device.py 期望的 runtime.backend.device
+  # 不一致。
+  module: flagtree
+  enabled: false                  # 探测不可靠——仅显式 --device thead-ppu / load_profile() 选择（先例: p800-kunlunxin-gems5）
+
+device:
+  # ── 设备编号口径（PR36 条目 3 取证, 2026-10-25）: 本 profile 两个设备字段均取
+  #    **物理卡号**, kernel / op / framework 三层同一口径（取证表: ops/sdpa/PLATFORM.md §3c-2）。
+  # · torch_device: 仓库默认不写 CUDA_VISIBLE_DEVICES、16 卡直曝时 cuda:6 = 物理卡 6（实测空闲）。
+  # · visible_devices: 是 CVD 列表, 语义天然物理——harness 子进程内逻辑 0/1 = 物理 6/7
+  #   （2026-10-25 实测: 该子进程 device_count=2, get_device_name(0)=PPU-ZW810E）。
+  # · 消费点取证: 全仓仅三处写 CVD——tests/framework_level/_harness.py:62、
+  #   scripts/drift_study.py:31、examples/b-fullstack/example.py:208——三处都只写 vLLM
+  #   子进程 env, 且该子进程只读 profile.engine_args()/profile.name, **不读 torch_device**——
+  #   故两字段本就是同一物理卡号口径, 也不存在重映射后越界路径: 本次只补口径声明与
+  #   换算规则, 不改任何字段数值。
+  # · 仅外层 shell 自行 export CUDA_VISIBLE_DEVICES 时才需换算成逻辑口径:
+  #   CVD=6,7 下 cuda:6 实测报 invalid device ordinal, 此时物理 6 = 逻辑 0
+  #   （换算说明见 docs/device-profiles.md「昆仑芯卡号与入口选择」表）。
+  torch_device: "cuda:6"          # kernel/op 与算子框架层测试设备（PPU 经 CUDA 兼容路径直曝 16 卡 cuda:0-15）
+  visible_devices: "6,7"          # 中央 framework harness 暴露的物理卡对（实测 2MiB/0% 空闲; 避 4/11 100%、5 占 76G）
+                                  # 中央 vLLM framework 证据由 thead-ppu-c2 第二 profile 承接（model_path 占位）
+  dispatch_key: CUDA              # 中央 A1 注册 key（基键口径, PR36 条目 2 取证后有意保留）
+                                  # 中央消费点: common/device.py → tests/framework_level/
+                                  #   _harness.py|_aten_harness.py 写 A1_DISPATCH_KEY →
+                                  #   injection/sitecustomize.py; 另有 scripts/intake_validate.py、
+                                  #   scripts/bench_dispatch.py、tests/op_level/test_a1.py 同读。
+                                  # 依据(2026-10-25 卡6 实测, scripts/smoke_dispatch_key.py 可复现):
+                                  #   基键 CUDA 在 grad/no_grad/inference_mode 三口径各拦 1 次、
+                                  #   输出逐位相同、反向梯度对齐 silu 解析反向; AutogradCUDA 在
+                                  #   inference_mode 零命中(known-issues #19.3)。
+                                  # 先例比对: p800-kunlunxin{,-gems5}=CUDA、cambricon=PrivateUse1,
+                                  #   同为「YAML 基键 / 算子本地 Autograd* 键」分层; sdpa/embedding/
+                                  #   sdpa_math 本地 _profile 取 AutogradCUDA, 见各自 PLATFORM.md thead 节。
+
+framework:
+  tensor_parallel_size: 2
+  distributed_executor_backend: mp
+  max_model_len: 4096
+  max_num_seqs: 50
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  enable_prefix_caching: false
+  load_format: safetensors
+  seed: 20260823
+  # 冒烟模型未就绪: 用 FLAGOS_MODEL_PATH 覆盖（见 docs/device-profiles.md#模型路径覆盖）；
+  # framework 级证据由 thead-ppu-c2 栈 profile 承接。
+  model_path: /path/to/placeholder-model
+  quirks:
+    keep_default_prefer: true     # known-issues #1: 禁设 VLLM_FL_PREFER=flagos（PPU 栈无该插件配置，保守沿用）
+    require_two_visible_devices: false
+
+vendor_delegate: null
+
+reference_fallback: reference.torch
+
+# 厂商硬件 kernel 直测清单（硬件级 B 路线交付时补充；
+# 镜像内预装 flash-attn 2.7.4.post1 / flash-attn-3 3.0.0b1 / flash_mla / flashinfer 0.6.4 为候选）
+vendor_kernels: []

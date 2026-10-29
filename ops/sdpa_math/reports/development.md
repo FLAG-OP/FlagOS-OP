@@ -4,8 +4,8 @@
 |---|---|
 | 算子名称 | `aten::_scaled_dot_product_attention_math`（SDPA math 后端，双输出） |
 | 实现路线 / 开发级别 | **A1** / Triton 级（NPU）+ P800 fast（vendor O/LSE + exact-P）+ torch 级（CPU/fallback） |
-| 目标设备 | `ascend910` · `p800-kunlunxin` · `cpu`（参考与梯度兜底） |
-| 日期 / 状态 | 2026-09-30~10-01 / 定稿 |
+| 目标设备 | `ascend910` · `p800-kunlunxin` · `thead-ppu` · `cpu`（参考与梯度兜底） |
+| 日期 / 状态 | 2026-09-30~10-01 / 定稿 / 2026-10-24 thead-ppu |
 
 ## 1. 环境配置
 
@@ -32,6 +32,17 @@
 | triton / FlagGems | `3.0.0+03c4c9be` / `4.2.1rc0` |
 | 设备 / A1 key | `cuda:1`（锁定镜像稳定卡）· `AutogradCUDA+CUDA` 成对注册 |
 | 消费方 | FlagOS/FlagGems 栈内，`flag_gems.only_enable(['gelu'])` 启动周边 GELU |
+
+### 1.2 thead-ppu 环境（2026-10-24）
+
+| 项 | 值 |
+|---|---|
+| 容器 / torch / python | `flagos-ppu-wt-dev` · `2.10.0`（CUDA 兼容层）· 3.11 |
+| triton / flag_gems | `3.6.0`（`PPUDriver`）· 无（A2 一致性缺证） |
+| 设备 | 16 卡均 `PPU-ZW810E`，用卡 **6,7**（2MiB 各，避 4/5/11） |
+| A1 key | `AutogradCUDA+CUDA` 成对注册（首测 AutogradCUDA 6/7、CUDA 7/7） |
+| 消费方 | `F.sdpa(MATH)` 经 composite 拦截到本算子（op 层 intercepts=3822）；无 FlagGems 栈 |
+| 跨层一致性 | `run.py --consistency` 锚定 `ops.sdpa_math` 的 thead 端到端已由 op/framework 层覆盖；全库 `--consistency` 因 A2 锚定依赖 flag_gems 缺证（T1/T2 同根因） |
 
 ## 2. 算子定义
 
@@ -63,6 +74,7 @@ dispatch dump），旧代码零改动。
 | torch | `kernel/torch_level.py` | CPU 交付 + 第二判卷人 | `where` 生成 causal bias、`nan_to_num(softmax)` 守卫（与 reference 不同写法） |
 | triton | `kernel/triton_level.py` | NPU 交付 | 两段式：`_probs_kernel`(pass1 行最大 + pass2 归一) → `_pv_kernel`；`_score_block` 两 pass 共用；固定 64×64 tile；dropout 用 ATen 收口。**小形状按 score tile 数（≤56）自动改走单 kernel 融合**（QK→softmax→PV 一趟，见 [performance.md §6/§9](performance.md)） |
 | p800 | `kernel/p800_fast_level.py` | P800 交付 | vendor efficient attention 产出 `O/LSE`；`P=exp(scale·QKᵀ-LSE)` 保留双输出契约；mask/dropout/fp32/direct-autograd 回退 torch |
+| thead | `kernel/thead_fast_level.py` | thead-ppu 交付 | 方阵 causal/无 causal → flash；带 mask 或非方阵 causal → efficient；LSE 32-pad 后 exact-P；fp32/dropout/grad 回退 torch |
 
 **Triton 关键决策**:
 1. 必须物化 P（算子契约），故不能用 flash 的重算策略 → 两段式而非单遍；

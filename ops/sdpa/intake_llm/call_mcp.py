@@ -26,7 +26,8 @@ PARAMS = {
                   "value (B, Hkv, Skv, D), "
                   "optional mask broadcastable to (B,Hq,Sq,Skv); bool=keep float=additive, "
                   "dropout probability (0.0 for inference), "
-                  "causal lower-triangular mask requires Sq==Skv, "
+                  "causal left-top tril over (Sq,Skv); Sq!=Skv only on "
+                  "thead-ppu (other backends reject), "
                   "scale factor default 1/sqrt(D), "
                   "grouped query attention when Hq != Hkv"),
     "output_arg_desc": "attention output (B, Hq, Sq, D), same dtype as q",

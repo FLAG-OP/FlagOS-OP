@@ -208,7 +208,9 @@ def sdpa_triton(
     if query.shape[-1] != key.shape[-1] or query.shape[-1] != value.shape[-1]:
         raise ValueError("head_dim 不一致")
     if is_causal and query.shape[-2] != key.shape[-2]:
-        raise ValueError("causal 语义要求 Sq == Skv（与 aten/reference 一致）")
+        raise ValueError(
+            "causal 语义要求 Sq == Skv（本平台未接入 Sq!=Skv causal，"
+            "aten/reference 本身按 top-tril 支持，见 PLATFORM.md §3c-3）")
 
     hq, hkv = query.shape[1], key.shape[1]
     if attn_mask is not None:

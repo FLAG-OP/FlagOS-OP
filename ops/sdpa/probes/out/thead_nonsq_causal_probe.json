@@ -1,0 +1,641 @@
+{
+  "device": "cuda:6",
+  "checks": [
+    {
+      "check": "reference_nonsq_causal",
+      "status": "ACCEPTED"
+    },
+    {
+      "check": "prod_facade/sq128-skv128/float16",
+      "status": "PASS",
+      "err": 0.00034928321838378906
+    },
+    {
+      "check": "native/sq128-skv128/float16",
+      "status": "PASS",
+      "err": 0.00034928321838378906
+    },
+    {
+      "check": "flash/sq128-skv128/float16",
+      "status": "PASS",
+      "err": 0.00034928321838378906
+    },
+    {
+      "check": "efficient/sq128-skv128/float16",
+      "status": "PASS",
+      "err": 0.00034928321838378906,
+      "note": "lse_shape=(1, 4, 128) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        128
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq128-skv128/bfloat16",
+      "status": "PASS",
+      "err": 0.0025063157081604004
+    },
+    {
+      "check": "native/sq128-skv128/bfloat16",
+      "status": "PASS",
+      "err": 0.0025063157081604004
+    },
+    {
+      "check": "flash/sq128-skv128/bfloat16",
+      "status": "PASS",
+      "err": 0.0025063157081604004
+    },
+    {
+      "check": "efficient/sq128-skv128/bfloat16",
+      "status": "PASS",
+      "err": 0.0025063157081604004,
+      "note": "lse_shape=(1, 4, 128) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        128
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq128-skv128/float32",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq128-skv128/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07
+    },
+    {
+      "check": "flash/sq128-skv128/float32",
+      "status": "ERROR",
+      "note": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "check": "efficient/sq128-skv128/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07,
+      "note": "lse_shape=(1, 4, 128) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        128
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq4-skv8/float16",
+      "status": "PASS",
+      "err": 0.0005621910095214844
+    },
+    {
+      "check": "native/sq4-skv8/float16",
+      "status": "PASS",
+      "err": 0.0005621910095214844
+    },
+    {
+      "check": "flash/sq4-skv8/float16",
+      "status": "FAIL",
+      "err": 1.21240234375
+    },
+    {
+      "check": "efficient/sq4-skv8/float16",
+      "status": "PASS",
+      "err": 0.0005621910095214844,
+      "note": "lse_shape=(1, 4, 32) lse_err=2.384e-07",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 2.384185791015625e-07
+    },
+    {
+      "check": "prod_facade/sq4-skv8/bfloat16",
+      "status": "PASS",
+      "err": 0.002978086471557617
+    },
+    {
+      "check": "native/sq4-skv8/bfloat16",
+      "status": "PASS",
+      "err": 0.002978086471557617
+    },
+    {
+      "check": "flash/sq4-skv8/bfloat16",
+      "status": "FAIL",
+      "err": 1.21484375
+    },
+    {
+      "check": "efficient/sq4-skv8/bfloat16",
+      "status": "PASS",
+      "err": 0.002978086471557617,
+      "note": "lse_shape=(1, 4, 32) lse_err=1.192e-07",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 1.1920928955078125e-07
+    },
+    {
+      "check": "prod_facade/sq4-skv8/float32",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq4-skv8/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07
+    },
+    {
+      "check": "flash/sq4-skv8/float32",
+      "status": "ERROR",
+      "note": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "check": "efficient/sq4-skv8/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07,
+      "note": "lse_shape=(1, 4, 32) lse_err=1.192e-07",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 1.1920928955078125e-07
+    },
+    {
+      "check": "prod_facade/sq8-skv4/float16",
+      "status": "PASS",
+      "err": 0.0003184676170349121
+    },
+    {
+      "check": "native/sq8-skv4/float16",
+      "status": "PASS",
+      "err": 0.0003184676170349121
+    },
+    {
+      "check": "flash/sq8-skv4/float16",
+      "status": "FAIL",
+      "err": 1.5146484375
+    },
+    {
+      "check": "efficient/sq8-skv4/float16",
+      "status": "PASS",
+      "err": 0.0003184676170349121,
+      "note": "lse_shape=(1, 4, 32) lse_err=1.192e-07",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 1.1920928955078125e-07
+    },
+    {
+      "check": "prod_facade/sq8-skv4/bfloat16",
+      "status": "PASS",
+      "err": 0.0027251839637756348
+    },
+    {
+      "check": "native/sq8-skv4/bfloat16",
+      "status": "PASS",
+      "err": 0.0027251839637756348
+    },
+    {
+      "check": "flash/sq8-skv4/bfloat16",
+      "status": "FAIL",
+      "err": 1.515625
+    },
+    {
+      "check": "efficient/sq8-skv4/bfloat16",
+      "status": "PASS",
+      "err": 0.0027251839637756348,
+      "note": "lse_shape=(1, 4, 32) lse_err=1.192e-07",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 1.1920928955078125e-07
+    },
+    {
+      "check": "prod_facade/sq8-skv4/float32",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq8-skv4/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07
+    },
+    {
+      "check": "flash/sq8-skv4/float32",
+      "status": "ERROR",
+      "note": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "check": "efficient/sq8-skv4/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07,
+      "note": "lse_shape=(1, 4, 32) lse_err=1.192e-07",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 1.1920928955078125e-07
+    },
+    {
+      "check": "prod_facade/sq1-skv64/float16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq1-skv64/float16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "flash/sq1-skv64/float16",
+      "status": "FAIL",
+      "err": 1.5460205078125
+    },
+    {
+      "check": "efficient/sq1-skv64/float16",
+      "status": "PASS",
+      "err": 0.0,
+      "note": "lse_shape=(1, 4, 32) lse_err=7.451e-08",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 7.450580596923828e-08
+    },
+    {
+      "check": "prod_facade/sq1-skv64/bfloat16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq1-skv64/bfloat16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "flash/sq1-skv64/bfloat16",
+      "status": "FAIL",
+      "err": 1.5478515625
+    },
+    {
+      "check": "efficient/sq1-skv64/bfloat16",
+      "status": "PASS",
+      "err": 0.0,
+      "note": "lse_shape=(1, 4, 32) lse_err=5.960e-08",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 5.960464477539063e-08
+    },
+    {
+      "check": "prod_facade/sq1-skv64/float32",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq1-skv64/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07
+    },
+    {
+      "check": "flash/sq1-skv64/float32",
+      "status": "ERROR",
+      "note": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "check": "efficient/sq1-skv64/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07,
+      "note": "lse_shape=(1, 4, 32) lse_err=0.000e+00",
+      "lse_shape": [
+        1,
+        4,
+        32
+      ],
+      "lse_err": 0.0
+    },
+    {
+      "check": "prod_facade/sq100-skv197/float16",
+      "status": "PASS",
+      "err": 0.00044023990631103516
+    },
+    {
+      "check": "native/sq100-skv197/float16",
+      "status": "PASS",
+      "err": 0.00044023990631103516
+    },
+    {
+      "check": "flash/sq100-skv197/float16",
+      "status": "FAIL",
+      "err": 1.9083099365234375
+    },
+    {
+      "check": "efficient/sq100-skv197/float16",
+      "status": "PASS",
+      "err": 0.00044023990631103516,
+      "note": "lse_shape=(1, 4, 128) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        128
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq100-skv197/bfloat16",
+      "status": "PASS",
+      "err": 0.0023235082626342773
+    },
+    {
+      "check": "native/sq100-skv197/bfloat16",
+      "status": "PASS",
+      "err": 0.0023235082626342773
+    },
+    {
+      "check": "flash/sq100-skv197/bfloat16",
+      "status": "FAIL",
+      "err": 1.909423828125
+    },
+    {
+      "check": "efficient/sq100-skv197/bfloat16",
+      "status": "PASS",
+      "err": 0.0023235082626342773,
+      "note": "lse_shape=(1, 4, 128) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        128
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq100-skv197/float32",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq100-skv197/float32",
+      "status": "PASS",
+      "err": 2.5331974029541016e-07
+    },
+    {
+      "check": "flash/sq100-skv197/float32",
+      "status": "ERROR",
+      "note": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "check": "efficient/sq100-skv197/float32",
+      "status": "PASS",
+      "err": 2.5331974029541016e-07,
+      "note": "lse_shape=(1, 4, 128) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        128
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq333-skv197/float16",
+      "status": "PASS",
+      "err": 0.00036513805389404297
+    },
+    {
+      "check": "native/sq333-skv197/float16",
+      "status": "PASS",
+      "err": 0.00036513805389404297
+    },
+    {
+      "check": "flash/sq333-skv197/float16",
+      "status": "FAIL",
+      "err": 1.5888671875
+    },
+    {
+      "check": "efficient/sq333-skv197/float16",
+      "status": "PASS",
+      "err": 0.00036513805389404297,
+      "note": "lse_shape=(1, 4, 352) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        352
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq333-skv197/bfloat16",
+      "status": "PASS",
+      "err": 0.002624034881591797
+    },
+    {
+      "check": "native/sq333-skv197/bfloat16",
+      "status": "PASS",
+      "err": 0.002624034881591797
+    },
+    {
+      "check": "flash/sq333-skv197/bfloat16",
+      "status": "FAIL",
+      "err": 1.5859375
+    },
+    {
+      "check": "efficient/sq333-skv197/bfloat16",
+      "status": "PASS",
+      "err": 0.002624034881591797,
+      "note": "lse_shape=(1, 4, 352) lse_err=9.537e-07",
+      "lse_shape": [
+        1,
+        4,
+        352
+      ],
+      "lse_err": 9.5367431640625e-07
+    },
+    {
+      "check": "prod_facade/sq333-skv197/float32",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq333-skv197/float32",
+      "status": "PASS",
+      "err": 2.5331974029541016e-07
+    },
+    {
+      "check": "flash/sq333-skv197/float32",
+      "status": "ERROR",
+      "note": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "check": "efficient/sq333-skv197/float32",
+      "status": "PASS",
+      "err": 2.5331974029541016e-07,
+      "note": "lse_shape=(1, 4, 352) lse_err=4.768e-07",
+      "lse_shape": [
+        1,
+        4,
+        352
+      ],
+      "lse_err": 4.76837158203125e-07
+    },
+    {
+      "check": "prod_facade/sq64-skv1/float16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq64-skv1/float16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "flash/sq64-skv1/float16",
+      "status": "FAIL",
+      "err": 1.533203125
+    },
+    {
+      "check": "efficient/sq64-skv1/float16",
+      "status": "PASS",
+      "err": 0.0,
+      "note": "lse_shape=(1, 4, 64) lse_err=2.980e-07",
+      "lse_shape": [
+        1,
+        4,
+        64
+      ],
+      "lse_err": 2.980232238769531e-07
+    },
+    {
+      "check": "prod_facade/sq64-skv1/bfloat16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq64-skv1/bfloat16",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "flash/sq64-skv1/bfloat16",
+      "status": "FAIL",
+      "err": 1.53125
+    },
+    {
+      "check": "efficient/sq64-skv1/bfloat16",
+      "status": "PASS",
+      "err": 0.0,
+      "note": "lse_shape=(1, 4, 64) lse_err=5.960e-08",
+      "lse_shape": [
+        1,
+        4,
+        64
+      ],
+      "lse_err": 5.960464477539063e-08
+    },
+    {
+      "check": "prod_facade/sq64-skv1/float32",
+      "status": "PASS",
+      "err": 0.0
+    },
+    {
+      "check": "native/sq64-skv1/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07
+    },
+    {
+      "check": "flash/sq64-skv1/float32",
+      "status": "ERROR",
+      "note": "RuntimeError: FlashAttention only support fp16 and bf16 data type"
+    },
+    {
+      "check": "efficient/sq64-skv1/float32",
+      "status": "PASS",
+      "err": 2.384185791015625e-07,
+      "note": "lse_shape=(1, 4, 64) lse_err=5.960e-08",
+      "lse_shape": [
+        1,
+        4,
+        64
+      ],
+      "lse_err": 5.960464477539063e-08
+    },
+    {
+      "check": "aligned_bias_causal/bool333x197",
+      "status": "PASS",
+      "err": 0.0004544258117675781,
+      "note": "bias_repaired=True out_shape=(1, 4, 333, 64)"
+    },
+    {
+      "check": "aligned_bias_causal/float100x197",
+      "status": "PASS",
+      "err": 0.002762913703918457,
+      "note": "bias_repaired=True out_shape=(1, 4, 100, 64)"
+    },
+    {
+      "check": "aligned_bias_causal/bool1x64",
+      "status": "PASS",
+      "err": 0.0,
+      "note": "bias_repaired=False out_shape=(1, 4, 1, 64)"
+    },
+    {
+      "check": "gqa_efficient/gqa8/2_1x64/float16",
+      "status": "PASS",
+      "err": 0.0,
+      "note": "lse_shape=(2, 8, 32)"
+    },
+    {
+      "check": "gqa_efficient/gqa8/2_1x64/bfloat16",
+      "status": "PASS",
+      "err": 0.0,
+      "note": "lse_shape=(2, 8, 32)"
+    },
+    {
+      "check": "gqa_efficient/gqa8/2_100x197/float16",
+      "status": "PASS",
+      "err": 0.0005575418472290039,
+      "note": "lse_shape=(2, 8, 128)"
+    },
+    {
+      "check": "gqa_efficient/gqa8/2_100x197/bfloat16",
+      "status": "PASS",
+      "err": 0.003755331039428711,
+      "note": "lse_shape=(2, 8, 128)"
+    },
+    {
+      "check": "efficient_backward/100x197-fp16",
+      "status": "PASS",
+      "err": 0.00390625,
+      "note": "dq=2.441e-04 dk=4.883e-04 dv=3.906e-03"
+    },
+    {
+      "check": "a1_math_backward_gate/100x197",
+      "status": "MISMATCH",
+      "err": 4.6779327392578125,
+      "note": "dq=4.211e-01 dk=6.496e-01 dv=4.678e+00 （旧门回放: 整改前 register.py:109 跳过非方阵 causal，现门已拆，现行判卷见 test/op_level.py 第 6 步）"
+    }
+  ],
+  "misc": {
+    "device_name": "PPU-ZW810E",
+    "torch": "2.10.0"
+  },
+  "summary": {
+    "ACCEPTED": 1,
+    "PASS": 73,
+    "ERROR": 7,
+    "FAIL": 12,
+    "MISMATCH": 1
+  }
+}

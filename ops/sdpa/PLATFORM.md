@@ -1,8 +1,9 @@
 # 平台绑定清单（Platform Binding）
 
-> 当前交付包含三个平台：**ascend910**（Triton 主实现）、
-> **p800-kunlunxin**（厂商 efficient-attention 委托 + fp32 精度补偿）与
-> **mlu590**（Cambricon TMO FA + fused overrideable 委托）。
+> 当前交付包含四个平台：**ascend910**（Triton 主实现）、
+> **p800-kunlunxin**（厂商 efficient-attention 委托 + fp32 精度补偿）、
+> **mlu590**（Cambricon TMO FA + fused overrideable 委托）与
+> **thead-ppu**（平头哥 ZW810E：flash/efficient 分流委托 + fp32 组合）。
 > 本文件记录不可凭直觉搬运的绑定结论；跨平台移植时逐项重验，不要把
 > 单平台实验结果当成普适行为。
 
@@ -68,6 +69,170 @@ FlagGems `5.3.5`、设备 **MLU590-M9 / `mlu:0`**。
 | FlagGems `_cambricon` | 精度 397/397 全过，但比原生慢 10-40x 且无 autograd——仅作兜底/对照 |
 | 性能水位 | **1.00-1.33x** 原生（早期 math-only 为 0.12-0.52x，已废） |
 
+## 3c. thead-ppu 绑定（平头哥 ZW810E，flash/efficient 分流委托）
+
+环境锁定：开发容器 `flagos-ppu-wt-dev`（torch **2.10.0** CUDA 兼容层 /
+triton **3.6.0** / vllm 0.19.0；无 flag_gems、无 vllm-plugin-fl），
+16 卡均为 **PPU-ZW810E**，用卡 **6,7**（避 4/5/11）。profile 显式
+`--device thead-ppu`（`auto_detect.enabled=false`），测试设备默认
+`cuda:6`，`SDPA_TEST_DEVICE` 可覆盖。
+
+| 绑定项 | 结论 |
+|---|---|
+| 设备表现 | PPU 经 CUDA 兼容层直曝 `device.type="cuda"`；守卫要求设备名含 `PPU`；`get_impl("cuda")` 三候选路由：`torch_xmlir`→p800、PPU 栈→thead_ppu |
+| 注册 key | **`AutogradCUDA`**（算子本地）：探针 6/7 命中（零命中仅 inference_mode，known-issues #19）。中央 YAML 另存基键 `CUDA` 有意分层，见 §3c-1 |
+| GQA | efficient/flash schema **均无 `enable_gqa`**（8 参数实测）→ `repeat_interleave` 扩 KV |
+| 主实现（maskless） | 直调 `aten::_scaled_dot_product_flash_attention`；`TorchDispatchMode` 实证原生 `F.sdpa` 内部同此 overload。flash schema **无 attn_mask** |
+| 主实现（带 mask） | efficient 委托 `aten::_scaled_dot_product_efficient_attention`；bool mask 转 additive `-inf` bias；全遮蔽行输出端 `masked_fill` 恢复 NaN |
+| 非方阵 causal（`Sq≠Skv` 且 `is_causal=True`） | **PR36 条目 4 接入**：maskless 亦强制 efficient（flash 对该输入不生效），梯度门同批拆；取证见 §3c-3 |
+| bias 16B stride 对齐 | efficient kernel 强制要求；非对齐输入走 `_aligned_bias` 列 pad 修复，fp32/fp16/bf16 均已验收（细节与报错原文见 §3c-4） |
+| fp32 路径 | 委托精度好（非 extreme 3e-7～5e-6）但 scale=8 饱和超 1e-5 判卷线 → **fp32 走 ATen 组合**。PPU 无 p800 的 XMLIR bmm JIT 缺陷，无需 768 pad |
+| bf16 boundary | V≈dtype_max/2 × 长序列时厂商 kernel 中间量溢出 inf（**原生同溢出**，平台分化非缺陷）。tail 判定：inf 位置 parity + 有限子集 rel<5e-3 |
+| cudnn / overrideable | 两入口直调分别报 `CUDNN_BACKEND_TENSOR_DESCRIPTOR` 与 `NotImplementedError`（privateuse1 专用）——均不选 |
+| triton 备选 | triton 3.6.0 可编译执行（target cuda arch=80, PPUDriver）但 `tl.dot` 精度掉到 fp16 量级（64³ rel≈7e-4）→ 仅记备选，不接生产 |
+| 性能 | 首版 4.07× 倒挂；收口 maskless flash 分流 + get_impl 缓存后 **1.10× 原生**，六形状 0.63-0.99×（见 reports/performance.md） |
+| 跨层一致性缺证 | `run.py --consistency` 锚定 gelu_and_mul（A2），硬依赖 `flag_gems` + `vllm_fl`——dev 容器均无。直调↔dispatch 一致由 op 层断言覆盖 |
+
+### 3c-1. 中央 YAML `dispatch_key` 与算子本地 key 的分层（PR36 条目 2 取证，2026-10-25）
+
+`configs/devices/thead-ppu.yaml` 的 `device.dispatch_key: CUDA` 是**有意保留的中央
+基键**，与上表算子本地 `AutogradCUDA` 分层并存，不是笔误：
+
+| 侧 | key | 消费点（取证到的读取路径） |
+|---|---|---|
+| 中央 | `CUDA`（基键） | `common/device.py` → `_harness.py`/`_aten_harness.py` 写 `A1_DISPATCH_KEY` → `injection/sitecustomize.py`；另 intake/bench/op_a1 同读 |
+| 算子本地 | `AutogradCUDA` | `ops/<op>/_profile.py` → op / kernel / framework 三层测试与探针 |
+
+中央取基键而非 `AutogradCUDA` 的依据（2026-10-25 卡 6 实测，`python3
+scripts/smoke_dispatch_key.py` 复现，三断言全绿）：
+
+- 基键 `CUDA` 在 grad / no_grad / inference_mode 三口径各拦截 1 次、输出逐位相同，
+  反向梯度有限且对齐 silu 解析反向（`max_err=1.2e-7`）；
+- `AutogradCUDA` 在 `inference_mode` 零命中（known-issues #19.3，即本节上表 6/7 的
+  唯一零命中）——中央 A1 注册若改用它会在 inference 上静默失拦；
+- 先例一致：`p800-kunlunxin{,-gems5}.yaml` = `CUDA`、`cambricon.yaml` =
+  `PrivateUse1`，同为「YAML 基键 / 算子本地 `Autograd*` 键」分层（cambricon 侧
+  分层已由 `ops/embedding/reports/cambricon.md` §4 记录）。
+
+算子本地 `AutogradCUDA` 的探针依据不变（上表「注册 key」行）；两键分层不改任何
+既有测试口径。
+
+### 3c-2. 设备编号口径（PR36 条目 3 取证，2026-10-25）
+
+审阅质疑「profile 默认 `cuda:6` 与 `visible_devices: "6,7"` 并存，经
+`CUDA_VISIBLE_DEVICES` 重映射后子进程合法索引可能只有 `cuda:0/1`」。取证结论：
+`configs/devices/thead-ppu.yaml` 与本算子本地 `cuda:6` **都取物理卡号**，
+kernel / op / framework 三层同一口径，字段值不改。
+
+| 层 | 入口（消费点） | 实际用卡 |
+|---|---|---|
+| kernel | 中央 YAML `device.torch_device` → `tests/kernel_level/*`；本地 `_profile.py` thead 节 → `ops/<op>/test/kernel_level*.py` | 物理卡 6 |
+| op | 中央 YAML → `tests/op_level/*`；本地 `_profile.py` → `ops/<op>/test/op_level.py`、探针 | 物理卡 6 |
+| framework（算子应用层） | 同读 `profile.torch_device` → `ops/<op>/test/framework_level.py` | 物理卡 6 |
+| framework（中央 vLLM harness） | YAML `device.visible_devices` → `tests/framework_level/_harness.py:62` 写子进程 `CUDA_VISIBLE_DEVICES` | 物理卡 6,7（子进程逻辑 0/1） |
+
+依据：
+
+- 全仓只有三处写 `CUDA_VISIBLE_DEVICES`：`tests/framework_level/_harness.py:62`、
+  `scripts/drift_study.py:31`、`examples/b-fullstack/example.py:208`。三处都只写
+  **vLLM 子进程** env（`os.environ.copy()` 的副本），父进程与 kernel/op 算子进程
+  从不重映射——仓库内没有物理→逻辑的映射逻辑可依，所以 profile 只能、也只需
+  按物理卡号声明。
+- 被重映射的子进程是 `tests/framework_level/_vllm_runner.py`，它只消费
+  `profile.engine_args()` 与 `profile.name`，**不读 `profile.torch_device`**——
+  `cuda:6` 不会在重映射子进程里被使用，仓库驱动流程因此没有越界路径。
+  `examples/b-fullstack/example.py` 的 `stage_l2`（用 `torch_device`）与
+  `stage_l4`（写 CVD）分属不同阶段、不同进程环境，同理不冲突。
+- 实测（2026-10-25，跑前 `ppu-smi` 确认 6/7 空闲）：无 CVD 时 `device_count=16`、
+  `cuda:6` 可用；`CUDA_VISIBLE_DEVICES=6,7` 的子进程 `device_count=2`、
+  `get_device_name(0)="PPU-ZW810E"`，此时 `cuda:6` 报 `invalid device
+  ordinal`——即**只有外层 shell 自行 `export` CVD 时**才需换算：物理卡 =
+  列表第 N 项，`cuda:0/1` = 物理 `6/7`（换算说明沿用
+  `docs/device-profiles.md`「昆仑芯卡号与入口选择」表）。
+- 先例比对：`p800-kunlunxin{,-gems5}` = `cuda:1` + `"1,2"`、
+  `cambricon`/`mlu590` = `mlu:0` + `"0"`——同为「`torch_device` 索引 ∈
+  `visible_devices` 集合」的物理卡号写法。
+
+本节只补口径声明与换算规则，未改任何字段值、未放宽任何既有断言。
+
+### 3c-3. 非方阵 causal（Sq≠Skv）四平台现状（PR36 条目 4 取证，2026-10-25）
+
+审阅质疑「T-Head SDPA 文档写明 Sq != Skv 的 causal 会转 efficient，但当前
+backend 仍直接拒绝该输入」。取证三步：
+
+**1) 拒绝发生在哪一行**：`kernel/backends/thead_ppu.py` 旧第 233-234 行
+（dtype/head_dim 校验之后、flash/efficient 分流之前）
+`if is_causal and query.shape[-2] != key.shape[-2]: raise ValueError("causal
+语义要求 Sq == Skv（与 aten/reference 一致）")`；同款拒绝另见
+`p800_kunlunxin.py:211`、`mlu590.py:272`；判卷侧 `reference.py` 旧第 60 行断言
+`assert Sq == Skv`（现该断言已删）。
+
+**2) 文档作出该路由结论的原文行**：`ops/sdpa/PLATFORM.md` 自身**没有**这条
+结论——grep `Sq` / `Skv` / `causal` 只命中 §2 的 ascend 两行、§3b 的 mlu590
+快路径行与 `causal+mask` 行、§3c 的 bf16 boundary 行（均为别平台、别语义）。
+作出该结论的是同一 T-Head 交付里的 **sdpa_math 侧文档**：
+
+| 文件:行 | 原文 |
+|---|---|
+| `ops/sdpa_math/PLATFORM.md:54` | 「主实现（带 mask 或**非方阵 causal**） → efficient 委托」 |
+| `ops/sdpa_math/PLATFORM.md:55` | 「非方阵 causal **强制走 efficient**」（附首测 flash O err≈2.0 vs efficient err≈0） |
+| `ops/sdpa_math/reports/thead-ppu.md:41` | 「带 mask 或**非方阵 causal → efficient**」 |
+| `ops/sdpa_math/reports/development.md:77`、`ops/sdpa_math/REPORT.md:25` | 同款分流行 |
+
+而 `ops/sdpa/reports/development.md` **改前第 214 行**（本批已改写为选型 a
+的结论）反向写「Sq≠Skv 的 causal 语义未实现（**aten 本身限制性语义**）→
+wrapper 断言拒绝，与参考一致」——sdpa 侧按拒绝、sdpa_math 侧按转
+efficient，两边对不上，即审阅所指矛盾。
+
+**3) 实测**（`probes/thead_nonsq_causal_probe.py`，跑卡前 `ppu-smi` 确认
+6/7 空闲 2MiB/0%；产物：现行 `probes/out/thead_nonsq_causal_probe.json`
++ 整改前只读快照 `probes/out/thead_nonsq_causal_probe_prefix.json`）：
+
+| 探针项 | 结果 |
+|---|---|
+| 生产 facade `sdpa_triton` | **整改前**（快照）：18 例 ValueError + reference 1 例 AssertionError（REJECT 19），方阵对照 PASS；**整改后**：21 例全 PASS，非方阵 err 0 |
+| 原生 `F.sdpa`（PPU） | 全 PASS——aten 语义是 **top-tril** `tril(ones(Sq, Skv))`，非方阵同样支持；旧 assert 的「与 aten 一致」不成立 |
+| flash 直调 `is_causal=True` | 全 FAIL（err 1.21-1.91，causal 未施加）→ **不能**当非方阵 causal 路径 |
+| efficient 直调 `is_causal=True` | 6 形状（4×8/8×4/1×64/100×197/333×197/64×1）× fp16/bf16/fp32 全 PASS：err ≤5.62e-4 / ≤2.98e-3 / ≤2.53e-7，与原生逐案同误差 |
+| LSE 32-pad 切回 | `lse.shape[-1]` = Sq 上取整到 32（4→32、100→128、333→352），`[..., :Sq]` 后 err ≤9.5e-7 |
+| `_aligned_bias` × 非方阵 causal | bool 333×197、float 100×197 PASS 且 `bias_repaired=True`（bias 确被修复）；bool 1×64 PASS `bias_repaired=False`（Sq=1 无需 pad） |
+| GQA 扩 KV × 非方阵 causal | Hq/Hkv=8/2 的 1×64、100×197 PASS |
+| 厂商 efficient 反向 | dq 2.4e-4 / dk 4.9e-4 / dv 3.9e-3（fp16 容差内） |
+| A1 数学 backward（**旧门回放**，5b 内联复刻整改前门体） | **MISMATCH err=4.678**——非方阵上不折 causal；现门已拆，现行判卷见 `test/op_level.py` 第 6 步 |
+
+**选型：a）实现按文档路由**。依据是探针而不是推断：efficient 委托六形状三
+dtype 全对、与原生同值，且原生本就支持该输入（A1 注册不该比原生更严）；代价
+不结构性——只需删拒绝行、把 maskless 分支的非方阵 causal 改道 efficient、
+拆 `register.py:109` 梯度门、`reference.py` 与 aten 对齐（黄金集无非方阵
+causal 案例，397 例判卷口径不变）。四平台现状：
+
+| 平台 | 非方阵 causal（`is_causal=True` 且 `Sq≠Skv`） | 位置 |
+|---|---|---|
+| thead-ppu | **支持**：maskless 与带 mask 都走 efficient（fp16/bf16/fp32、GQA、非对齐 bias、反向全验） | `kernel/backends/thead_ppu.py` 分流 + `register.py` 梯度 |
+| p800-kunlunxin | 显式拒绝 `ValueError`（本平台未接入，未在 PPU 之外实测） | `kernel/backends/p800_kunlunxin.py` |
+| mlu590 | 显式拒绝 `ValueError`（同上） | `kernel/backends/mlu590.py` |
+| ascend910 | 显式拒绝 `ValueError`——原 `IS_CAUSAL` 折叠 **静默降级成不遮蔽**（前向错且与反向不一致），本批补拒绝 | `kernel/backends/ascend910.py` |
+
+配套测试：`test/kernel_level_tail_thead_ppu.py` 第 3 节（8 形状 × 3 dtype ×
+2 seed + 与原生 parity 3 例）、`test/op_level.py` 第 6 步（thead 专用：A1 拦截、
+注册=直调逐位、梯度 vs CPU 参考）。
+
+### 3c-4. bias 16B stride 对齐细节（thead 专属）
+
+- 报错原文两种：`(stride(1)*elem)%16!=0` →
+  `attn_bias is not correctly aligned (strideH)`；
+  `(stride(2)*elem)%16!=0` → `attn_bias is not correctly aligned`（无后缀）。
+- 修复（`_aligned_bias`，探针里叫 kv_pad）：把 bias 复制进按列 pad 到 16B 步长
+  的缓冲再 `as_strided` 回原逻辑形状（K-stride 保持 1）。
+- 生效范围：fp32/fp16 已验证等价（`probes/thead_bias_layout.json` 9/9）；
+  bf16 2026-10-24 已补验收口（`probes/out/thead_bf16_bias_pad.json`，T4）：
+  生产 `_aligned_bias` vs 连续 kv_pad 布局直算 vs CPU fp32 参考 11/11 用例在
+  bf16 1e-2 abs（黄金口径收紧）内一致（两路径互差 0），报错原文两种变体在
+  bf16 均复现。
+- 黄金集 bf16 masked 案例全为 basic S128（row stride 256B %16==0），走连续
+  bias 不触发非对齐分支——黄金 24 组 masked bf16 子集经生产 facade 回归无回退
+  （worst 7.8125e-3 = 交付时历史 worst）。
+
 ## 4. 平台专属数字（不可跨平台引用）
 
 - ascend910 性能与根因分解见 `reports/performance.md`、
@@ -81,6 +246,10 @@ FlagGems `5.3.5`、设备 **MLU590-M9 / `mlu:0`**。
 - mlu590 性能与路径选择见 `reports/mlu590.md`、
   `reports/perf_fp16_mlu590.json`（TMO+fused 后 **1.00-1.33x** 原生；
   FlagGems 慢 10-40x，仅兜底）。
+- thead-ppu 性能与倒挂收口见 `reports/thead-ppu.md`、
+  `reports/performance.md`、`reports/perf_fp16_thead-ppu.json`
+  （maskless flash 分流 + `get_impl` 解析缓存后 **1.10x** 原生，
+  六形状 0.63-0.99x；FlagGems 对比因 dev 栈缺失记缺证）。
 
 ## 5. 多平台结构（已落地）
 
@@ -90,6 +259,7 @@ kernel/backends/
   ascend910.py                  # 原 Triton 主体，旧功能零改动
   p800_kunlunxin.py             # Kunlunxin 厂商委托 + fp32 补偿
   mlu590.py                     # Cambricon TMO FA + fused overrideable
+  thead_ppu.py                  # 平头哥 flash(maskless)/efficient(masked) 分流委托
 ```
 
 合并流程与后续平台扩展仍按 [MERGE.md](MERGE.md) 执行。
@@ -108,12 +278,13 @@ backend 内不允许裸 `from reference import ...` 作为首选路径：一旦�
 | 层 | 机制 |
 |---|---|
 | facade 元数据 | `kernel.triton_level.PLATFORM = "multi(...)"`、`SUPPORTED_DEVICE_TYPES=("npu","cuda","mlu")` |
-| backend 元数据 | `kernel.backends.ascend910.PLATFORM` / `...p800_kunlunxin.PLATFORM` / `...mlu590.PLATFORM` |
-| 调用守卫 | backend 只接受本设备且 P800 要求 XMLIR、MLU 要求 torch_mlu；误配立即 `RuntimeError` 并指向本文件 |
+| backend 元数据 | `kernel.backends.ascend910.PLATFORM` / `...p800_kunlunxin.PLATFORM` / `...mlu590.PLATFORM` / `...thead_ppu.PLATFORM` |
+| 调用守卫 | backend 只接受本设备且 P800 要求 XMLIR、MLU 要求 torch_mlu、thead 要求设备名含 `PPU`；误配立即 `RuntimeError` 并指向本文件 |
 
 ```bash
 # 每个平台各跑一次
 python3 probes/guard_check.py ascend910
 python3 probes/guard_check.py p800-kunlunxin
 python3 probes/guard_check.py mlu590
+python3 probes/guard_check.py thead-ppu
 ```

@@ -2,10 +2,10 @@
 
 | 项 | 值 |
 |---|---|
-| 日期 | 2026-09-23（cambricon 平台接入与复测 2026-09-24） |
-| 设备 | p800-kunlunxin `cuda:1` · cambricon MLU590 `mlu:0` |
-| 环境 | P800: Torch 2.9.0+cu129 / torch_xmlir / Triton 3.0；MLU: Torch 2.11.0+cpu / torch_mlu 1.33.1 / Triton 3.4.0+mlu2.1.1 |
-| 结论 | 通过（两平台） |
+| 日期 | 2026-09-23（cambricon 平台接入与复测 2026-09-24；thead-ppu 接入 2026-10-23） |
+| 设备 | p800-kunlunxin `cuda:1` · cambricon MLU590 `mlu:0` · thead-ppu PPU-ZW810E `cuda:6` |
+| 环境 | P800: Torch 2.9.0+cu129 / torch_xmlir / Triton 3.0；MLU: Torch 2.11.0+cpu / torch_mlu 1.33.1 / Triton 3.4.0+mlu2.1.1；PPU: Torch 2.10.0 CUDA 兼容层 / Triton 3.6.0 PPUDriver |
+| 结论 | 通过（三平台） |
 
 ## 1. 测试范围
 
@@ -19,6 +19,7 @@
 | FlagOS 栈 | `flag_gems.only_enable(['gelu'])` 后运行应用层 | ✅ |
 | 边界 | sparse forward 接受、sparse backward / invalid padding 拒绝 | ✅ |
 | 第二平台 cambricon | kernel / op / framework / guard 同判据复跑 | ✅ |
+| 第三平台 thead-ppu | kernel / tail / op / framework / guard / 黄金同判据复跑 | ✅ |
 
 ## 2. 环境
 
@@ -110,7 +111,35 @@ python3 -m pytest tests/unit -q
 | 单测 | ✅ `pytest tests/unit -q` 20 passed |
 | perf gate | ✅ `FAIL 0 · WARN 0 · NEW 0`（`ops.embedding.cambricon.forward` 0.060ms） |
 
-## 7. 结论
+## 7. thead-ppu（PPU ZW810E）复跑结果
 
-kernel 层、op 层、应用层、黄金与性能门禁在 **p800-kunlunxin 与 cambricon
-两个平台上全部通过**；建议合入。
+```bash
+python3 example.py thead-ppu
+python3 test/kernel_level_tail_thead_ppu.py thead-ppu
+python3 script/gen_golden.py
+python3 script/check_accuracy.py --impl thead-ppu --device cuda:6
+python3 scripts/perf_run.py --device thead-ppu --pattern ops.embedding
+python3 scripts/perf_compare.py --device thead-ppu
+python3 -m pytest tests/unit -q
+```
+
+| 层级 | 结果 |
+|---|---|
+| kernel forward | ✅ 20/20，`max_forward_err=0.0` |
+| kernel backward | ✅ 6/6，`max_backward_err=0.0`（3 dtype × scale 0/1，原生直通） |
+| tail 补充（§2d） | ✅ 37/37：3072/5000/5120 × 3 dtype × 3 seed + zeros/large/boundary 全 err=0；哨兵通过 |
+| 守卫 | ✅ sparse backward 拒绝 / invalid padding 拒绝 / sparse forward 接受 |
+| 黄金 | ✅ 174/174，worst=0.000e+00（`--impl thead-ppu`，逐位判据） |
+| A1 op | ✅ 拦截 5 次；注册=直调（逐位）；dense/scale grad err=0；sparse fwd OK / bwd rejected |
+| 应用层 | ✅ 拦截 8 次；logits diff=0.000e+00；greedy 1.00；两级梯度 diff=0（flag_gems 缺证, 纯 A1 拦截口径） |
+| 一键三层 | ✅ `example.py thead-ppu` 1/3 kernel · 2/3 A1 op · 3/3 application 全 PASS |
+| 单测 | ✅ `pytest tests/unit -q` 46 passed |
+| perf gate | ✅ `FAIL 0 · WARN 0`（`ops.embedding.thead-ppu.forward` 0.033ms / 255.0 GB/s） |
+| 仓库一致性 | ◐ `run.py --consistency` FAIL：`ModuleNotFoundError: flag_gems`（dev 栈结构性缺证，同 T1 sdpa） |
+| C2 真实 vLLM（thead-ppu-c2） | ✅ EngineCore 内 A1 命中 10；token 与基线一致（[e2e_vllm_c2_thead-ppu-c2.json](e2e_vllm_c2_thead-ppu-c2.json)、[thead-ppu-c2.md](thead-ppu-c2.md)） |
+
+## 8. 结论
+
+kernel 层、op 层、应用层、黄金与性能门禁在 **p800-kunlunxin、cambricon 与
+thead-ppu 三个平台上全部通过**；thead 另有 **thead-ppu-c2 真实 vLLM C2** 证据。
+建议合入。
