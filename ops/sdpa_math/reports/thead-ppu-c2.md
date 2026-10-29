@@ -1,6 +1,6 @@
 # thead-ppu-c2 sdpa_math C2 报告（真实 vLLM EngineCore）
 
-日期：2026-10-28 · 提交线索：wt-2026-10-26-fix  
+日期：2026-10-28 · 提交线索：wt-2026-10-26-fix
 profile：`thead-ppu-c2`（真实引擎基座，与 dev 基座 `thead-ppu` 双 profile）
 
 ## 1. 环境
@@ -23,7 +23,7 @@ python3 scripts/check_env.py --device thead-ppu-c2
 
 ## 2. 路径判定（状态：PASS）
 
-**默认真实 vLLM 注意力不消费** `aten::_scaled_dot_product_attention_math`  
+**默认真实 vLLM 注意力不消费** `aten::_scaled_dot_product_attention_math`
 （flag_gems `flash_attn_varlen` / FA3 wheel；`ALL_ATTENTION_FUNCTIONS["vllm"]`
 → vLLM Attention → flagos）。`model_impl=transformers` 仍把
 `_attn_implementation` 钉为 `"vllm"`，HF 的 F.sdpa 不会走到 math composite。

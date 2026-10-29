@@ -120,7 +120,7 @@ dq 4.9e-4 · dk 4.9e-4 · dv 3.9e-3。
 
 ### 2026-10-25 thead-ppu 非方阵 causal 复验（PR36 条目 4）
 
-选型 a（实现按文档路由，取证与四平台矩阵见 [PLATFORM.md §3c-3](PLATFORM.md)）：
+选型 a（实现按文档路由，取证与四平台矩阵见 [PLATFORM.md §3c-3](../PLATFORM.md)）：
 
 | 层级 | 结果 |
 |---|---|

@@ -1,6 +1,6 @@
 # thead-ppu-c2 embedding C2 报告（真实 vLLM EngineCore）
 
-日期：2026-10-28 · 提交线索：wt-2026-10-26-fix  
+日期：2026-10-28 · 提交线索：wt-2026-10-26-fix
 profile：`thead-ppu-c2`（真实引擎基座，与 dev 基座 `thead-ppu` 双 profile）
 
 ## 1. 环境
@@ -37,8 +37,8 @@ python3 scripts/check_env.py --device thead-ppu-c2
 
 双跑分进程（A1 注册不可撤销）：
 
-1. **baseline**：真实 vLLM，无注入  
-2. **injected**：`FLAGOS_C2_EMB_INJECT=1` + `A1_DISPATCH_KEY=CUDA`  
+1. **baseline**：真实 vLLM，无注入
+2. **injected**：`FLAGOS_C2_EMB_INJECT=1` + `A1_DISPATCH_KEY=CUDA`
    + `A1_EMB_PLATFORM=thead-ppu` + `A1_EMBEDDING_COUNT_FILE`（pid 分片 JSON）
 
 入口：
