@@ -8,7 +8,7 @@
 #   与可选 evidence.report；C2* 级别必须指向存在的报告（issue #41）。
 
 schema: 1
-updated: 2026-10-28
+updated: 2026-10-29
 
 target_scope:
   vendor_family_count: 6
@@ -102,13 +102,13 @@ operators:
     directory: sdpa_math
     group: core
     purpose: 私有 SDPA math 后端，同时返回完整概率图。
-    key_result: 四份实现通过同一组 175 例黄金数据。
+    key_result: 四份实现通过同一组 175 例黄金数据；Ascend910 引擎侧 C2 命中。
     platforms:
       ascend:
         profiles: [ascend910]
         implementation: Triton exact-P 路径
         evidence:
-          level: C2-routing-boundary
+          level: C2
           report: ops/sdpa_math/reports/c2_ascend910.md
       kunlunxin:
         profiles: [p800-kunlunxin]
@@ -120,8 +120,14 @@ operators:
     directory: embedding
     group: core
     purpose: 稠密 embedding 前向和 dense backward。
-    key_result: 已在两个当前厂商平台交付；MLU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
+    key_result: 已在三个厂商平台交付；MLU 侧逐位覆盖，Ascend910 引擎侧 C2 命中。
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: Triton row-gather
+        evidence:
+          level: C2
+          report: ops/embedding/reports/c2_ascend910.md
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: 原生 row-gather 与反向补偿

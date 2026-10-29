@@ -1,12 +1,18 @@
 {
-  "schema": 1,
-  "date": "2026-10-28T14:45:27Z",
+  "schema": 2,
+  "date": "2026-10-29T01:16:59Z",
   "profile": "ascend910",
   "engine": "vllm-ascend",
-  "commit": "726df053aef664cef6cd176447de7b5d75aab2d3",
+  "commit": "618a1967409cfdfca3751d7497afdeb1508479e9",
   "model": "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
   "prompt": "The capital of France is",
   "python": "3.11.15",
+  "injection": {
+    "mp_method": "spawn",
+    "attn_backend_patch": true,
+    "flagos_attn_env": "1",
+    "a1_ops": "sdpa_math"
+  },
   "baseline": {
     "mode": "baseline",
     "ok": true,
@@ -14,11 +20,13 @@
     "torch_npu": "2.10.0",
     "npu_available": true,
     "npu_count": 16,
+    "mp_method": "spawn",
+    "flagos_attn": "0",
     "vllm": "0.20.2",
     "vllm_ascend": "source",
     "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-    "init_s": 12.48,
-    "generate_s": 0.38,
+    "init_s": 25.38,
+    "generate_s": 0.39,
     "text": " the city of Paris. It is the",
     "token_ids": [
       260,
@@ -31,7 +39,7 @@
       260
     ],
     "rc": 0,
-    "wall_s": 24.81
+    "wall_s": 42.51
   },
   "inject": {
     "mode": "inject",
@@ -40,22 +48,25 @@
     "torch_npu": "2.10.0",
     "npu_available": true,
     "npu_count": 16,
-    "registered_libs": 2,
+    "mp_method": "spawn",
+    "flagos_attn": "1",
+    "a1_counter_retrieved": true,
+    "attn_patched": true,
     "vllm": "0.20.2",
     "vllm_ascend": "source",
     "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-    "init_s": 16.12,
-    "generate_s": 0.37,
-    "text": " the city of Paris. It is the",
+    "init_s": 23.75,
+    "generate_s": 0.41,
+    "text": " the capital of the country.\n\n",
     "token_ids": [
       260,
-      2240,
+      3575,
       282,
-      7042,
+      260,
+      1798,
       30,
-      657,
-      314,
-      260
+      198,
+      198
     ],
     "forward_hits_before_probe": 0,
     "probe_hits_after_direct_call": 1,
@@ -67,23 +78,39 @@
     ],
     "probe_out_dtype": "torch.float16",
     "rc": 0,
-    "wall_s": 37.65
+    "wall_s": 47.52
   },
   "hit_files": [
     {
-      "pid": 2632222,
+      "pid": 4078929,
       "op": "sdpa_math",
       "aten": "aten::_scaled_dot_product_attention_math",
       "hits": 1,
-      "dumped_at": "2026-10-28T14:45:21Z"
+      "dumped_at": "2026-10-29T01:16:47Z"
+    },
+    {
+      "pid": 4083966,
+      "op": "sdpa_math",
+      "aten": "aten::_scaled_dot_product_attention_math",
+      "hits": 0,
+      "dumped_at": "2026-10-29T01:16:57Z"
+    },
+    {
+      "pid": 4083967,
+      "op": "sdpa_math",
+      "aten": "aten::_scaled_dot_product_attention_math",
+      "hits": 240,
+      "dumped_at": "2026-10-29T01:16:48Z"
     }
   ],
-  "forward_hits": 0,
-  "total_hits_all_incl_probe": 1,
+  "engine_core_hits": 241,
+  "forward_hits": 241,
+  "total_hits_all_incl_probe": 241,
   "probe_hits_after_direct_call": 1,
-  "outputs_equal": true,
-  "c2_status": "c2-routing-boundary",
+  "outputs_equal": false,
+  "c2_status": "c2-hit",
   "notes": [
-    "A1 注册链在 NPU 进程内可用（probe 命中），但真实前向 forward_hits=0：注意力经 npu_fusion_attention，不调用 aten math 后端（known-issues #19）。不把默认路由声明为 C2 命中。另: sitecustomize 全进程注入在 NPU fork EngineCore 上触发 torch.npu 再初始化失败，本 harness 仅做主进程 probe（见 reports/c2_ascend910.md）。"
+    "真实 vLLM-Ascend 前向命中 aten math 后端（引擎侧 FlagOSMathAttentionBackend 补丁生效），C2 成立",
+    "WARNING: 基线与注入 token_ids 不一致"
   ]
 }

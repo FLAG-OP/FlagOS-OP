@@ -1,0 +1,101 @@
+{
+  "schema": 2,
+  "date": "2026-10-29T01:30:47Z",
+  "profile": "ascend910",
+  "engine": "vllm-ascend",
+  "commit": "618a1967409cfdfca3751d7497afdeb1508479e9",
+  "model": "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "prompt": "The capital of France is",
+  "python": "3.11.15",
+  "injection": {
+    "mp_method": "spawn",
+    "a1_ops": "embedding"
+  },
+  "baseline": {
+    "mode": "baseline",
+    "ok": true,
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0",
+    "npu_available": true,
+    "npu_count": 16,
+    "mp_method": "spawn",
+    "vllm": "0.20.2",
+    "vllm_ascend": "source",
+    "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
+    "init_s": 25.91,
+    "generate_s": 0.36,
+    "text": " the city of Paris. It is the",
+    "token_ids": [
+      260,
+      2240,
+      282,
+      7042,
+      30,
+      657,
+      314,
+      260
+    ],
+    "rc": 0,
+    "wall_s": 42.82
+  },
+  "inject": {
+    "mode": "inject",
+    "ok": true,
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0",
+    "npu_available": true,
+    "npu_count": 16,
+    "mp_method": "spawn",
+    "a1_counter_retrieved": true,
+    "vllm": "0.20.2",
+    "vllm_ascend": "source",
+    "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
+    "init_s": 28.58,
+    "generate_s": 0.36,
+    "text": " the city of Paris. It is the",
+    "token_ids": [
+      260,
+      2240,
+      282,
+      7042,
+      30,
+      657,
+      314,
+      260
+    ],
+    "forward_hits_before_probe": 0,
+    "rc": 0,
+    "wall_s": 57.65
+  },
+  "hit_files": [
+    {
+      "pid": 178232,
+      "op": "embedding",
+      "aten": "aten::embedding",
+      "hits": 0,
+      "dumped_at": "2026-10-29T01:30:32Z"
+    },
+    {
+      "pid": 183954,
+      "op": "embedding",
+      "aten": "aten::embedding",
+      "hits": 0,
+      "dumped_at": "2026-10-29T01:30:42Z"
+    },
+    {
+      "pid": 183955,
+      "op": "embedding",
+      "aten": "aten::embedding",
+      "hits": 9,
+      "dumped_at": "2026-10-29T01:30:33Z"
+    }
+  ],
+  "engine_core_hits": 9,
+  "forward_hits": 9,
+  "total_hits_all_incl_probe": 9,
+  "outputs_equal": true,
+  "c2_status": "c2-hit",
+  "notes": [
+    "真实 vLLM-Ascend 前向命中 aten::embedding，C2 成立"
+  ]
+}

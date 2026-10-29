@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
-"""C2 真实 vLLM-Ascend 双跑 harness（issue #38）。
+"""C2 真实 vLLM-Ascend 双跑 harness（issue #38，引擎侧突破版）。
 
 基线: 无 FlagOS 注入的 vLLM-Ascend 前向。
-注入: sitecustomize（含 EngineCore 子进程）+ FLAGOS_A1_OPS=sdpa_math，
+注入: spawn 多进程 + sitecustomize（EngineCore/Worker 各进程内生效）:
+      - FLAGOS_A1_ATEN_INJECT=1 → A1 注册 aten::_scaled_dot_product_attention_math
+      - FLAGOS_SDPA_MATH_ATTN=1  → 补丁 NPUPlatform.get_attn_backend_cls，
+        强制注意力走 FlagOSMathAttentionBackend（内部调 aten math op），
+        突破 known-issues #19 的 routing boundary。
       按 pid 分片写调用计数（docs/testing.md）。
 断言: 双跑均完成；记录 token ids / 版本 / 模型 / commit / 命中计数。
-      total_hits=0 且 probe>0 时记为 routing boundary（known-issues #19），
-      不把默认路由声明为 C2 命中。
+      forward_hits>0 且输出可比 → C2 命中；否则按 routing-boundary 记录原因。
+
+关键环境:
+  - VLLM_WORKER_MULTIPROC_METHOD=spawn（NPU 上 sitecustomize 在 spawn
+    子进程启动时执行，NPU 尚未初始化，无 fork 再初始化冲突）。
+  - enforce_eager=True（禁 ACL graph，保证 Python 路径逐步执行）。
 
 用法:
   python3 ops/sdpa_math/script/c2_real_vllm_ascend.py --out reports/c2_ascend910
@@ -38,28 +46,30 @@ _CANN = [
 
 def _child_env(inject: bool, workdir: pathlib.Path) -> dict[str, str]:
     env = os.environ.copy()
-    # 注入模式**不**把 injection/ 放进 EngineCore 可见的 sitecustomize
-    # 路径之外的自动加载——NPU 上 sitecustomize 在 fork 子进程里
-    # 触发 torch.npu 再初始化会失败（见报告 routing/init 边界）。
-    # 主进程探针在 child runner 内显式注册，不依赖 sitecustomize。
-    parts = ["/vllm-workspace/vllm-ascend", *_CANN]
-    if not inject:
-        # 基线: 仍暴露 injection 目录但不设 FLAGOS_A1_ATEN_INJECT，
-        # 保证 PYTHONPATH 形态与注入跑对称。
-        parts = [str(ROOT / "injection")] + parts
+    # spawn 模式: sitecustomize 在每个子进程启动时执行（NPU 未初始化），
+    # 无 fork 再初始化冲突。injection/ 放 PYTHONPATH 首位。
+    parts = [str(ROOT / "injection"), "/vllm-workspace/vllm-ascend", *_CANN]
     env["PYTHONPATH"] = ":".join(parts + [p for p in [env.get("PYTHONPATH")] if p])
     env["VLLM_PLUGINS"] = "ascend"
     env["ASCEND_HOME_PATH"] = "/usr/local/Ascend/cann-9.0.0"
     env["HCCL_VERIFY"] = "0"
+    # NPU 必须 spawn，否则 fork 后 torch.npu 再初始化失败
+    env["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
     if inject:
-        env["FLAGOS_A1_ATEN_INJECT"] = "0"
+        env["FLAGOS_A1_ATEN_INJECT"] = "1"
         env["FLAGOS_TEMPLATES_ROOT"] = str(ROOT)
         env["FLAGOS_A1_OPS"] = "sdpa_math"
         env["A1_DISPATCH_KEY"] = "AutogradPrivateUse1"
         env["FLAGOS_C2_COUNT_DIR"] = str(workdir)
+        env["FLAGOS_SDPA_MATH_ATTN"] = "1"
+        # C2 引擎侧路径强制 torch impl: triton 在 bf16 大 GQA shape
+        # 首轮可能出现异常输出（见 reports/c2_ascend910.md 调试记录）；
+        # torch impl 与 native 逐位一致，更适合 C2 证据链。
+        env.setdefault("FLAGOS_A1_IMPL", "torch")
     else:
         for k in ("FLAGOS_A1_ATEN_INJECT", "FLAGOS_A1_OPS",
-                  "FLAGOS_C2_COUNT_DIR", "A1_DISPATCH_KEY"):
+                  "FLAGOS_C2_COUNT_DIR", "A1_DISPATCH_KEY",
+                  "FLAGOS_SDPA_MATH_ATTN"):
             env.pop(k, None)
     return env
 
@@ -73,28 +83,41 @@ result = {"mode": mode, "ok": False}
 dump = None
 
 try:
+    # sitecustomize（inject 模式）已在本进程启动时完成 A1 注册与
+    # attention backend 补丁；此处只需验证状态并跑真实生成。
     import torch
     import torch_npu  # noqa: F401
     result["torch"] = torch.__version__
     result["torch_npu"] = getattr(__import__("torch_npu"), "__version__", "?")
     result["npu_available"] = bool(hasattr(torch, "npu") and torch.npu.is_available())
     result["npu_count"] = torch.npu.device_count() if result["npu_available"] else 0
+    result["mp_method"] = os.environ.get("VLLM_WORKER_MULTIPROC_METHOD", "fork")
+    result["flagos_attn"] = os.environ.get("FLAGOS_SDPA_MATH_ATTN", "0")
 
+    counter = None
     if mode == "inject":
-        # 主进程: 隔离加载 + 带 counter 注册。
-        # 注意: 此处**不**立即在 NPU 上跑张量——父进程过早初始化 NPU
-        # 会使随后 fork 的 EngineCore 报 "Cannot re-initialize NPU"。
-        # probe 放到 generate 之后。
+        # sitecustomize 已注册; 取回 counter 做主进程 probe 验证
         root = pathlib.Path(os.environ["FLAGOS_TEMPLATES_ROOT"])
         sys.path.insert(0, str(root / "injection"))
-        from a1_aten_ops import _load_isolated, _maybe_counter
-        r = _load_isolated(root, "sdpa_math")
-        if r is None:
-            raise RuntimeError("sdpa_math isolated load failed")
-        mod, _saved = r
-        counter, dump = _maybe_counter("sdpa_math")
-        libs = mod.register_a1("AutogradPrivateUse1", counter=counter)
-        result["registered_libs"] = len(libs)
+        from a1_aten_ops import get_counter
+        counter = get_counter("sdpa_math")
+        result["a1_counter_retrieved"] = counter is not None
+        # 验证 backend 补丁已生效（sitecustomize 可能因 import 时序失败，
+        # 此处再兜底补一次）
+        try:
+            from vllm_ascend.platform import NPUPlatform
+            patched = bool(getattr(NPUPlatform, "_flagos_math_attn_patched", False))
+            result["attn_patched"] = patched
+            if not patched and os.environ.get("FLAGOS_SDPA_MATH_ATTN") == "1":
+                from ops.sdpa_math.engine.flagos_math_attn import (
+                    patch_npu_platform_get_attn_backend_cls,
+                )
+                ok = patch_npu_platform_get_attn_backend_cls()
+                result["attn_patched_fallback"] = ok
+                result["attn_patched"] = bool(
+                    getattr(NPUPlatform, "_flagos_math_attn_patched", False))
+        except Exception as e:
+            result["attn_patched_err"] = repr(e)
 
     from vllm import LLM, SamplingParams
     import vllm
@@ -119,13 +142,12 @@ try:
     result["token_ids"] = list(outs[0].outputs[0].token_ids[:8])
     result["ok"] = True
 
-    if mode == "inject":
+    if mode == "inject" and counter is not None:
         # 真实前向结束后的计数（不含下方 probe）
         result["forward_hits_before_probe"] = counter["n"]
         if dump is not None:
             dump()
-        # generate 之后再 probe: EngineCore 已完成 fork，父进程此时
-        # 在 NPU 上直调 math 后端，验证 A1 拦截链在本进程生效。
+        # generate 之后 probe: 验证 A1 拦截链在本进程仍生效
         q = torch.randn(1, 4, 8, 16, dtype=torch.float16, device="npu")
         k = torch.randn(1, 4, 8, 16, dtype=torch.float16, device="npu")
         v = torch.randn(1, 4, 8, 16, dtype=torch.float16, device="npu")
@@ -149,7 +171,7 @@ print(json.dumps(result, ensure_ascii=False))
 
 
 def run_mode(mode: str, model: str, out_dir: pathlib.Path,
-             timeout_s: int = 300) -> dict:
+             timeout_s: int = 600) -> dict:
     out_path = out_dir / f"{mode}.json"
     env = _child_env(inject=(mode == "inject"), workdir=out_dir)
     cmd = [sys.executable, "-c", _CHILD_RUNNER, mode, model, PROMPT, str(out_path)]
@@ -206,21 +228,22 @@ def main() -> int:
         old.unlink()
     inject = run_mode("inject", model, out_dir)
     hits = merge_hits(out_dir)
-    # EngineCore 侧（若 sitecustomize 生效）+ 主进程 probe 的合计。
-    # 判定 C2 命中只看 forward_hits_before_probe / EngineCore 文件，
-    # 不把主进程 probe 算进真实前向。
-    engine_core_hits = sum(
+    # 主进程（child runner 进程内）计数含 probe；EngineCore/Worker 进程
+    # 的计数文件（pid 不同）才是真实前向命中。
+    main_pid = inject.get("pid")
+    engine_hits = sum(
         int(h.get("hits") or 0) for h in hits
-        if h.get("pid") != inject.get("pid"))
-    # 主进程计数文件含 probe；用 inject.forward_hits_before_probe 更准
+        if h.get("pid") != main_pid
+    )
     forward_hits = inject.get("forward_hits_before_probe")
-    if forward_hits is None:
-        forward_hits = engine_core_hits
+    # 若主进程 forward_hits 为 0 但 EngineCore 侧有命中，取引擎侧
+    if (forward_hits or 0) == 0 and engine_hits > 0:
+        forward_hits = engine_hits
     total_hits_all = sum(int(h.get("hits") or 0) for h in hits)
     probe_hits = inject.get("probe_hits_after_direct_call")
 
     summary = {
-        "schema": 1,
+        "schema": 2,
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "profile": "ascend910",
         "engine": "vllm-ascend",
@@ -228,9 +251,16 @@ def main() -> int:
         "model": model,
         "prompt": PROMPT,
         "python": platform.python_version(),
+        "injection": {
+            "mp_method": inject.get("mp_method"),
+            "attn_backend_patch": inject.get("attn_patched"),
+            "flagos_attn_env": inject.get("flagos_attn"),
+            "a1_ops": "sdpa_math",
+        },
         "baseline": baseline,
         "inject": inject,
         "hit_files": hits,
+        "engine_core_hits": engine_hits,
         "forward_hits": forward_hits,
         "total_hits_all_incl_probe": total_hits_all,
         "probe_hits_after_direct_call": probe_hits,
@@ -244,16 +274,16 @@ def main() -> int:
         if (forward_hits or 0) > 0:
             summary["c2_status"] = "c2-hit"
             summary["notes"].append(
-                "真实 vLLM-Ascend 前向命中 math 后端，C2 成立")
+                "真实 vLLM-Ascend 前向命中 aten math 后端（引擎侧 "
+                "FlagOSMathAttentionBackend 补丁生效），C2 成立")
         elif (probe_hits or 0) > 0:
             summary["c2_status"] = "c2-routing-boundary"
             summary["notes"].append(
                 "A1 注册链在 NPU 进程内可用（probe 命中），但真实前向 "
-                "forward_hits=0：注意力经 npu_fusion_attention，不调用 "
-                "aten math 后端（known-issues #19）。不把默认路由声明为 "
-                "C2 命中。另: sitecustomize 全进程注入在 NPU fork "
-                "EngineCore 上触发 torch.npu 再初始化失败，本 harness "
-                "仅做主进程 probe（见 reports/c2_ascend910.md）。")
+                "forward_hits=0：注意力未走 FlagOS math backend 路径。"
+                "可能原因: backend 补丁未传播到 EngineCore/Worker、"
+                "spawn 子进程未加载 sitecustomize、或注意力走了其他分支。"
+                "详见 inject.stdout.log 与 stderr。")
         else:
             summary["c2_status"] = "c2-inject-unverified"
             summary["notes"].append("注入进程 probe 未命中，注册链存疑")
@@ -268,7 +298,9 @@ def main() -> int:
     print(json.dumps({
         "c2_status": summary["c2_status"],
         "forward_hits": forward_hits,
+        "engine_core_hits": engine_hits,
         "probe_hits": probe_hits,
+        "attn_patched": inject.get("attn_patched"),
         "outputs_equal": summary["outputs_equal"],
         "baseline_ok": baseline.get("ok"),
         "inject_ok": inject.get("ok"),

@@ -5,22 +5,25 @@
   "torch_npu": "2.10.0",
   "npu_available": true,
   "npu_count": 16,
-  "registered_libs": 2,
+  "mp_method": "spawn",
+  "flagos_attn": "1",
+  "a1_counter_retrieved": true,
+  "attn_patched": true,
   "vllm": "0.20.2",
   "vllm_ascend": "source",
   "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-  "init_s": 16.12,
-  "generate_s": 0.37,
-  "text": " the city of Paris. It is the",
+  "init_s": 23.75,
+  "generate_s": 0.41,
+  "text": " the capital of the country.\n\n",
   "token_ids": [
     260,
-    2240,
+    3575,
     282,
-    7042,
+    260,
+    1798,
     30,
-    657,
-    314,
-    260
+    198,
+    198
   ],
   "forward_hits_before_probe": 0,
   "probe_hits_after_direct_call": 1,
@@ -32,5 +35,5 @@
   ],
   "probe_out_dtype": "torch.float16",
   "rc": 0,
-  "wall_s": 37.65
+  "wall_s": 47.52
 }

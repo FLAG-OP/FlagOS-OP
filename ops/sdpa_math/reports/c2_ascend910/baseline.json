@@ -5,11 +5,13 @@
   "torch_npu": "2.10.0",
   "npu_available": true,
   "npu_count": 16,
+  "mp_method": "spawn",
+  "flagos_attn": "0",
   "vllm": "0.20.2",
   "vllm_ascend": "source",
   "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-  "init_s": 12.48,
-  "generate_s": 0.38,
+  "init_s": 25.38,
+  "generate_s": 0.39,
   "text": " the city of Paris. It is the",
   "token_ids": [
     260,
@@ -22,5 +24,5 @@
     260
   ],
   "rc": 0,
-  "wall_s": 24.81
+  "wall_s": 42.51
 }

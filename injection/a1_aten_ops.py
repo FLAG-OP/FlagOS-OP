@@ -111,11 +111,14 @@ def _maybe_counter(op: str):
     counter = {"n": 0}
 
     def dump():
+        _aten_label = {
+            "sdpa_math": "aten::_scaled_dot_product_attention_math",
+            "embedding": "aten::embedding",
+        }.get(op, op)
         cpath.write_text(_json.dumps({
             "pid": os.getpid(),
             "op": op,
-            "aten": "aten::_scaled_dot_product_attention_math"
-                    if op == "sdpa_math" else op,
+            "aten": _aten_label,
             "hits": counter["n"],
             "dumped_at": datetime.now(timezone.utc).strftime(
                 "%Y-%m-%dT%H:%M:%SZ"),
@@ -123,6 +126,20 @@ def _maybe_counter(op: str):
 
     atexit.register(dump)
     return counter, dump
+
+
+# 进程内已注册算子的 counter 存档: {op: counter_dict}。
+# sitecustomize 注册后，child runner 可经 get_counter(op) 取回同一份
+# counter 做主进程 probe 验证（避免二次注册产生独立 counter）。
+_COUNTERS: dict[str, dict] = {}
+
+# 持有 register_a1 返回的 lib 列表——GC 后注册失效（见 register.py 注释）。
+_HELD_LIBS: list = []
+
+
+def get_counter(op: str):
+    """返回 register_all 存档的 counter dict，未注册则 None。"""
+    return _COUNTERS.get(op)
 
 
 def register_all(dispatch_key: str = "PrivateUse1",
@@ -141,14 +158,33 @@ def register_all(dispatch_key: str = "PrivateUse1",
                 setattr(mod, name, _wrap(fn, saved))
         try:
             counter, _dump = _maybe_counter(op)
+            # FLAGOS_A1_IMPL 可强制指定实现（如 torch），用于 C2 调试/规避
+            # triton 在特定 shape 下的首轮异常。
+            _impl = os.environ.get("FLAGOS_A1_IMPL") or None
+            libs = None
             if counter is not None:
                 try:
-                    mod.register_a1(dispatch_key, counter=counter)
+                    if _impl:
+                        libs = mod.register_a1(
+                            dispatch_key, counter=counter, impl=_impl)
+                    else:
+                        libs = mod.register_a1(dispatch_key, counter=counter)
                 except TypeError:
-                    # 个别算子 register_a1 未升级 counter 参数时退回无计数
-                    mod.register_a1(dispatch_key)
+                    # 个别算子 register_a1 未升级 counter/impl 参数时退回
+                    libs = mod.register_a1(dispatch_key)
+                # 注册成功后才存档 counter——失败时 get_counter 返回 None，
+                # 避免 harness 误报 a1_counter_retrieved=true 但 forward_hits=0。
+                _COUNTERS[op] = counter
             else:
-                mod.register_a1(dispatch_key)
+                if _impl:
+                    try:
+                        libs = mod.register_a1(dispatch_key, impl=_impl)
+                    except TypeError:
+                        libs = mod.register_a1(dispatch_key)
+                else:
+                    libs = mod.register_a1(dispatch_key)
+            if libs is not None:
+                _HELD_LIBS.append(libs)
             registered.append(op)
         except Exception:
             pass
