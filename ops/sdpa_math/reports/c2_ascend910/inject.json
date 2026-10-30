@@ -1,6 +1,7 @@
 {
   "mode": "inject",
   "ok": true,
+  "pid": 880357,
   "torch": "2.10.0+cpu",
   "torch_npu": "2.10.0",
   "npu_available": true,
@@ -12,8 +13,14 @@
   "vllm": "0.20.2",
   "vllm_ascend": "source",
   "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-  "init_s": 23.75,
-  "generate_s": 0.41,
+  "init_s": 24.15,
+  "prompt_logprobs": {
+    "1": -8.226740837097168,
+    "2": -0.8488110899925232,
+    "3": -5.2412238121032715,
+    "4": -1.0857064723968506
+  },
+  "generate_s": 0.61,
   "text": " the capital of the country.\n\n",
   "token_ids": [
     260,
@@ -35,5 +42,5 @@
   ],
   "probe_out_dtype": "torch.float16",
   "rc": 0,
-  "wall_s": 47.52
+  "wall_s": 48.68
 }

@@ -4,9 +4,12 @@
 > `PLATFORM.md` 负责平台绑定，`reports/` 保存带日期的实验和原始数据。
 > 当前为 Ascend910/P800 两个硬件交付，CPU 仅作 ATen 对照。FlagOS E2E 使用
 > mini-LLM harness（C1），不等同于真实 vLLM。**C2（vLLM-Ascend）已实测**:
-> 双跑完成、输出逐位一致，但默认路由经 `npu_fusion_attention`、
-> math 后端 **forward_hits=0**（routing boundary，issue #38）——
+> 2026-10-30 双跑完成、EngineCore 真实前向命中 math 后端 240 次
+> （`c2-hit`，引擎侧 `FLAGOS_SDPA_MATH_ATTN=1` backend 补丁）；输出与基线
+> 分叉属预期（math vs `npu_fusion_attention` 数值精度），已按共同前缀 +
+> teacher-forced prompt logprob 定量处置——
 > 详见 [reports/c2_ascend910.md](reports/c2_ascend910.md)。
+> 无补丁时的真实路由仍为 `npu_fusion_attention`（known-issues #19）。
 
 > 定位: 一页看全一个算子——实现矩阵、验证矩阵、关键数字。
 > 分册在 [reports/](reports/)。

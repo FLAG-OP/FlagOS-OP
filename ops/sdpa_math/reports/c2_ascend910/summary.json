@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "date": "2026-10-29T01:16:59Z",
+  "date": "2026-10-30T01:07:43Z",
   "profile": "ascend910",
   "engine": "vllm-ascend",
-  "commit": "618a1967409cfdfca3751d7497afdeb1508479e9",
+  "commit": "f9a424538f777042fbbfd695c946aef5dd7dda95",
   "model": "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
   "prompt": "The capital of France is",
   "python": "3.11.15",
@@ -16,6 +16,7 @@
   "baseline": {
     "mode": "baseline",
     "ok": true,
+    "pid": 867427,
     "torch": "2.10.0+cpu",
     "torch_npu": "2.10.0",
     "npu_available": true,
@@ -25,8 +26,14 @@
     "vllm": "0.20.2",
     "vllm_ascend": "source",
     "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-    "init_s": 25.38,
-    "generate_s": 0.39,
+    "init_s": 22.71,
+    "prompt_logprobs": {
+      "1": -8.226740837097168,
+      "2": -0.8253197073936462,
+      "3": -5.2279510498046875,
+      "4": -1.131880283355713
+    },
+    "generate_s": 0.55,
     "text": " the city of Paris. It is the",
     "token_ids": [
       260,
@@ -39,11 +46,12 @@
       260
     ],
     "rc": 0,
-    "wall_s": 42.51
+    "wall_s": 40.31
   },
   "inject": {
     "mode": "inject",
     "ok": true,
+    "pid": 880357,
     "torch": "2.10.0+cpu",
     "torch_npu": "2.10.0",
     "npu_available": true,
@@ -55,8 +63,14 @@
     "vllm": "0.20.2",
     "vllm_ascend": "source",
     "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-    "init_s": 23.75,
-    "generate_s": 0.41,
+    "init_s": 24.15,
+    "prompt_logprobs": {
+      "1": -8.226740837097168,
+      "2": -0.8488110899925232,
+      "3": -5.2412238121032715,
+      "4": -1.0857064723968506
+    },
+    "generate_s": 0.61,
     "text": " the capital of the country.\n\n",
     "token_ids": [
       260,
@@ -78,39 +92,87 @@
     ],
     "probe_out_dtype": "torch.float16",
     "rc": 0,
-    "wall_s": 47.52
+    "wall_s": 48.68
   },
   "hit_files": [
     {
-      "pid": 4078929,
+      "pid": 880357,
       "op": "sdpa_math",
       "aten": "aten::_scaled_dot_product_attention_math",
       "hits": 1,
-      "dumped_at": "2026-10-29T01:16:47Z"
+      "dumped_at": "2026-10-30T01:07:30Z",
+      "role": "main"
     },
     {
-      "pid": 4083966,
+      "pid": 884887,
       "op": "sdpa_math",
       "aten": "aten::_scaled_dot_product_attention_math",
       "hits": 0,
-      "dumped_at": "2026-10-29T01:16:57Z"
+      "dumped_at": "2026-10-30T01:07:41Z",
+      "role": "engine/worker"
     },
     {
-      "pid": 4083967,
+      "pid": 884888,
       "op": "sdpa_math",
       "aten": "aten::_scaled_dot_product_attention_math",
       "hits": 240,
-      "dumped_at": "2026-10-29T01:16:48Z"
+      "dumped_at": "2026-10-30T01:07:31Z",
+      "role": "engine/worker"
     }
   ],
-  "engine_core_hits": 241,
-  "forward_hits": 241,
+  "engine_core_hits": 240,
+  "main_process_hits": 1,
+  "forward_hits": 240,
   "total_hits_all_incl_probe": 241,
   "probe_hits_after_direct_call": 1,
   "outputs_equal": false,
+  "output_compare": {
+    "baseline_token_ids": [
+      260,
+      2240,
+      282,
+      7042,
+      30,
+      657,
+      314,
+      260
+    ],
+    "inject_token_ids": [
+      260,
+      3575,
+      282,
+      260,
+      1798,
+      30,
+      198,
+      198
+    ],
+    "common_prefix_len": 1,
+    "tokens_compared": 8,
+    "bitwise_equal": false,
+    "baseline_text": " the city of Paris. It is the",
+    "inject_text": " the capital of the country.\n\n",
+    "prompt_logprob": {
+      "tokens_compared": 4,
+      "max_abs_diff": 0.046174,
+      "mean_abs_diff": 0.020734,
+      "baseline": {
+        "1": -8.2267,
+        "2": -0.8253,
+        "3": -5.228,
+        "4": -1.1319
+      },
+      "inject": {
+        "1": -8.2267,
+        "2": -0.8488,
+        "3": -5.2412,
+        "4": -1.0857
+      }
+    }
+  },
   "c2_status": "c2-hit",
   "notes": [
     "真实 vLLM-Ascend 前向命中 aten math 后端（引擎侧 FlagOSMathAttentionBackend 补丁生效），C2 成立",
-    "WARNING: 基线与注入 token_ids 不一致"
+    "outputs_equal=false（例外记录）: math 后端与 npu_fusion_attention 数值精度不同，贪心生成分叉属预期；输出对比改用 token 共同前缀 + teacher-forced prompt logprob 差异定量判定，处置与退出条件见 reports/c2_ascend910.md「输出对比处置」"
   ]
 }

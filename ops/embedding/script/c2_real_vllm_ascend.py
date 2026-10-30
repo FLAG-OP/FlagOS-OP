@@ -66,7 +66,7 @@ _CHILD_RUNNER = r"""
 import json, os, pathlib, sys, time, traceback
 
 mode, model, prompt, out_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
-result = {"mode": mode, "ok": False}
+result = {"mode": mode, "ok": False, "pid": os.getpid()}
 
 try:
     import torch
@@ -154,6 +154,28 @@ def merge_hits(out_dir: pathlib.Path) -> list[dict]:
     return hits
 
 
+def _output_compare(baseline: dict, inject: dict) -> dict | None:
+    """生成结果对比: 共同前缀长度与逐位一致性（issue #38 输出对比项）。"""
+    if not (baseline.get("ok") and inject.get("ok")):
+        return None
+    b = list(baseline.get("token_ids") or [])
+    i = list(inject.get("token_ids") or [])
+    prefix = 0
+    for x, y in zip(b, i):
+        if x != y:
+            break
+        prefix += 1
+    return {
+        "baseline_token_ids": b,
+        "inject_token_ids": i,
+        "common_prefix_len": prefix,
+        "tokens_compared": max(len(b), len(i)),
+        "bitwise_equal": b == i,
+        "baseline_text": baseline.get("text"),
+        "inject_text": inject.get("text"),
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=os.environ.get("FLAGOS_MODEL_PATH",
@@ -177,14 +199,24 @@ def main() -> int:
         old.unlink()
     inject = run_mode("inject", model, out_dir)
     hits = merge_hits(out_dir)
+    # pid 归属: 主进程（child runner，含 probe）与 EngineCore/Worker 分开——
+    # 直读单个 hits 文件时必须能区分角色，否则易把主进程 0 命中误读为"无证据"
+    # 或把 probe 计入真实前向（issue #38 证据对齐要求）。
     main_pid = inject.get("pid")
+    for h in hits:
+        if main_pid is None or h.get("pid") is None:
+            h["role"] = "unknown"
+        else:
+            h["role"] = "main" if h["pid"] == main_pid else "engine/worker"
     engine_hits = sum(
-        int(h.get("hits") or 0) for h in hits
-        if h.get("pid") != main_pid
-    )
-    forward_hits = inject.get("forward_hits_before_probe")
-    if (forward_hits or 0) == 0 and engine_hits > 0:
-        forward_hits = engine_hits
+        int(h.get("hits") or 0) for h in hits if h.get("role") == "engine/worker")
+    main_hits = sum(int(h.get("hits") or 0) for h in hits
+                    if h.get("role") == "main")
+    # 真实前向命中: 优先取 EngineCore/Worker 进程计数；若引擎在主进程内
+    # 运行（无分片子进程）则回退主进程 generate 计数（不含 probe）。
+    forward_hits = engine_hits
+    if (forward_hits or 0) == 0:
+        forward_hits = inject.get("forward_hits_before_probe") or 0
     total_hits_all = sum(int(h.get("hits") or 0) for h in hits)
 
     summary = {
@@ -204,11 +236,13 @@ def main() -> int:
         "inject": inject,
         "hit_files": hits,
         "engine_core_hits": engine_hits,
+        "main_process_hits": main_hits,
         "forward_hits": forward_hits,
         "total_hits_all_incl_probe": total_hits_all,
         "outputs_equal": (
             baseline.get("token_ids") == inject.get("token_ids")
             if baseline.get("ok") and inject.get("ok") else None),
+        "output_compare": _output_compare(baseline, inject),
         "c2_status": None,
         "notes": [],
     }
@@ -235,6 +269,7 @@ def main() -> int:
         "c2_status": summary["c2_status"],
         "forward_hits": forward_hits,
         "engine_core_hits": engine_hits,
+        "main_process_hits": main_hits,
         "outputs_equal": summary["outputs_equal"],
         "baseline_ok": baseline.get("ok"),
         "inject_ok": inject.get("ok"),

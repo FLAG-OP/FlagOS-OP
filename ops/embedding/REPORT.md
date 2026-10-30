@@ -1,21 +1,25 @@
 # 算子总体报告: embedding（aten::embedding）
 
-> **当前汇总**：本页以下的当前交付为 P800/Kunlunxin 与 Cambricon MLU590。
-> 文件中的 Ascend910 段落是历史实验记录，保留用于追溯，不计入当前平台矩阵。
-> 当前验证以本页的 P800/MLU 表和对应 `reports/*.json` 为准；`README.md` 负责
+> **当前汇总**：本页当前交付为 P800/Kunlunxin、Cambricon MLU590 与
+> **Ascend910（C2 级：真实 vLLM-Ascend 前向命中 `aten::embedding`，
+> 2026-10-30 复测，见 [reports/c2_ascend910.md](reports/c2_ascend910.md)）**。
+> Ascend910 的三层/黄金（C0/C1）行是 2026-09-30 历史实验记录，保留追溯。
+> 当前验证以本页各平台表和对应 `reports/*.json` 为准；`README.md` 负责
 > 使用入口，`PLATFORM.md` 负责平台绑定，详细实验保留在 `reports/`。
 
 | 项 | 值 |
 |---|---|
 | 算子名称 | `aten::embedding`（稠密查表 + dense 反向） |
 | 语义 | [reference.py](reference.py)（`weight[index]` 任意 index 形状；padding/scale_grad/sparse 不改前向） |
-| 当前硬件平台 | **2 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托） |
+| 当前硬件平台 | **3 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托）· ascend910（**C2** 引擎侧证据） |
 | 路线 | **A1**（aten 拦截） |
-| 日期 / 状态 | 2026-09-24 / 当前两平台交付；Ascend910 记录见下方历史章节 |
+| 日期 / 状态 | 2026-09-24 / 三平台交付；Ascend910 C2 复测 2026-10-30，三层历史记录见下方 |
 
-## 历史 Ascend910 记录
+## Ascend910 记录（C0/C1 历史实验 + C2 当前证据）
 
-以下内容保留用于追溯，不能作为当前平台矩阵或当前环境证据。
+Ascend910 的 C2 当前证据在 [reports/c2_ascend910.md](reports/c2_ascend910.md)
+（真实 vLLM-Ascend 前向命中 9 次、输出逐位一致）。以下表格为 2026-09-30
+的 C0/C1 实验记录，保留用于追溯。
 
 | 算子 | `aten::embedding` |
 | 范围 | 普通查表 forward + dense backward；`sparse=True` forward 可用，稀疏 backward 不覆盖 |

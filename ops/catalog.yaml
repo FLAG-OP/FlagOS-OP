@@ -8,7 +8,7 @@
 #   与可选 evidence.report；C2* 级别必须指向存在的报告（issue #41）。
 
 schema: 1
-updated: 2026-10-29
+updated: 2026-10-30
 
 target_scope:
   vendor_family_count: 6
@@ -106,7 +106,7 @@ operators:
     platforms:
       ascend:
         profiles: [ascend910]
-        implementation: Triton exact-P 路径
+        implementation: Triton exact-P 路径（C2 证据经引擎侧 FlagOSMathAttentionBackend 调 aten math）
         evidence:
           level: C2
           report: ops/sdpa_math/reports/c2_ascend910.md
@@ -124,7 +124,7 @@ operators:
     platforms:
       ascend:
         profiles: [ascend910]
-        implementation: Triton row-gather
+        implementation: CANN index_select 行采集委托（Triton gather 仅探针）
         evidence:
           level: C2
           report: ops/embedding/reports/c2_ascend910.md

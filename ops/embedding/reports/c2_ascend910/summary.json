@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "date": "2026-10-29T01:30:47Z",
+  "date": "2026-10-30T01:09:34Z",
   "profile": "ascend910",
   "engine": "vllm-ascend",
-  "commit": "618a1967409cfdfca3751d7497afdeb1508479e9",
+  "commit": "f9a424538f777042fbbfd695c946aef5dd7dda95",
   "model": "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
   "prompt": "The capital of France is",
   "python": "3.11.15",
@@ -14,6 +14,7 @@
   "baseline": {
     "mode": "baseline",
     "ok": true,
+    "pid": 901750,
     "torch": "2.10.0+cpu",
     "torch_npu": "2.10.0",
     "npu_available": true,
@@ -22,8 +23,8 @@
     "vllm": "0.20.2",
     "vllm_ascend": "source",
     "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-    "init_s": 25.91,
-    "generate_s": 0.36,
+    "init_s": 24.05,
+    "generate_s": 0.37,
     "text": " the city of Paris. It is the",
     "token_ids": [
       260,
@@ -36,11 +37,12 @@
       260
     ],
     "rc": 0,
-    "wall_s": 42.82
+    "wall_s": 40.73
   },
   "inject": {
     "mode": "inject",
     "ok": true,
+    "pid": 918474,
     "torch": "2.10.0+cpu",
     "torch_npu": "2.10.0",
     "npu_available": true,
@@ -50,8 +52,8 @@
     "vllm": "0.20.2",
     "vllm_ascend": "source",
     "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-    "init_s": 28.58,
-    "generate_s": 0.36,
+    "init_s": 32.57,
+    "generate_s": 0.38,
     "text": " the city of Paris. It is the",
     "token_ids": [
       260,
@@ -65,35 +67,66 @@
     ],
     "forward_hits_before_probe": 0,
     "rc": 0,
-    "wall_s": 57.65
+    "wall_s": 62.41
   },
   "hit_files": [
     {
-      "pid": 178232,
+      "pid": 918474,
       "op": "embedding",
       "aten": "aten::embedding",
       "hits": 0,
-      "dumped_at": "2026-10-29T01:30:32Z"
+      "dumped_at": "2026-10-30T01:09:18Z",
+      "role": "main"
     },
     {
-      "pid": 183954,
+      "pid": 921889,
       "op": "embedding",
       "aten": "aten::embedding",
       "hits": 0,
-      "dumped_at": "2026-10-29T01:30:42Z"
+      "dumped_at": "2026-10-30T01:09:29Z",
+      "role": "engine/worker"
     },
     {
-      "pid": 183955,
+      "pid": 921890,
       "op": "embedding",
       "aten": "aten::embedding",
       "hits": 9,
-      "dumped_at": "2026-10-29T01:30:33Z"
+      "dumped_at": "2026-10-30T01:09:19Z",
+      "role": "engine/worker"
     }
   ],
   "engine_core_hits": 9,
+  "main_process_hits": 0,
   "forward_hits": 9,
   "total_hits_all_incl_probe": 9,
   "outputs_equal": true,
+  "output_compare": {
+    "baseline_token_ids": [
+      260,
+      2240,
+      282,
+      7042,
+      30,
+      657,
+      314,
+      260
+    ],
+    "inject_token_ids": [
+      260,
+      2240,
+      282,
+      7042,
+      30,
+      657,
+      314,
+      260
+    ],
+    "common_prefix_len": 8,
+    "tokens_compared": 8,
+    "bitwise_equal": true,
+    "baseline_text": " the city of Paris. It is the",
+    "inject_text": " the city of Paris. It is the"
+  },
   "c2_status": "c2-hit",
   "notes": [
     "真实 vLLM-Ascend 前向命中 aten::embedding，C2 成立"

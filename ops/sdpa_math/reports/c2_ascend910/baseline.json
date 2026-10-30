@@ -1,6 +1,7 @@
 {
   "mode": "baseline",
   "ok": true,
+  "pid": 867427,
   "torch": "2.10.0+cpu",
   "torch_npu": "2.10.0",
   "npu_available": true,
@@ -10,8 +11,14 @@
   "vllm": "0.20.2",
   "vllm_ascend": "source",
   "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py",
-  "init_s": 25.38,
-  "generate_s": 0.39,
+  "init_s": 22.71,
+  "prompt_logprobs": {
+    "1": -8.226740837097168,
+    "2": -0.8253197073936462,
+    "3": -5.2279510498046875,
+    "4": -1.131880283355713
+  },
+  "generate_s": 0.55,
   "text": " the city of Paris. It is the",
   "token_ids": [
     260,
@@ -24,5 +31,5 @@
     260
   ],
   "rc": 0,
-  "wall_s": 42.51
+  "wall_s": 40.31
 }

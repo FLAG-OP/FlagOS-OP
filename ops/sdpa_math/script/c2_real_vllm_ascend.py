@@ -79,7 +79,7 @@ _CHILD_RUNNER = r"""
 import json, os, pathlib, sys, time, traceback
 
 mode, model, prompt, out_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
-result = {"mode": mode, "ok": False}
+result = {"mode": mode, "ok": False, "pid": os.getpid()}
 dump = None
 
 try:
@@ -134,16 +134,32 @@ try:
               gpu_memory_utilization=0.2, max_num_seqs=1,
               trust_remote_code=True, disable_log_stats=True)
     result["init_s"] = round(time.time() - t0, 2)
-    sp = SamplingParams(max_tokens=8, temperature=0.0)
+    # 一次 generate 同时取生成结果与 teacher-forced prompt logprobs——
+    # 分两次 generate 会把第二次前向的命中混进 engine 计数。
     t1 = time.time()
-    outs = llm.generate([prompt], sp)
+    try:
+        sp = SamplingParams(max_tokens=8, temperature=0.0, prompt_logprobs=0)
+        outs = llm.generate([prompt], sp)
+        pl = outs[0].prompt_logprobs
+        plmap = {}
+        for idx, d in enumerate(pl or []):
+            if not d:
+                continue
+            lp = next(iter(d.values()))
+            plmap[str(idx)] = float(getattr(lp, "logprob", lp))
+        result["prompt_logprobs"] = plmap
+    except Exception:
+        # prompt_logprobs 不可用时回退普通生成，保证主证据链可跑
+        result["prompt_logprobs_err"] = traceback.format_exc().splitlines()[-1]
+        sp = SamplingParams(max_tokens=8, temperature=0.0)
+        outs = llm.generate([prompt], sp)
     result["generate_s"] = round(time.time() - t1, 2)
     result["text"] = outs[0].outputs[0].text
     result["token_ids"] = list(outs[0].outputs[0].token_ids[:8])
     result["ok"] = True
 
     if mode == "inject" and counter is not None:
-        # 真实前向结束后的计数（不含下方 probe）
+        # 真实前向（本次 generate）结束后的计数——不含下方 probe
         result["forward_hits_before_probe"] = counter["n"]
         if dump is not None:
             dump()
@@ -205,6 +221,51 @@ def merge_hits(out_dir: pathlib.Path) -> list[dict]:
     return hits
 
 
+def _output_compare(baseline: dict, inject: dict) -> dict | None:
+    """输出对比: 贪心 token 共同前缀 + teacher-forced 逐 token logprob 差异。
+
+    两种 attention 实现（FlagOS math 后端 vs npu_fusion_attention）数值
+    精度不同，生成分叉属预期；logprob 对比给出分叉幅度的定量上界。
+    """
+    if not (baseline.get("ok") and inject.get("ok")):
+        return None
+    b = list(baseline.get("token_ids") or [])
+    i = list(inject.get("token_ids") or [])
+    prefix = 0
+    for x, y in zip(b, i):
+        if x != y:
+            break
+        prefix += 1
+    out = {
+        "baseline_token_ids": b,
+        "inject_token_ids": i,
+        "common_prefix_len": prefix,
+        "tokens_compared": max(len(b), len(i)),
+        "bitwise_equal": b == i,
+        "baseline_text": baseline.get("text"),
+        "inject_text": inject.get("text"),
+    }
+    bl = baseline.get("prompt_logprobs") or {}
+    il = inject.get("prompt_logprobs") or {}
+    common = sorted((k for k in set(bl) & set(il)), key=int)
+    if common:
+        diffs = [abs(float(bl[k]) - float(il[k])) for k in common]
+        out["prompt_logprob"] = {
+            "tokens_compared": len(common),
+            "max_abs_diff": round(max(diffs), 6),
+            "mean_abs_diff": round(sum(diffs) / len(diffs), 6),
+            "baseline": {k: round(float(bl[k]), 4) for k in common},
+            "inject": {k: round(float(il[k]), 4) for k in common},
+        }
+    else:
+        out["prompt_logprob"] = {
+            "unavailable": True,
+            "baseline_err": baseline.get("prompt_logprobs_err"),
+            "inject_err": inject.get("prompt_logprobs_err"),
+        }
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=os.environ.get("FLAGOS_MODEL_PATH",
@@ -228,17 +289,24 @@ def main() -> int:
         old.unlink()
     inject = run_mode("inject", model, out_dir)
     hits = merge_hits(out_dir)
-    # 主进程（child runner 进程内）计数含 probe；EngineCore/Worker 进程
-    # 的计数文件（pid 不同）才是真实前向命中。
+    # pid 归属: 主进程（child runner，含 probe）与 EngineCore/Worker 分开——
+    # EngineCore/Worker 分开——真实前向只计引擎侧进程；主进程 probe 不得
+    # 计入 forward_hits（issue #38 证据对齐要求）。
     main_pid = inject.get("pid")
+    for h in hits:
+        if main_pid is None or h.get("pid") is None:
+            h["role"] = "unknown"
+        else:
+            h["role"] = "main" if h["pid"] == main_pid else "engine/worker"
     engine_hits = sum(
-        int(h.get("hits") or 0) for h in hits
-        if h.get("pid") != main_pid
-    )
-    forward_hits = inject.get("forward_hits_before_probe")
-    # 若主进程 forward_hits 为 0 但 EngineCore 侧有命中，取引擎侧
-    if (forward_hits or 0) == 0 and engine_hits > 0:
-        forward_hits = engine_hits
+        int(h.get("hits") or 0) for h in hits if h.get("role") == "engine/worker")
+    main_hits = sum(int(h.get("hits") or 0) for h in hits
+                    if h.get("role") == "main")
+    # 真实前向命中: EngineCore/Worker 进程计数；若引擎在主进程内运行则
+    # 回退主进程 generate 计数（forward_hits_before_probe 为 generate 后、probe 前快照）。
+    forward_hits = engine_hits
+    if (forward_hits or 0) == 0:
+        forward_hits = inject.get("forward_hits_before_probe") or 0
     total_hits_all = sum(int(h.get("hits") or 0) for h in hits)
     probe_hits = inject.get("probe_hits_after_direct_call")
 
@@ -261,12 +329,14 @@ def main() -> int:
         "inject": inject,
         "hit_files": hits,
         "engine_core_hits": engine_hits,
+        "main_process_hits": main_hits,
         "forward_hits": forward_hits,
         "total_hits_all_incl_probe": total_hits_all,
         "probe_hits_after_direct_call": probe_hits,
         "outputs_equal": (
             baseline.get("token_ids") == inject.get("token_ids")
             if baseline.get("ok") and inject.get("ok") else None),
+        "output_compare": _output_compare(baseline, inject),
         "c2_status": None,
         "notes": [],
     }
@@ -288,7 +358,12 @@ def main() -> int:
             summary["c2_status"] = "c2-inject-unverified"
             summary["notes"].append("注入进程 probe 未命中，注册链存疑")
         if summary["outputs_equal"] is False:
-            summary["notes"].append("WARNING: 基线与注入 token_ids 不一致")
+            summary["notes"].append(
+                "outputs_equal=false（例外记录）: math 后端与 "
+                "npu_fusion_attention 数值精度不同，贪心生成分叉属预期；"
+                "输出对比改用 token 共同前缀 + teacher-forced prompt "
+                "logprob 差异定量判定，处置与退出条件见 "
+                "reports/c2_ascend910.md「输出对比处置」")
     else:
         summary["c2_status"] = "c2-failed"
         summary["notes"].append("基线或注入跑失败，见 *.stderr.log")
@@ -299,9 +374,11 @@ def main() -> int:
         "c2_status": summary["c2_status"],
         "forward_hits": forward_hits,
         "engine_core_hits": engine_hits,
+        "main_process_hits": main_hits,
         "probe_hits": probe_hits,
         "attn_patched": inject.get("attn_patched"),
         "outputs_equal": summary["outputs_equal"],
+        "output_compare": summary.get("output_compare"),
         "baseline_ok": baseline.get("ok"),
         "inject_ok": inject.get("ok"),
         "out": str(out_dir / "summary.json"),

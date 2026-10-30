@@ -1,70 +1,70 @@
-INFO 10-29 09:29:59 [__init__.py:44] Available plugins for group vllm.platform_plugins:
-INFO 10-29 09:29:59 [__init__.py:46] - ascend -> vllm_ascend:register
-INFO 10-29 09:29:59 [__init__.py:58] Loading plugin ascend
-INFO 10-29 09:29:59 [__init__.py:238] Platform plugin ascend is activated
-INFO 10-29 09:30:03 [utils.py:233] non-default args: {'trust_remote_code': True, 'max_model_len': 192, 'gpu_memory_utilization': 0.2, 'max_num_seqs': 1, 'disable_log_stats': True, 'enforce_eager': True, 'model': '/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2'}
-INFO 10-29 09:30:04 [nixl_utils.py:20] Setting UCX_RCACHE_MAX_UNRELEASED to '1024' to avoid a rare memory leak in UCX when using NIXL.
-WARNING 10-29 09:30:04 [nixl_utils.py:34] NIXL is not available
-WARNING 10-29 09:30:04 [nixl_utils.py:44] NIXL agent config is not available
-INFO 10-29 09:30:04 [model.py:555] Resolved architecture: LlamaForCausalLM
-INFO 10-29 09:30:04 [model.py:1680] Using max model len 192
-INFO 10-29 09:30:04 [scheduler.py:239] Chunked prefill is enabled with max_num_batched_tokens=192.
-INFO 10-29 09:30:04 [vllm.py:840] Asynchronous scheduling is enabled.
-WARNING 10-29 09:30:04 [vllm.py:896] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
-WARNING 10-29 09:30:04 [vllm.py:914] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
-INFO 10-29 09:30:04 [kernel.py:205] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'])
-INFO 10-29 09:30:04 [vllm.py:1089] Cudagraph is disabled under eager mode
-INFO 10-29 09:30:04 [utils.py:169] No quantization signature detected from model files for "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2". The model will be loaded as float. To force a quantization method, pass "--quantization <method>" explicitly.
-WARNING 10-29 09:30:04 [platform.py:848] Parameter '--disable-cascade-attn' is a GPU-specific feature. Resetting to False for Ascend.
-WARNING 10-29 09:30:04 [platform.py:937] Ignored parameter 'disable_flashinfer_prefill'. This is a GPU-specific feature not supported on Ascend. Resetting to False.
-INFO 10-29 09:30:04 [ascend_config.py:688] Dynamic EPLB is False
-INFO 10-29 09:30:04 [ascend_config.py:689] The number of redundant experts is 0
-INFO 10-29 09:30:04 [platform.py:338] Compilation disabled, using eager mode by default
-INFO 10-29 09:30:04 [utils.py:1333] Block size is set to 128 if prefix cache or chunked prefill is enabled.
-INFO 10-29 09:30:04 [platform.py:581] Set PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
-INFO 10-29 09:30:04 [compilation.py:303] Enabled custom fusions: norm_quant, act_quant
-INFO 10-29 09:30:14 [__init__.py:44] Available plugins for group vllm.platform_plugins:
-INFO 10-29 09:30:14 [__init__.py:46] - ascend -> vllm_ascend:register
-INFO 10-29 09:30:14 [__init__.py:58] Loading plugin ascend
-INFO 10-29 09:30:14 [__init__.py:238] Platform plugin ascend is activated
-WARNING 10-29 09:30:19 [nixl_utils.py:34] NIXL is not available
-WARNING 10-29 09:30:19 [nixl_utils.py:44] NIXL agent config is not available
-(EngineCore pid=183955) INFO 10-29 09:30:19 [core.py:109] Initializing a V1 LLM engine (v0.20.2) with config: model='/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2', speculative_config=None, tokenizer='/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=192, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=True, quantization=None, quantization_config=None, enforce_eager=True, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=npu, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'vllm_ascend.compilation.compiler_interface.AscendCompiler', 'custom_ops': ['all'], 'ir_enable_torch_wrap': False, 'splitting_ops': [], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.NONE: 0>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native']), enable_flashinfer_autotune=True, moe_backend='auto')
-(EngineCore pid=183955) INFO 10-29 09:30:20 [ascend_config.py:688] Dynamic EPLB is False
-(EngineCore pid=183955) INFO 10-29 09:30:20 [ascend_config.py:689] The number of redundant experts is 0
-(EngineCore pid=183955) INFO 10-29 09:30:21 [parallel_state.py:1402] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://10.120.72.27:37807 backend=hccl
+INFO 10-30 09:08:41 [__init__.py:44] Available plugins for group vllm.platform_plugins:
+INFO 10-30 09:08:41 [__init__.py:46] - ascend -> vllm_ascend:register
+INFO 10-30 09:08:41 [__init__.py:58] Loading plugin ascend
+INFO 10-30 09:08:41 [__init__.py:238] Platform plugin ascend is activated
+INFO 10-30 09:08:45 [utils.py:233] non-default args: {'trust_remote_code': True, 'max_model_len': 192, 'gpu_memory_utilization': 0.2, 'max_num_seqs': 1, 'disable_log_stats': True, 'enforce_eager': True, 'model': '/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2'}
+INFO 10-30 09:08:46 [nixl_utils.py:20] Setting UCX_RCACHE_MAX_UNRELEASED to '1024' to avoid a rare memory leak in UCX when using NIXL.
+WARNING 10-30 09:08:46 [nixl_utils.py:34] NIXL is not available
+WARNING 10-30 09:08:46 [nixl_utils.py:44] NIXL agent config is not available
+INFO 10-30 09:08:46 [model.py:555] Resolved architecture: LlamaForCausalLM
+INFO 10-30 09:08:46 [model.py:1680] Using max model len 192
+INFO 10-30 09:08:46 [scheduler.py:239] Chunked prefill is enabled with max_num_batched_tokens=192.
+INFO 10-30 09:08:46 [vllm.py:840] Asynchronous scheduling is enabled.
+WARNING 10-30 09:08:46 [vllm.py:896] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+WARNING 10-30 09:08:46 [vllm.py:914] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+INFO 10-30 09:08:46 [kernel.py:205] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'])
+INFO 10-30 09:08:46 [vllm.py:1089] Cudagraph is disabled under eager mode
+INFO 10-30 09:08:46 [utils.py:169] No quantization signature detected from model files for "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2". The model will be loaded as float. To force a quantization method, pass "--quantization <method>" explicitly.
+WARNING 10-30 09:08:46 [platform.py:848] Parameter '--disable-cascade-attn' is a GPU-specific feature. Resetting to False for Ascend.
+WARNING 10-30 09:08:46 [platform.py:937] Ignored parameter 'disable_flashinfer_prefill'. This is a GPU-specific feature not supported on Ascend. Resetting to False.
+INFO 10-30 09:08:46 [ascend_config.py:688] Dynamic EPLB is False
+INFO 10-30 09:08:46 [ascend_config.py:689] The number of redundant experts is 0
+INFO 10-30 09:08:46 [platform.py:338] Compilation disabled, using eager mode by default
+INFO 10-30 09:08:46 [utils.py:1333] Block size is set to 128 if prefix cache or chunked prefill is enabled.
+INFO 10-30 09:08:46 [platform.py:581] Set PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+INFO 10-30 09:08:46 [compilation.py:303] Enabled custom fusions: norm_quant, act_quant
+INFO 10-30 09:08:56 [__init__.py:44] Available plugins for group vllm.platform_plugins:
+INFO 10-30 09:08:56 [__init__.py:46] - ascend -> vllm_ascend:register
+INFO 10-30 09:08:56 [__init__.py:58] Loading plugin ascend
+INFO 10-30 09:08:56 [__init__.py:238] Platform plugin ascend is activated
+WARNING 10-30 09:09:01 [nixl_utils.py:34] NIXL is not available
+WARNING 10-30 09:09:01 [nixl_utils.py:44] NIXL agent config is not available
+(EngineCore pid=921890) INFO 10-30 09:09:01 [core.py:109] Initializing a V1 LLM engine (v0.20.2) with config: model='/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2', speculative_config=None, tokenizer='/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=192, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=True, quantization=None, quantization_config=None, enforce_eager=True, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=npu, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'vllm_ascend.compilation.compiler_interface.AscendCompiler', 'custom_ops': ['all'], 'ir_enable_torch_wrap': False, 'splitting_ops': [], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.NONE: 0>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native']), enable_flashinfer_autotune=True, moe_backend='auto')
+(EngineCore pid=921890) INFO 10-30 09:09:02 [ascend_config.py:688] Dynamic EPLB is False
+(EngineCore pid=921890) INFO 10-30 09:09:02 [ascend_config.py:689] The number of redundant experts is 0
+(EngineCore pid=921890) INFO 10-30 09:09:03 [parallel_state.py:1402] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://10.120.72.27:7797 backend=hccl
 [Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
 [Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
 [Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
 [Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
 [Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
 [Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
-(EngineCore pid=183955) INFO 10-29 09:30:21 [parallel_state.py:1715] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=921890) INFO 10-30 09:09:03 [parallel_state.py:1715] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
 [Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
-(EngineCore pid=183955) INFO 10-29 09:30:21 [model_runner_v1.py:3374] Starting to load model /root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2...
-(EngineCore pid=183955) INFO 10-29 09:30:22 [weight_utils.py:904] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 0.25 GiB. Available RAM: 1868.28 GiB.
-(EngineCore pid=183955) INFO 10-29 09:30:22 [weight_utils.py:927] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
-(EngineCore pid=183955) INFO 10-29 09:30:22 [default_loader.py:384] Loading weights took 0.08 seconds
-(EngineCore pid=183955) INFO 10-29 09:30:22 [model_runner_v1.py:3421] Loading model weights took 0.2536 GB
-(EngineCore pid=183955) INFO 10-29 09:30:24 [worker.py:394] Available KV cache memory: 11.96 GiB
-(EngineCore pid=183955) INFO 10-29 09:30:24 [kv_cache_utils.py:1708] GPU KV cache size: 418,176 tokens
-(EngineCore pid=183955) INFO 10-29 09:30:24 [kv_cache_utils.py:1709] Maximum concurrency for 192 tokens per request: 2178.00x
-(EngineCore pid=183955) INFO 10-29 09:30:25 [worker.py:546] Free memory on device (60.77/61.27 GiB) on startup. Desired GPU memory utilization is (0.2, 12.25 GiB). Actual usage: 0.25 GiB for weights, 0.02 GiB for peak activation, 0.02 GiB for non-torch memory, 0.0 GiB for NPU graph memory. Replace gpu_memory_utilization with `--kv-cache-memory=12689976832` (11.82 GiB) to fit into requested memory, or `--kv-cache-memory=64784821760` (60.34 GiB) to fully utilize NPU free memory. Current KV cache memory: 11.96 GiB.
-(EngineCore pid=183955) INFO 10-29 09:30:27 [cpu_binding.py:328] [cpu_bind_mode] mode=global_slice rank=0 visible_npus=[0, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15]
-(EngineCore pid=183955) INFO 10-29 09:30:27 [cpu_binding.py:388] The CPU allocation plan is as follows:
-(EngineCore pid=183955) INFO 10-29 09:30:27 [cpu_binding.py:393] NPU0: main=[2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37]  acl=[38]  release=[[39]]
-(EngineCore pid=183955) INFO 10-29 09:30:28 [cpu_binding.py:415] [migrate] NPU:0 -> NUMA [0]
-(EngineCore pid=183955) INFO 10-29 09:30:31 [cpu_binding.py:510] NPU0(PCI 0000:9d:00.0): sq_send_trigger_irq IRQ_ID=2016 -> CPU0, cq_update_irq IRQ_ID=2017 -> CPU1
-(EngineCore pid=183955) INFO 10-29 09:30:31 [core.py:306] init engine (profile, create kv cache, warmup model) took 9.04 s
-(EngineCore pid=183955) INFO 10-29 09:30:32 [vllm.py:840] Asynchronous scheduling is enabled.
-(EngineCore pid=183955) WARNING 10-29 09:30:32 [vllm.py:896] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
-(EngineCore pid=183955) WARNING 10-29 09:30:32 [vllm.py:914] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
-(EngineCore pid=183955) INFO 10-29 09:30:32 [kernel.py:205] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'])
-(EngineCore pid=183955) INFO 10-29 09:30:32 [vllm.py:1089] Cudagraph is disabled under eager mode
-(EngineCore pid=183955) INFO 10-29 09:30:32 [utils.py:169] No quantization signature detected from model files for "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2". The model will be loaded as float. To force a quantization method, pass "--quantization <method>" explicitly.
-(EngineCore pid=183955) INFO 10-29 09:30:32 [platform.py:338] Compilation disabled, using eager mode by default
-(EngineCore pid=183955) INFO 10-29 09:30:32 [platform.py:581] Set PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
-(EngineCore pid=183955) INFO 10-29 09:30:32 [compilation.py:303] Enabled custom fusions: norm_quant, act_quant
-(EngineCore pid=183955) INFO 10-29 09:30:33 [core.py:1238] Shutdown initiated (timeout=0)
-(EngineCore pid=183955) INFO 10-29 09:30:33 [core.py:1261] Shutdown complete
-{"mode": "inject", "ok": true, "torch": "2.10.0+cpu", "torch_npu": "2.10.0", "npu_available": true, "npu_count": 16, "mp_method": "spawn", "a1_counter_retrieved": true, "vllm": "0.20.2", "vllm_ascend": "source", "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py", "init_s": 28.58, "generate_s": 0.36, "text": " the city of Paris. It is the", "token_ids": [260, 2240, 282, 7042, 30, 657, 314, 260], "forward_hits_before_probe": 0}
+(EngineCore pid=921890) INFO 10-30 09:09:03 [model_runner_v1.py:3374] Starting to load model /root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2...
+(EngineCore pid=921890) INFO 10-30 09:09:04 [weight_utils.py:904] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 0.25 GiB. Available RAM: 1883.90 GiB.
+(EngineCore pid=921890) INFO 10-30 09:09:04 [weight_utils.py:927] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=921890) INFO 10-30 09:09:04 [default_loader.py:384] Loading weights took 0.08 seconds
+(EngineCore pid=921890) INFO 10-30 09:09:06 [model_runner_v1.py:3421] Loading model weights took 0.2536 GB
+(EngineCore pid=921890) INFO 10-30 09:09:09 [worker.py:394] Available KV cache memory: 11.96 GiB
+(EngineCore pid=921890) INFO 10-30 09:09:09 [kv_cache_utils.py:1708] GPU KV cache size: 418,176 tokens
+(EngineCore pid=921890) INFO 10-30 09:09:09 [kv_cache_utils.py:1709] Maximum concurrency for 192 tokens per request: 2178.00x
+(EngineCore pid=921890) INFO 10-30 09:09:10 [worker.py:546] Free memory on device (60.76/61.27 GiB) on startup. Desired GPU memory utilization is (0.2, 12.25 GiB). Actual usage: 0.25 GiB for weights, 0.02 GiB for peak activation, 0.02 GiB for non-torch memory, 0.0 GiB for NPU graph memory. Replace gpu_memory_utilization with `--kv-cache-memory=12689710592` (11.82 GiB) to fit into requested memory, or `--kv-cache-memory=64776400384` (60.33 GiB) to fully utilize NPU free memory. Current KV cache memory: 11.96 GiB.
+(EngineCore pid=921890) INFO 10-30 09:09:12 [cpu_binding.py:328] [cpu_bind_mode] mode=global_slice rank=0 visible_npus=[0, 1]
+(EngineCore pid=921890) INFO 10-30 09:09:12 [cpu_binding.py:388] The CPU allocation plan is as follows:
+(EngineCore pid=921890) INFO 10-30 09:09:12 [cpu_binding.py:393] NPU0: main=[2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37]  acl=[38]  release=[[39]]
+(EngineCore pid=921890) INFO 10-30 09:09:13 [cpu_binding.py:415] [migrate] NPU:0 -> NUMA [0]
+(EngineCore pid=921890) INFO 10-30 09:09:17 [cpu_binding.py:510] NPU0(PCI 0000:9d:00.0): sq_send_trigger_irq IRQ_ID=2016 -> CPU0, cq_update_irq IRQ_ID=2017 -> CPU1
+(EngineCore pid=921890) INFO 10-30 09:09:17 [core.py:306] init engine (profile, create kv cache, warmup model) took 11.57 s
+(EngineCore pid=921890) INFO 10-30 09:09:18 [vllm.py:840] Asynchronous scheduling is enabled.
+(EngineCore pid=921890) WARNING 10-30 09:09:18 [vllm.py:896] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+(EngineCore pid=921890) WARNING 10-30 09:09:18 [vllm.py:914] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+(EngineCore pid=921890) INFO 10-30 09:09:18 [kernel.py:205] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'])
+(EngineCore pid=921890) INFO 10-30 09:09:18 [vllm.py:1089] Cudagraph is disabled under eager mode
+(EngineCore pid=921890) INFO 10-30 09:09:18 [utils.py:169] No quantization signature detected from model files for "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2". The model will be loaded as float. To force a quantization method, pass "--quantization <method>" explicitly.
+(EngineCore pid=921890) INFO 10-30 09:09:18 [platform.py:338] Compilation disabled, using eager mode by default
+(EngineCore pid=921890) INFO 10-30 09:09:18 [platform.py:581] Set PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+(EngineCore pid=921890) INFO 10-30 09:09:18 [compilation.py:303] Enabled custom fusions: norm_quant, act_quant
+(EngineCore pid=921890) INFO 10-30 09:09:19 [core.py:1238] Shutdown initiated (timeout=0)
+(EngineCore pid=921890) INFO 10-30 09:09:19 [core.py:1261] Shutdown complete
+{"mode": "inject", "ok": true, "pid": 918474, "torch": "2.10.0+cpu", "torch_npu": "2.10.0", "npu_available": true, "npu_count": 16, "mp_method": "spawn", "a1_counter_retrieved": true, "vllm": "0.20.2", "vllm_ascend": "source", "vllm_ascend_file": "/vllm-workspace/vllm-ascend/vllm_ascend/__init__.py", "init_s": 32.57, "generate_s": 0.38, "text": " the city of Paris. It is the", "token_ids": [260, 2240, 282, 7042, 30, 657, 314, 260], "forward_hits_before_probe": 0}

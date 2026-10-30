@@ -1,11 +1,11 @@
 # 平台绑定清单（Platform Binding）— embedding
 
-> 当前交付包含两个平台：**p800-kunlunxin**（厂商委托同构，
-> gatherFIX 探针见 reports/）与 **cambricon**（MLU590，Autograd key
-> 注册——见 reports/cambricon.md §4）。**ascend910** 仅保留历史实验
-> 记录（见 §2 与 REPORT.md 历史章节），不计入当前平台矩阵
-> （与 `ops/catalog.yaml` / `ops/README.md` / `REPORT.md` 口径一致，
-> issue #38）。
+> 当前交付包含三个平台：**p800-kunlunxin**（厂商委托同构，
+> gatherFIX 探针见 reports/）、**cambricon**（MLU590，Autograd key
+> 注册——见 reports/cambricon.md §4）与 **ascend910**（C2：真实 vLLM-Ascend
+> 前向命中 `aten::embedding` 9 次，2026-10-30 复测，见 §2 与
+> `reports/c2_ascend910.md`；C0/C1 三层/黄金为 2026-09-30 历史记录）。
+> 口径与 `ops/catalog.yaml` / `ops/README.md` / `REPORT.md` 一致（issue #38）。
 > 本文件记录不可凭直觉搬运的绑定结论；跨平台移植时逐项重验，不要把
 > 单平台实验结果当成普适行为。
 
@@ -19,11 +19,15 @@
 | 三层测试、性能脚本 | `test/`、`script/`（`EMBEDDING_PROFILE` 切平台） |
 | A1 autograd.Function 包装 | `register.py`（`_BACKENDS` 选择器 + `_DEVICE_PROBE` 守卫） |
 
-## 2. ascend910 绑定（历史实验，非当前交付）
+## 2. ascend910 绑定（C2 已登记，C0/C1 为历史实验）
 
-> **降级声明（issue #38）**：ascend910 行仅作历史追溯。当前 catalog
-> 不登记 embedding 的 ascend 平台；无真实 vLLM C2 证据。若恢复交付，
-> 须补齐 C0/C1/C2 证据并重新登记 `ops/catalog.yaml`。
+> **C2 证据（issue #38，2026-10-30 复测）**：真实 vLLM-Ascend 双跑，
+> EngineCore 前向命中 `aten::embedding` **9 次** = 1 次引擎初始化
+> dummy/profile 前向（`skip_attn`，仍执行 embed_tokens）+ 8 次 generate
+> 前向（1 prefill + 7 decode），token_ids 与基线**逐位一致**，
+> 主进程/辅助进程 0 命中（按 pid 角色标注，防串算）。
+> 见 [reports/c2_ascend910.md](reports/c2_ascend910.md)。
+> 下表绑定结论来自 2026-09-30 的 C0/C1 实验，移植时逐项重验。
 
 | 绑定项 | 实测结论 |
 |---|---|

@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 日期 | 2026-09-23（cambricon 平台接入与复测 2026-09-24） |
+| 日期 | 2026-09-23（cambricon 平台接入与复测 2026-09-24）· Ascend910 C2 复测 2026-10-30 |
 | 设备 | p800-kunlunxin `cuda:1` · cambricon MLU590 `mlu:0` |
 | 环境 | P800: Torch 2.9.0+cu129 / torch_xmlir / Triton 3.0；MLU: Torch 2.11.0+cpu / torch_mlu 1.33.1 / Triton 3.4.0+mlu2.1.1 |
 | 结论 | 通过（两平台） |
@@ -19,6 +19,7 @@
 | FlagOS 栈 | `flag_gems.only_enable(['gelu'])` 后运行应用层 | ✅ |
 | 边界 | sparse forward 接受、sparse backward / invalid padding 拒绝 | ✅ |
 | 第二平台 cambricon | kernel / op / framework / guard 同判据复跑 | ✅ |
+| C2 真实 vLLM-Ascend | `script/c2_real_vllm_ascend.py` | ✅ **c2-hit**（2026-10-30 复测）：双跑 OK、token_ids 逐位一致（common prefix 8/8）；EngineCore 前向 `aten::embedding` 命中 9 次（1 init dummy + 8 generate）+ 主进程 0；按 pid 角色拆分防串算。见 [c2_ascend910.md](c2_ascend910.md) |
 
 ## 2. 环境
 
