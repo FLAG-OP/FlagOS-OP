@@ -1,0 +1,80 @@
+{
+  "op": "sdpa_math",
+  "profile": "thead-ppu-c2",
+  "consumer_type": "vllm-enginecore",
+  "tier": "C2",
+  "dispatch_key": "CUDA",
+  "platform": "thead-ppu",
+  "model": "/tmp/flagos_tiny_llama",
+  "model_impl": "transformers",
+  "explicit_path": "ALL_ATTENTION_FUNCTIONS['vllm'] -> F.sdpa + SDPBackend.MATH (default flash/flagos path does not consume math composite)",
+  "baseline_path": "same MATH path without A1 (FLAGOS_C2_FORCE_MATH_PATH=1)",
+  "prompt_ids": [
+    1,
+    5,
+    6,
+    7
+  ],
+  "max_tokens": 8,
+  "seed": 20260823,
+  "baseline": {
+    "token_ids": [
+      [
+        0,
+        15,
+        18,
+        22,
+        12,
+        1,
+        18,
+        22
+      ]
+    ],
+    "prompt_token_ids": [
+      [
+        1,
+        5,
+        6,
+        7
+      ]
+    ],
+    "aten_hits": {},
+    "elapsed_s": 54.506
+  },
+  "injected": {
+    "token_ids": [
+      [
+        0,
+        15,
+        18,
+        22,
+        12,
+        1,
+        18,
+        22
+      ]
+    ],
+    "prompt_token_ids": [
+      [
+        1,
+        5,
+        6,
+        7
+      ]
+    ],
+    "aten_hits": {
+      "aten::_scaled_dot_product_attention_math": 20
+    },
+    "elapsed_s": 53.405,
+    "count_shards": [
+      "flagos_c2_sdpa_math_27119.29306"
+    ]
+  },
+  "assertions": {
+    "math_hits_gt_0": true,
+    "output_tokens_match": true
+  },
+  "status": "PASS",
+  "date": "2026-10-28",
+  "commit_hint": "wt-2026-10-26-fix"
+}

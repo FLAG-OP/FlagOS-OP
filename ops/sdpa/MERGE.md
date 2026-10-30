@@ -1,8 +1,9 @@
 # 多平台合并指南（MERGE.md）
 
 > 何时用: 新平台的 SDPA 实现开发完成后，合入本目录。
-> 当前已合并: ascend910（Triton）、p800-kunlunxin（厂商委托）与
-> mlu590（Cambricon TMO FA + fused overrideable 委托）。
+> 当前已合并: ascend910（Triton）、p800-kunlunxin（厂商委托）、
+> mlu590（Cambricon TMO FA + fused overrideable 委托）与
+> thead-ppu（平头哥 ZW810E，flash/efficient 分流委托）。
 > 前置阅读: [PLATFORM.md](PLATFORM.md)（当前平台的绑定清单）。
 > 原则: **黄金/测试/注册链是平台无关资产，直接复用；只有 kernel 本体按平台分文件**。
 
@@ -32,7 +33,8 @@ sdpa/
 │       ├── __init__.py       #   平台选择器（按 device.type 分发）
 │       ├── ascend910.py      #   Triton 主体（函数名不变）
 │       ├── p800_kunlunxin.py #   厂商 efficient-attention 委托
-│       └── mlu590.py         #   Cambricon TMO FA + fused overrideable
+│       ├── mlu590.py         #   Cambricon TMO FA + fused overrideable
+│       └── thead_ppu.py      #   平头哥 flash(maskless)/efficient(masked) 分流
 ├── test/                     # kernel_level.py 不动（36 case 换 profile 即跑）
 └── reports/
     ├── perf_fp16.json        #   保留为 ascend910 数据（或改名加平台后缀）
@@ -132,17 +134,15 @@ import importlib
 
 _IMPL_BY_DEVICE = {
     "npu": "ascend910",
-    "cuda": "p800_kunlunxin",  # backend 内部再校验 torch_xmlir
     "mlu": "mlu590",           # backend 内部再校验 torch_mlu
 }
+# "cuda" 是三候选: torch_xmlir/P800、PPU 栈/thead-ppu、否则报错——
+# _cuda_impl_name() 按 torch_xmlir import 与 PPU 栈证据（triton
+# PPUDriver / 设备名 PPU）判定; 解析结果进 _IMPL_CACHE（进程级,
+# 栈身份不变; 不缓存时 find_spec ~80-100µs/调用, thead 实测拖慢 3x）。
 
 def get_impl(device_type: str):
-    name = _IMPL_BY_DEVICE.get(device_type)
-    if name is None:
-        raise RuntimeError(
-            f"sdpa 无 {device_type!r} 平台实现，已注册: "
-            f"{list(_IMPL_BY_DEVICE)}（见 MERGING 指南/PLATFORM.md）")
-    return importlib.import_module(f".{name}", __package__)
+    ...  # 见 kernel/backends/__init__.py 实现（含缓存）
 ```
 
 `kernel/triton_level.py` 退化为 facade:
@@ -150,7 +150,7 @@ def get_impl(device_type: str):
 ```python
 """兼容 facade: sdpa_triton 按输入设备自动路由到平台实现。"""
 from kernel.backends import get_impl
-PLATFORM = "multi(ascend910,p800-kunlunxin,mlu590)"
+PLATFORM = "multi(ascend910,p800-kunlunxin,mlu590,thead-ppu)"
 SUPPORTED_DEVICE_TYPES = ("npu", "cuda", "mlu")
 
 def sdpa_triton(q, k, v, *a, **kw):
@@ -180,3 +180,11 @@ _kunlunxin/...` 各厂商目录并列，已实际存在），所以:
       委托、math bool-mask 分化已显式标注
 - [x] `probes/guard_check.py mlu590` 全绿；`reports/perf_fp16_mlu590.json`
       与 `reports/mlu590.md` 就位（修订后 1.00-1.33x 原生）
+- [x] thead-ppu: 黄金 397/397 + kernel 层 37/37 + tail 覆盖 88/88（含
+      非方阵 causal 48 案例 + 原生 parity，PR36 条目 4） +
+      op/framework/guard 绿（flash/efficient 分流，见 PLATFORM.md §3c）
+- [x] PLATFORM.md 有 thead-ppu 小节（§3c）；bias 对齐两种报错原文、
+      bf16 boundary parity 口径、consistency 缺证（dev 栈无 flag_gems）
+      已显式标注；`_IMPL_CACHE` 与 flash 分流的倒挂收口记录在案
+- [x] `probes/guard_check.py thead-ppu` 全绿；`reports/perf_fp16_thead-ppu.json`
+      与 `reports/thead-ppu.md` 就位（1.10x 原生；首版 4.07x 倒挂已收口）

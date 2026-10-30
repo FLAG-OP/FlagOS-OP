@@ -22,6 +22,24 @@ class LocalProfile:
                 f"impl={self.default_impl}]")
 
 
+def _is_ppu_stack() -> bool:
+    """PPU 栈识别（configs auto_detect 不可靠——T1 thead-ppu.yaml 同款）。"""
+    try:
+        from triton.runtime import driver
+        if "PPU" in type(driver.active).__name__:
+            return True
+    except Exception:
+        pass
+    try:
+        import torch
+        return torch.cuda.is_available() and any(
+            "PPU" in torch.cuda.get_device_name(i)
+            for i in range(torch.cuda.device_count())
+        )
+    except Exception:
+        return False
+
+
 def load_profile(name: str | None = None) -> LocalProfile:
     if name is None:
         name = os.environ.get("SDPA_MATH_PROFILE")
@@ -30,6 +48,8 @@ def load_profile(name: str | None = None) -> LocalProfile:
             import torch
             if hasattr(torch, "npu") and torch.npu.is_available():
                 name = "ascend910"
+            elif _is_ppu_stack():
+                name = "thead-ppu"
             elif torch.cuda.is_available():
                 try:
                     import torch_xmlir  # noqa: F401
@@ -66,8 +86,25 @@ def load_profile(name: str | None = None) -> LocalProfile:
             dispatch_key="AutogradCUDA",   # paired with CUDA by register_a1
             default_impl="p800",            # vendor O/LSE + exact-P composition
         )
+    if name in ("thead-ppu", "thead", "ppu", "thead-ppu-zw810e"):
+        # probes/thead_first_probe.py 实测（2026-10-24, 卡6）:
+        #   AutogradCUDA 6/7 命中（唯一零命中 inference_mode =
+        #   known-issues #19 Autograd 键通病, 与 T1 sdpa / T2 embedding 同）;
+        #   CUDA 键 7/7 全命中但反传带"未注册 Autograd kernel"警告。
+        #   与 p800/T1 先例一致选 AutogradCUDA。
+        # 设备编号口径（PR36 条目 3）: 物理卡号 cuda:6——与中央 YAML 的
+        # torch_device / visible_devices("6,7") 同口径, kernel/op/framework
+        # 三层均落在物理卡 6; 取证与换算规则见 PLATFORM.md §3a 表。
+        return LocalProfile(
+            name="thead-ppu",
+            vendor="thead",
+            torch_device=os.environ.get("SDPA_MATH_TEST_DEVICE", "cuda:6"),
+            dispatch_key="AutogradCUDA",
+            default_impl="thead",  # flash/efficient 分流 + exact-P
+        )
     raise ValueError(
-        f"未知设备 profile: {name}（内置 cpu / ascend910 / p800-kunlunxin）")
+        f"未知设备 profile: {name}"
+        f"（内置 cpu / ascend910 / p800-kunlunxin / thead-ppu）")
 
 
 def detect_profile() -> LocalProfile:
@@ -75,6 +112,8 @@ def detect_profile() -> LocalProfile:
         import torch
         if hasattr(torch, "npu") and torch.npu.is_available():
             return load_profile("ascend910")
+        if _is_ppu_stack():
+            return load_profile("thead-ppu")
         if torch.cuda.is_available():
             try:
                 import torch_xmlir  # noqa: F401

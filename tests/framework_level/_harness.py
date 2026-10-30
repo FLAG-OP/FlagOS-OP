@@ -59,6 +59,10 @@ def run_case(route: str, profile, out_name: str, with_plugin: bool) -> dict:
     """跑一次 vLLM 子进程并返回结果 dict。"""
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{ROOT / 'injection'}{os.pathsep}{ROOT}"
+    # visible_devices 是物理卡号（CVD 语义）: 子进程内逻辑 0/1 = 列表里的物理卡。
+    # 本 harness 的子进程（_vllm_runner.py）只消费 profile.engine_args()/name,
+    # 不读 profile.torch_device——故与 kernel/op 层的 torch_device 无重映射冲突
+    # （PR36 条目 3 取证, 见 ops/sdpa/PLATFORM.md §3c-2）。
     env["CUDA_VISIBLE_DEVICES"] = profile.visible_devices
     env["VLLM_LOGGING_LEVEL"] = "WARNING"
     # 统一 token 钳制输入: 与黄金生成一致，且规避 vendor 栈

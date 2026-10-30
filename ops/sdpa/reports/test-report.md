@@ -103,8 +103,37 @@ dq 4.9e-4 · dk 4.9e-4 · dv 3.9e-3。
 详细复现：[mlu590.md](mlu590.md) ·
 已填样例 [sdpa_mlu590_test_report](../../../reports/examples/sdpa_mlu590_test_report.md)。
 
+### 2026-10-23 thead-ppu 复验
+
+| 层级 | 结果 |
+|---|---|
+| kernel | 37/37；fp32 ≤3.6e-6 / fp16 ≤9.8e-4 / bf16 3.91e-3；哨兵通过；1k D128 ~0.12ms |
+| tail 覆盖 | 37/37；S3072/5000/5120 尾块 ×3 seed + zeros/large/boundary；boundary 用 rel 5e-3（黄金 extreme 口径），bf16 用 parity_vs_native + 有限子集 rel |
+| 黄金 | 397/397；worst 7.812e-3（bf16 float-mask，容差内）；extreme fp32 rel 4.988e-3 |
+| A1 op | `AutogradCUDA` 拦截（6/7 探针命中，`inference_mode` 零命中同 #19）；注册=直调逐位；vs 原生 0.0；dq/dk/dv ≤3.91e-3；direct+mask 反向通过 |
+| 应用 | mini-decoder harness 拦截 28；logits diff=0.0；top1/贪心续写一致率 1.00（非真实 vLLM） |
+| 守卫 | 元数据、`cuda:6` PPU 正向路径、CPU 拒绝、注册全通过 |
+| 性能 | fp16 相对原生 **1.10x**（maskless flash 分流 + `get_impl` 解析缓存；首版 efficient-only 为 4.07x 慢，已收口） |
+| 一致性 | `run.py --consistency` FAIL——`ModuleNotFoundError: flag_gems`（A2/gelu 门禁在 dev 栈结构性缺证，非 sdpa/thead 缺陷；sdpa 级一致性由 op 层逐位断言覆盖） |
+
+详细复现：[thead-ppu.md](thead-ppu.md)。
+
+### 2026-10-25 thead-ppu 非方阵 causal 复验（PR36 条目 4）
+
+选型 a（实现按文档路由，取证与四平台矩阵见 [PLATFORM.md §3c-3](../PLATFORM.md)）：
+
+| 层级 | 结果 |
+|---|---|
+| tail 覆盖 | `test/kernel_level_tail_thead_ppu.py thead-ppu` **88/88**（原 37 + 非方阵 causal 48 + 原生 parity 3；带 mask 改判非有限位与参考逐位一致） |
+| A1 op | 非方阵 causal 经 `AutogradCUDA` 拦截、注册=直调逐位、vs 原生 **0.0**；梯度 vs CPU dq 1.22e-4 / dk 1.26e-4 / dv 1.92e-3（旧 `Sq==Skv` 门梯度差 4.68，已拆） |
+| kernel | `test/kernel_level.py thead-ppu` 37/37 无回退；黄金 **397/397**（worst 7.812e-3，与交付时持平） |
+| 应用/守卫 | `example.py thead-ppu` 三层全绿；`probes/guard_check.py thead-ppu` 全过 |
+| 回归口径 | `tests/unit` 46/46；三索引 `--check` 全绿；`git diff --check` 干净 |
+
 ### 总结论
 
 kernel 层/框架层/应用层/黄金/性能五线全绿（ascend910 · p800-kunlunxin ·
-mlu590 三平台），正确性与拦截机制均有实验证据链；性能定位清晰。
-**建议合入**（真实 vLLM 场景待环境具备后补验；MLU 侧 quirks 已声明）。
+mlu590 · thead-ppu 四平台），正确性与拦截机制均有实验证链；性能定位
+清晰（thead 首版倒挂已定位到"非同 kernel 委托 + 未缓存路由"并收口）。
+**建议合入**（真实 vLLM 场景与 FlagGems 三方对比待环境具备后补验；
+MLU/PPU 侧 quirks 已声明）。

@@ -32,9 +32,9 @@ platform_families:
     roadmap_note: 覆盖当前 P800 XMLIR 栈；含 FlagGems 5.0 复测 profile。
   thead:
     display_name: 平头哥
-    status: planned
-    current_profiles: []
-    roadmap_note: 首个算子交付时补充 profile 与命名。
+    status: partial
+    current_profiles: [thead-ppu, thead-ppu-c2]
+    roadmap_note: sdpa、embedding、sdpa_math 已交付（kernel/A1）；thead-ppu-c2 承接 embedding/sdpa_math C2 真实 vLLM 证据（#37）。
   enflame:
     display_name: 燧原 GCU
     status: planned
@@ -80,7 +80,7 @@ operators:
     directory: sdpa
     group: core
     purpose: 标准 scaled-dot-product attention 前向路径。
-    key_result: 三平台黄金覆盖 397/397。
+    key_result: 四平台黄金覆盖 397/397。
     platforms:
       ascend:
         profiles: [ascend910]
@@ -97,12 +97,15 @@ operators:
         implementation: TMO / fused overrideable 委托
         evidence:
           level: C1
+      thead:
+        profiles: [thead-ppu]
+        implementation: flash/efficient 分流委托
 
   - name: sdpa_math
     directory: sdpa_math
     group: core
     purpose: 私有 SDPA math 后端，同时返回完整概率图。
-    key_result: 四份实现通过同一组 175 例黄金数据；Ascend910 引擎侧 C2 命中。
+    key_result: 五份实现通过同一组 175 例黄金数据；Ascend910 引擎侧 C2 真实前向命中（验收状态 PARTIAL，见 reports/c2_ascend910.md）。
     platforms:
       ascend:
         profiles: [ascend910]
@@ -115,12 +118,15 @@ operators:
         implementation: vendor O/LSE 加 exact-P 重建
         evidence:
           level: C1
+      thead:
+        profiles: [thead-ppu]
+        implementation: flash/efficient 分流 O/LSE 加 exact-P 重建
 
   - name: embedding
     directory: embedding
     group: core
     purpose: 稠密 embedding 前向和 dense backward。
-    key_result: 已在三个厂商平台交付；MLU 侧逐位覆盖，Ascend910 引擎侧 C2 命中。
+    key_result: p800/MLU/PPU 三平台交付且逐位覆盖；Ascend910 引擎侧 C2 真实前向命中（验收状态 PARTIAL，见 reports/c2_ascend910.md）。
     platforms:
       ascend:
         profiles: [ascend910]
@@ -138,6 +144,9 @@ operators:
         implementation: 原生 index_select 与 embedding_backward 委托
         evidence:
           level: C1
+      thead:
+        profiles: [thead-ppu]
+        implementation: 原生 index_select 与 embedding_backward 委托
 
   - name: type_as
     directory: type_as

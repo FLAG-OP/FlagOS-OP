@@ -1,7 +1,7 @@
 # FlagOS-OP 的基座镜像索引。
 # 本文件登记外部协作基座线索；FlagOS-OP 不构建、不分发这些镜像。
 schema: 1
-updated: "2026-10-16"
+updated: "2026-10-26"
 source:
   repository: FlagRT/runtime-team
   revision: "74197bf7d4b5dc8cdd3b2b89b15ac3561936dda6"
@@ -84,11 +84,12 @@ images:
     status: registered
     distribution: public-registry
     current: true
-    related_profiles: []
-    flagos_op_relation: platform-planned
+    related_profiles: [thead-ppu]
+    flagos_op_relation: version-aligned
     notes:
       - 外部源标记为 FlagTree 官方镜像并按 digest 锁定。
-      - FlagOS-OP 的平头哥算子矩阵仍是 planned，本行不改变支持状态。
+      - 与 FlagOS-OP thead-ppu 环境锁的 Python/torch/triton 主版本线对齐（py3.12 / torch 2.10.0 / triton 3.6.0）。
+      - FlagOS-OP 未登记运行容器的 image id 或 digest，因此不声明“同镜像实例已验证”。
 
   - id: cambricon-mlu-runtime-v1
     family: cambricon

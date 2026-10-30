@@ -57,10 +57,13 @@ def run(profile):
     # operator stack.  Enable the stable FlagGems GELU used by this consumer;
     # enabling the full op set is not deterministic on the locked P800 image,
     # and the same narrow FlagGems path keeps both platforms comparable.
-    import flag_gems
-    flag_gems.only_enable(include=["gelu"])
-    assert flag_gems.current_work_registrar is not None
-    assert "gelu" in flag_gems.current_work_registrar.include_ops
+    # thead-ppu: dev 栈结构性无 flag_gems（T1 sdpa 同款缺证口径）——
+    # 仅拦截/数值一致性, 跳过 FlagOS 栈门禁。
+    if profile.vendor != "thead":
+        import flag_gems
+        flag_gems.only_enable(include=["gelu"])
+        assert flag_gems.current_work_registrar is not None
+        assert "gelu" in flag_gems.current_work_registrar.include_ops
 
     # bf16 avoids overflow in the random fp16 Linear/GELU consumer.
     dtype = torch.bfloat16
@@ -112,8 +115,13 @@ def run(profile):
     assert emb_grad_diff < 2e-3, emb_grad_diff
     assert head_grad_diff < 2e-3, head_grad_diff
 
+    stack_line = (
+        "  FlagOS stack: flag_gems.only_enable(['gelu']) active"
+        if profile.vendor != "thead" else
+        "  FlagOS stack: 缺证（thead dev 栈无 flag_gems）——纯 A1 拦截口径"
+    )
     print(
-        f"  FlagOS stack: flag_gems.only_enable(['gelu']) active\n"
+        f"{stack_line}\n"
         f"  consumer: nn.Embedding + 2-layer MLP, bf16, 4 prompts × 48 tokens"
         f"\n  interception count={_CALLS['n']}; logits diff={logits_diff:.3e}; "
         f"greedy seq match={seq_match:.2f}"

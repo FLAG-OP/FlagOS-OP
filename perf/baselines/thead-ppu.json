@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "device": "thead-ppu",
+  "created_at": "2026-10-23T14:43:09.881772+00:00",
+  "updated_at": "2026-10-24T09:27:31.345491+00:00",
+  "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+  "git_dirty": false,
+  "env_fingerprint": {
+    "torch": "2.10.0",
+    "triton": "3.6.0",
+    "flag_gems": null,
+    "vllm_fl": null,
+    "vllm": "0.19.0"
+  },
+  "cases": {
+    "ops.embedding.native.forward": {
+      "metrics": {
+        "latency_ms": 0.028359,
+        "GBps": 300.418
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-10-24T09:27:30.929998+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.embedding.thead-ppu.forward": {
+      "metrics": {
+        "latency_ms": 0.031571,
+        "GBps": 269.857
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-10-24T09:27:30.921336+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.sdpa.native.forward": {
+      "metrics": {
+        "latency_ms": 0.104098,
+        "TFLOPS": 41.259
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-10-24T09:27:28.947533+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.sdpa.thead-ppu.forward": {
+      "metrics": {
+        "latency_ms": 0.113115,
+        "TFLOPS": 37.97
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-10-24T09:27:28.252568+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.sdpa_math.native": {
+      "metrics": {
+        "latency_ms": 0.78066,
+        "TFLOPS": 5.502
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-10-24T09:27:30.888496+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.sdpa_math.reference": {
+      "metrics": {
+        "latency_ms": 1.13581,
+        "TFLOPS": 3.781
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-10-24T09:27:31.340248+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.sdpa_math.thead-ppu": {
+      "metrics": {
+        "latency_ms": 0.325266,
+        "TFLOPS": 13.204
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-10-24T09:27:30.530924+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    },
+    "ops.sdpa_math.torch": {
+      "metrics": {
+        "latency_ms": 0.758707,
+        "TFLOPS": 5.661
+      },
+      "warmup": 20,
+      "iters": 50,
+      "updated_at": "2026-10-24T09:27:31.037819+00:00",
+      "git_commit": "aa6cf7f8de4763b3cfe4907815982f8e3f660398",
+      "git_dirty": false,
+      "env_fingerprint": {
+        "torch": "2.10.0",
+        "triton": "3.6.0",
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": "0.19.0"
+      }
+    }
+  }
+}

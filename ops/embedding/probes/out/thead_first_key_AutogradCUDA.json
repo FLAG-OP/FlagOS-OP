@@ -1,0 +1,22 @@
+{
+  "dispatch_key": "AutogradCUDA",
+  "device": "cuda:6",
+  "probes": {
+    "grad_no_rg": 1,
+    "grad_rg_has_grad_fn": true,
+    "grad_rg": 1,
+    "grad_rg_backward": true,
+    "no_grad": 1,
+    "inference_mode": 0,
+    "aten_direct": 1
+  },
+  "has_kernel": true,
+  "hit_probes": [
+    "grad_no_rg",
+    "grad_rg_has_grad_fn",
+    "grad_rg",
+    "grad_rg_backward",
+    "no_grad",
+    "aten_direct"
+  ]
+}

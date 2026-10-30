@@ -219,6 +219,13 @@ def sdpa_triton(
     B, Hq, Sq, D = query.shape
     _, Hkv, Skv, Dk = key.shape
     assert D == Dk == value.shape[-1], "head_dim 不一致"
+    if is_causal and Sq != Skv:
+        # 非方阵 causal 本平台未接入（kernel 的 IS_CAUSAL 原本在 Sq!=Skv 时
+        # 静默降级为不遮蔽）。PR36 条目 4 拆掉 reference/梯度侧的 Sq==Skv
+        # 门后补同款显式拒绝，避免前向静默错 + 反向折 causal 的不一致。
+        raise ValueError(
+            "causal 语义要求 Sq == Skv（本平台未接入 Sq!=Skv causal，"
+            "aten/reference 本身按 top-tril 支持，见 PLATFORM.md §3c-3）")
     assert query.dtype in (torch.float16, torch.bfloat16, torch.float32), \
         f"不支持的 dtype: {query.dtype}"
 

@@ -16,7 +16,7 @@ except ImportError:  # Standalone import with OP_DIR on sys.path
     from kernel.backends import get_impl
 
 
-PLATFORM = "multi(ascend910,p800-kunlunxin,mlu590)"
+PLATFORM = "multi(ascend910,p800-kunlunxin,mlu590,thead-ppu)"
 SUPPORTED_DEVICE_TYPES = ("npu", "cuda", "mlu")
 
 

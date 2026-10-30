@@ -1,10 +1,12 @@
 # 平台绑定清单（Platform Binding）— embedding
 
-> 当前交付包含三个平台：**p800-kunlunxin**（厂商委托同构，
+> 当前交付包含四个平台：**p800-kunlunxin**（厂商委托同构，
 > gatherFIX 探针见 reports/）、**cambricon**（MLU590，Autograd key
-> 注册——见 reports/cambricon.md §4）与 **ascend910**（C2：真实 vLLM-Ascend
-> 前向命中 `aten::embedding` 9 次，2026-10-30 复测，见 §2 与
-> `reports/c2_ascend910.md`；C0/C1 三层/黄金为 2026-09-30 历史记录）。
+> 注册——见 reports/cambricon.md §4）、**thead-ppu**（平头哥 PPU
+> ZW810E，CUDA 兼容层——见 reports/thead-ppu.md）与 **ascend910**
+> （C2：真实 vLLM-Ascend 前向命中 `aten::embedding` 9 次，2026-10-30
+> 复测，验收状态 PARTIAL——见 §2 与 `reports/c2_ascend910.md`；
+> C0/C1 三层/黄金为 2026-09-30 历史记录）。
 > 口径与 `ops/catalog.yaml` / `ops/README.md` / `REPORT.md` 一致（issue #38）。
 > 本文件记录不可凭直觉搬运的绑定结论；跨平台移植时逐项重验，不要把
 > 单平台实验结果当成普适行为。
@@ -54,7 +56,48 @@
   `EMBEDDING_PROFILE` 显式指定平台（`_backend_for` 的 platform 参数
   优先于 dispatch_key 推断）
 
-## 5. 新平台接入
+## 5. thead-ppu（PPU ZW810E）绑定
+
+- PPU torch 经 **CUDA 兼容层**直曝 `cuda:N` 张量——与 XMLIR 伪装 CUDA
+  同 device.type，`kernel/platform.py::_cuda_impl` 按栈身份路由：
+  `torch_xmlir` 可导入 → p800；设备名含 `PPU` → thead；进程级缓存
+  （T1 教训: 无缓存 find_spec 路由 80-100µs/调用）。`register.py`
+  `_cuda_backend` 同款。
+- A1 拦截 key = **AutogradCUDA**（probes/thead_first_probe.py 实测
+  6/7 命中; 唯一零命中 inference_mode = known-issues #19 Autograd 键
+  通病, 与 p800/T1-sdpa 同结论）。
+- 中央 YAML 分层（PR36 条目 2 取证, 2026-10-25）:
+  `configs/devices/thead-ppu.yaml` 的 `dispatch_key: CUDA` 是**中央 A1 基键**,
+  与本节 `AutogradCUDA` 分层并存（同 cambricon.yaml=`PrivateUse1` /
+  本地 `AutogradPrivateUse1` 的分层, 见 reports/cambricon.md §4）。中央消费点
+  （`tests/framework_level/_harness.py` → `A1_DISPATCH_KEY` →
+  `injection/sitecustomize.py`, 另有 `scripts/intake_validate.py`、
+  `scripts/bench_dispatch.py`、`tests/op_level/test_a1.py`）实测基键在
+  grad/no_grad/inference_mode 三口径各拦 1 次, 而 `AutogradCUDA` 在
+  inference_mode 零命中（known-issues #19.3）——复现
+  `python3 scripts/smoke_dispatch_key.py`; 取证表见 `ops/sdpa/PLATFORM.md` §3c-1。
+- 设备编号口径（PR36 条目 3 取证, 2026-10-25）: 本地 `_profile.py` 的 `cuda:6`
+  与中央 YAML `device.torch_device: cuda:6`、`visible_devices: "6,7"` 同取
+  **物理卡号**——kernel / op / framework 三层都落在物理卡 6（中央 vLLM harness
+  用 6,7, 其子进程逻辑 0/1 = 物理 6/7）。全仓只有三处写 `CUDA_VISIBLE_DEVICES`,
+  且被重映射的 `_vllm_runner.py` 子进程不读 `torch_device`；换算规则与实测见
+  `ops/sdpa/PLATFORM.md` §3c-2。`EMBEDDING_TEST_DEVICE` 的覆盖值同样按物理卡号理解。
+- **原生 `embedding_backward` 完整**（`padding_idx` 与
+  `scale_grad_by_freq=True` 直通, fp16 err 6.1e-5~1.2e-4 累加序噪声）
+  ——与 cambricon 同型零补偿；若未来栈升级出现 p800 式
+  `Check scale_grad_by_freq == false failed`，回退 p800 的
+  inverse-frequency 补偿（p800_kunlunxin.py 已有）。
+- forward native `embedding`/`index_select` vs CPU 官方**逐位 err=0**
+  （3 dtype × padding 全组合）。
+- 同步 API：`torch.cuda.synchronize`（CUDA 兼容层提供），
+  `kernel/platform.py::synchronize` cuda 分支直接覆盖。
+- 测试尾块维口径：§2d 的 3072/5000/5120 对 embedding 取 gather 长度维
+  （#15a 尾块 masked-load 归约陷阱不适用——gather 无归约）。
+- dev 栈无 flag_gems：framework_level 跳过 FlagOS 栈门禁（纯 A1 拦截
+  口径）；`run.py --consistency`/Triton gather 对比结构性缺证（同 T1
+  sdpa 报告 §6.11）。
+
+## 6. 新平台接入
 
 按 `MERGE.md` 七步走；kernel 层实现 `embedding`/`embedding_backward`
 + `PLATFORM` + `_DEVICE_PROBE` 四件即可并入 `_BACKENDS`。

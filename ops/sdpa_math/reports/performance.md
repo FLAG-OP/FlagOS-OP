@@ -389,3 +389,43 @@ SDPA_MATH_FUSED=on|off python3 probes/e2e_probe.py ours   # 融合强制 A/B
 python3 probes/sameproc_ab.py                     # 同进程 A/B（§8）
 python3 example.py ascend910 && python3 script/check_accuracy.py --impl triton
 ```
+
+## 10. 结果：thead-ppu fp16（2026-10-24）
+
+设备 `cuda:6`（PPU-ZW810E）。数据: [perf_thead-ppu.json](perf_thead-ppu.json)
+与 `perf/baselines/thead-ppu.json`。
+
+### 10.1 直调（`--register` 后 A1 拦截路径）
+
+| shape | ours(ms) | native(ms) | speedup |
+|---|---:|---:|---:|
+| prefill_1k_d64 | 0.620 | 0.658 | 1.06x |
+| prefill_1k_d128 | 0.759 | 0.778 | 1.03x |
+| prefill_2k_d128 | 2.766 | 2.842 | 1.03x |
+| gqa_1k_d128 | 1.382 | 1.444 | 1.04x |
+| decode_d128 | 0.161 | 0.156 | 0.97x |
+| tail100_d64 | 0.162 | 0.157 | 0.97x |
+
+注: `--register` 后 native 也走本实现（成对注册），故 speedup 接近 1.0；
+真实对比见 §10.2。
+
+### 10.2 perf_run 基线（未注册进程，native = 原生 composite math）
+
+| case | latency_ms | TFLOPS |
+|---|---:|---:|
+| `ops.sdpa_math.thead-ppu` | 0.328 | 13.10 |
+| `ops.sdpa_math.native` | 0.782 | 5.49 |
+| `ops.sdpa_math.torch` | 0.763 | 5.63 |
+| `ops.sdpa_math.reference` | 1.147 | 3.75 |
+
+**direct 2.38x native composite**（同为返回 out+P 的公平口径）。
+门禁: FAIL 0 · WARN 0 · NEW 0 · 共 8 条（含 T1/T2 基线）。
+
+### 10.3 复现
+
+```bash
+python3 script/bench_perf.py --device cuda:6 --register \
+  --json-out reports/perf_thead-ppu.json
+python3 scripts/perf_run.py --device thead-ppu --pattern ops.sdpa_math
+python3 scripts/perf_compare.py --device thead-ppu
+```

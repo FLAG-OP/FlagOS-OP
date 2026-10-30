@@ -156,3 +156,58 @@ ops.sdpa.native.forward
 python3 scripts/perf_run.py --device p800-kunlunxin --pattern ops.sdpa
 python3 scripts/perf_compare.py --device p800-kunlunxin
 ```
+
+## 7. thead-ppu（2026-10-23）
+
+PPU-ZW810E（`cuda:6`，torch 2.10.0 CUDA 兼容层）。fp16 采样
+（warmup=20，iters=100，每次迭代读取一个输出元素强制完成）见
+[perf_fp16_thead-ppu.json](perf_fp16_thead-ppu.json)：
+
+| shape | ours | Python F.sdpa | FlagGems | ours/F.sdpa |
+|---|---:|---:|---:|---:|
+| prefill_1k_d64 | 0.092ms | 0.082ms | 缺证 | 0.89x |
+| prefill_1k_d128 | 0.113ms | 0.104ms | 缺证 | 0.92x |
+| prefill_2k_d128 | 0.361ms | 0.351ms | 缺证 | 0.97x |
+| prefill_4k_d128 | 1.136ms | 1.125ms | 缺证 | 0.99x |
+| gqa_1k_d128 | 0.239ms | 0.205ms | 缺证 | 0.86x |
+| decode_d128 | 0.053ms | 0.033ms | 缺证 | 0.63x |
+
+FlagGems 列缺证原因：dev 容器无 flag_gems（任务书口径"缺一写原因"），
+三方对比留给 thead-ci 第二 profile（P3）。
+
+### 7.1 首版 4.07x 倒挂与收口
+
+| 阶段 | ops.sdpa.thead-ppu.forward | 原生 | 比值 |
+|---|---:|---:|---:|
+| 首版（maskless 也走 efficient + `get_impl` 每调用 find_spec） | 0.426ms | 0.105ms | **0.25x（4.07x 慢）** |
+| +maskless 分流 flash 直调 | 0.317ms | 0.104ms | 0.33x |
+| +`backends.get_impl` 进程级 `_IMPL_CACHE` | **0.114ms** | **0.104ms** | **0.91x（1.10x 原生）** |
+
+两个根因（详见 [thead-ppu.md](thead-ppu.md) §5-§6）：
+
+1. PPU 原生 `F.sdpa` 内部只调 `_scaled_dot_product_flash_attention`
+   （TorchDispatchMode 实证）——efficient 委托不是"同 kernel 的另一入口"，
+   更慢且输出非连续；
+2. `kernel/backends.get_impl()` 每调用 `find_spec`/`importlib` 解析
+   三候选（cProfile ~80-100 µs/调用），加进程级缓存后消除。
+
+### 7.2 仓库 perf gate（2026-10-23）
+
+注册用例：`ops.sdpa.thead-ppu.forward` / `ops.sdpa.native.forward`
+（与 sdpa_math 组的 `ops.sdpa_math.torch/reference` 同批入库；
+`ops.sdpa_math.triton` 为 ascend910 绑定，SKIP 记录在案）。
+
+| case | latency | TFLOPS |
+|---|---:|---:|
+| ops.sdpa.thead-ppu.forward | 0.114ms | 37.70 |
+| ops.sdpa.native.forward | 0.104ms | 41.16 |
+
+门禁判定：`FAIL 0 · WARN 0`（基线 `perf/baselines/thead-ppu.json`，
+更新原因：生产路径由 efficient-only 切换为 flash/efficient 分流并
+消除 `get_impl` 每调用解析开销）。复现：
+
+```bash
+ppu-smi   # 确认 6/7 空闲
+python3 scripts/perf_run.py --device thead-ppu --pattern ops.sdpa --update-baseline
+python3 scripts/perf_compare.py --device thead-ppu
+```

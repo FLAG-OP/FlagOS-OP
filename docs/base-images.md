@@ -36,7 +36,7 @@ revision `74197bf7d4b5dc8cdd3b2b89b15ac3561936dda6`，读取时间 2026-10-16。
 | 华为昇腾 | 昇腾 910C 训练腿<br>`ascend-operator-runtime-comm` / `v3` | `flagrt/ascend-operator-runtime-comm:2.0.0-flagtree3.5-routeA-cann9.0-py311-torch2.10-flagcx0.13.0g4e0e0cb-arm64` | 部分可复现 | 离线发布 | 未接入 FlagOS-OP 环境锁 |
 | 华为昇腾 | 昇腾 910C 推理腿<br>`ascend-infer-vllm` / `v1` | `quay.io/ascend/vllm-ascend:v0.20.2rc1-a3` | 登记式基座 | 公开 registry | 未接入 FlagOS-OP 环境锁 |
 | 昆仑芯 | 昆仑芯 P800 算子运行时基座<br>`kunlun-operator-runtime` / `v2` | `flagrt/kunlun-operator-runtime:2.0.0-xpu3.6-py310-torch2.9-flagtree0.6.1-flaggems73c5aff1-x86_64` | 外部可复现构建 | 内部构建 | 版本对齐；未声明同镜像实例 |
-| 平头哥 | 平头哥 PPU 运行时基座<br>`thead-ppu-runtime` / `v1` | `harbor.baai.ac.cn/flagtree/flagtree-ppu-py312-torch2.10.0-sdk2.1.0-cu130-ubuntu24.04:202607-3.6-base` | 登记式基座 | 公开 registry | 平台算子矩阵仍为 planned |
+| 平头哥 | 平头哥 PPU 运行时基座<br>`thead-ppu-runtime` / `v1` | `harbor.baai.ac.cn/flagtree/flagtree-ppu-py312-torch2.10.0-sdk2.1.0-cu130-ubuntu24.04:202607-3.6-base` | 登记式基座 | 公开 registry | 版本对齐；未声明同镜像实例 |
 | 寒武纪 | 寒武纪 MLU590 运行时基座<br>`cambricon-mlu-runtime` / `v1` | `harbor.baai.ac.cn/flagos-runtime/flagos-runtime-cambricon-neuware4.4.3:2.2.0` | 登记式基座 | 公开 registry | 未接入 FlagOS-OP 环境锁 |
 
 ### 平台说明
@@ -75,8 +75,9 @@ revision `74197bf7d4b5dc8cdd3b2b89b15ac3561936dda6`，读取时间 2026-10-16。
 #### 平头哥 PPU 运行时基座
 
 - 外部源标记为 FlagTree 官方镜像并按 digest 锁定。
-- FlagOS-OP 的平头哥算子矩阵仍是 planned，本行不改变支持状态。
-- 关联环境锁：未登记。
+- 与 FlagOS-OP thead-ppu 环境锁的 Python/torch/triton 主版本线对齐（py3.12 / torch 2.10.0 / triton 3.6.0）。
+- FlagOS-OP 未登记运行容器的 image id 或 digest，因此不声明“同镜像实例已验证”。
+- 关联环境锁：`thead-ppu`。
 
 <a id="cambricon-mlu-runtime-v1"></a>
 #### 寒武纪 MLU590 运行时基座
@@ -93,7 +94,7 @@ revision `74197bf7d4b5dc8cdd3b2b89b15ac3561936dda6`，读取时间 2026-10-16。
 | 华为昇腾 | `ascend-operator-runtime` · `ascend-operator-runtime-comm` · `ascend-infer-vllm` | 部分交付 |
 | 寒武纪 | `cambricon-mlu-runtime` | 部分交付 |
 | 昆仑芯 | `kunlun-operator-runtime` | 部分交付 |
-| 平头哥 | `thead-ppu-runtime` | 规划中 |
+| 平头哥 | `thead-ppu-runtime` | 部分交付 |
 | 燧原 GCU | 未登记 | 规划中 |
 | 壁仞 | 未登记 | 规划中 |
 
