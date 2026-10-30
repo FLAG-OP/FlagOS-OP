@@ -97,34 +97,98 @@ def _maybe_counter(op: str):
     """若设置了 FLAGOS_C2_COUNT_DIR，则返回 (counter, dump_fn)。
 
     计数文件按 pid 分片（docs/testing.md: TP worker 并发写同一文件会
-    低估约 35 倍）。dump 在 atexit 与每次递增后触发，进程崩溃也能留痕。
+    低估约 35 倍）。dump 在 atexit 与每次递增后触发（FLAGOS_C2_DUMP_MODE
+    可切 atexit），进程崩溃也能留痕。
+
+    计数归因（issue #38 意见 3）:
+      - run_id 取自 FLAGOS_C2_RUN_ID，父进程用它剔除旧文件/他人运行的
+        残留（防串算）；
+      - hit_times 记录每次命中的 epoch 秒（__setitem__ 钩子，register.py
+        只做 counter["n"] += 1，无需改它）——父进程据此把命中归到
+        init/warmup/measured/correctness/probe 各阶段窗口；
+      - dump_s 累计本 counter 花在落盘上的秒数，供性能对照披露
+        写文件开销（与 baseline 无注入的差异项）。
     """
     count_dir = os.environ.get("FLAGOS_C2_COUNT_DIR")
     if not count_dir:
         return None, None
     import atexit
     import json as _json
+    import time as _time
     from datetime import datetime, timezone
 
+    run_id = os.environ.get("FLAGOS_C2_RUN_ID")
     cpath = Path(count_dir) / f"{op}_hits_{os.getpid()}.json"
     Path(count_dir).mkdir(parents=True, exist_ok=True)
-    counter = {"n": 0}
+
+    class _Counter(dict):
+        def __init__(self) -> None:
+            super().__init__(n=0)
+            self.hit_times: list[float] = []
+            self.registered_at: float = _time.time()
+            self.dump_s: float = 0.0
+
+        def __setitem__(self, key, value):
+            if key == "n":
+                try:
+                    if int(value) > int(self.get("n", 0)):
+                        self.hit_times.append(_time.time())
+                except Exception:
+                    pass
+            super().__setitem__(key, value)
+            # 每次递增后增量落盘（受 FLAGOS_C2_DUMP_MODE 控制）。
+            _fn = getattr(self, "_dump_fn", None)
+            if _fn is not None:
+                try:
+                    _fn()
+                except Exception:
+                    pass
+
+    counter = _Counter()
 
     def dump():
         _aten_label = {
             "sdpa_math": "aten::_scaled_dot_product_attention_math",
             "embedding": "aten::embedding",
         }.get(op, op)
+        _t0 = _time.time()
         cpath.write_text(_json.dumps({
             "pid": os.getpid(),
+            "ppid": os.getppid(),
             "op": op,
             "aten": _aten_label,
+            "run_id": run_id,
             "hits": counter["n"],
+            "hit_times": [round(t, 6) for t in counter.hit_times],
+            "registered_at": round(counter.registered_at, 6),
+            "dump_s": round(counter.dump_s, 6),
             "dumped_at": datetime.now(timezone.utc).strftime(
                 "%Y-%m-%dT%H:%M:%SZ"),
         }))
+        counter.dump_s += _time.time() - _t0
+
+    # 增量落盘节流（意见 4 性能对照公平性）: 每次递增都全量重写
+    # （含不断增长的 hit_times 数组）会在被测时间窗内引入随命中数
+    # 二次增长的写盘开销（实测 6.1s/2881 hits，会把 inject/baseline
+    # 中位数比虚高 ~0.5s/次 generate）。默认 0.25s 节流一次，
+    # atexit 仍写全量（进程崩溃前的落盘间隔 = 节流窗口）。
+    _throttle_s = float(os.environ.get("FLAGOS_C2_DUMP_INTERVAL_S", "0.25"))
+    _last = [0.0]
+
+    def dump_if_enabled():
+        if os.environ.get("FLAGOS_C2_DUMP_MODE", "every") == "atexit":
+            return
+        now = _time.time()
+        if now - _last[0] < _throttle_s:
+            return
+        _last[0] = now
+        dump()
 
     atexit.register(dump)
+    # 挂到 counter 上: register_all 存档 counter 后，harness 可调
+    # counter._dump() 强制落盘（阶段边界快照）。
+    counter._dump = dump  # type: ignore[attr-defined]
+    counter._dump_fn = dump_if_enabled  # type: ignore[attr-defined]
     return counter, dump
 
 
