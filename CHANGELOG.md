@@ -3,6 +3,25 @@
 ## [Unreleased]
 
 ### Added
+- **P800 5.0 真实 vLLM C2 证据（issue #39，2026-10-29）**：
+  `p800-kunlunxin-gems5` profile 用随机权重 `/models/random-qwen3-tiny`
+  跑通 `tests/framework_level/test_a1_aten_ops.py`（1 passed）：
+  `embedding` 真实前向命中 19、`sdpa_math` 命中 9（真实 prefill 消费 8），
+  注入前后输出 token 逐位一致；sdpa_math 走「等价目标消费者」——注入侧
+  把 `KunlunxinAttentionBackendImpl.context_forward` 无前缀缓存分支改接
+  A1 `torch.ops.aten._scaled_dot_product_attention_math`（双输出 O+P 喂回
+  模型；decode/前缀缓存/profiling fake-meta 保持 vendor），概率图统计
+  JSONL（行和偏差 9.9e-3）与同进程 bf16 双输出反向梯度 probe（对 CPU
+  fp64 参照 max_abs≤0.016）一并存档
+  `tests/framework_level/evidence/`；框架级 README 增 5.0 C2 小节，
+  复测页 §5.5/§6/§7 回填，`p800-kunlunxin-gems5.lock.yaml` scope 与
+  `docs/environments.md` 重生成，embedding/sdpa_math REPORT 增 C2 行。
+  同时修复多算子注入的两处隔离缺陷：`register_all` 计数文件变量遮蔽
+  （导致后续算子不再注册）与跨算子裸模块 `reference` 缓存污染（导致
+  `sdpa_math` 加载失败）
+- **P800 4.2 栈三项遗留记入已知问题（#24-#26）**：FlagGems 4.2 `gather`
+  采样阶段 err_code 1（`USE_FLAGGEMS=0` 规避）、Qwen3-8B EngineCore
+  初始化挂起、`copy_ ↔ type_as/to` A1 注入递归（`copy_` 排除）
 - **13 个基础 ATen 算子接入 p800-kunlunxin（2026-10-22）**：
   `clone/contiguous/copy_/detach/detach_/dropout/empty/empty_like/
   empty_strided/item/_local_scalar_dense/result_type/type_as` 完成
