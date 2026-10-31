@@ -93,6 +93,10 @@ directory: <ops 子目录>
 group: <分组 key>
 purpose: <面向读者的一句话作用>
 key_result: <有证据支撑的简短结果>
+evidence: C0 | C1 | C2
+evidence_basis: <仅 C2：一句范围诚实的说明（平台/日期/消费点）>
+evidence_paths:
+  - <仅 C2：仓库内证据文件路径，至少一项>
 platforms:
   <family-key>:
     profiles: [<已交付 profile>]
@@ -101,6 +105,19 @@ platforms:
 
 foundation 算子还需要顶层 `route`，除非每个平台条目单独声明 `route`。
 算子里的 platform 条目表示已交付声明，必须由该算子的测试和报告支撑。
+
+`evidence` 声明证据等级（定义见 [docs/testing.md](testing.md) 证据等级）：
+
+- **C0**：无 consumer 证据。
+- **C1**：具备 `ops/<directory>/test/framework_level.py`（黄金 + mini consumer 或单测层）。
+- **C2**：真实引擎端到端调用与输出结论——必须同时给出
+  `evidence_basis` 与仓库内 `evidence_paths`，路径不存在即 CI 失败，
+  防止只写结论不给产物。C2 只按已实测消费点的算子标注；
+  「注册进引擎但未被调用」停在 C1。
+
+`python3 scripts/evidence_check.py`（CI `ops-catalog` job）复核上述字段、
+平台状态三方一致（catalog ↔ operator-catalog.md ↔ 生成的 `ops/README.md`）
+以及 `updated`/环境锁日期不晚于当天。
 
 基础算子当前的实测报告以 `cambricon` profile 的 2026-09-18 历史快照为主；
 没有独立 `mlu590` 报告时，不应把 `mlu590` 写入算子条目的 `profiles`。环境锁的
@@ -124,9 +141,11 @@ ops/<operator>/MERGE.md
 1. 从 `templates/operator/` 复制并完成算子目录。
 2. 通过 kernel、op、framework/application 三层测试。
 3. 补齐 golden 与性能证据。
-4. 在 `ops/catalog.yaml` 的 `operators` 中登记。
+4. 在 `ops/catalog.yaml` 的 `operators` 中登记，并回填 `evidence`
+   （C2 需 `evidence_basis` + `evidence_paths`）。
 5. 运行 `python3 scripts/build_ops_index.py`。
 6. 确认 `python3 scripts/build_ops_index.py --check` 通过。
+7. 确认 `python3 scripts/evidence_check.py` 通过。
 
 校验器要求 `ops/` 下每个目录都出现在 catalog 中，防止新算子合入后没有
 库存索引记录。
