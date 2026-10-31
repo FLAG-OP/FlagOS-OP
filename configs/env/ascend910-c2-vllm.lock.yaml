@@ -72,5 +72,5 @@ evidence:
     note: sdpa_math C2 叙述报告
   - path: ops/embedding/reports/c2_ascend910.md
     note: embedding C2 叙述报告
-  - path: results/perf/compare-ascend910-20261030.md
-    note: 算子级性能回归对比（ops.sdpa_math.* OK；embedding NEW 未入基线）
+  - path: ops/sdpa_math/reports/perf_compare_ascend910_20261030.md
+    note: 算子级性能回归对比（ops.sdpa_math.* 对基线 OK；embedding NEW 未入基线，同文另存 ops/embedding/reports/）

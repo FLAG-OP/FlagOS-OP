@@ -67,7 +67,7 @@ python3 scripts/build_env_index.py --check
 - [ops/embedding/reports/c2_ascend910/summary.json](../ops/embedding/reports/c2_ascend910/summary.json)：embedding C2 双跑摘要
 - [ops/sdpa_math/reports/c2_ascend910.md](../ops/sdpa_math/reports/c2_ascend910.md)：sdpa_math C2 叙述报告
 - [ops/embedding/reports/c2_ascend910.md](../ops/embedding/reports/c2_ascend910.md)：embedding C2 叙述报告
-- [results/perf/compare-ascend910-20261030.md](../results/perf/compare-ascend910-20261030.md)：算子级性能回归对比（ops.sdpa_math.* OK；embedding NEW 未入基线）
+- [ops/sdpa_math/reports/perf_compare_ascend910_20261030.md](../ops/sdpa_math/reports/perf_compare_ascend910_20261030.md)：算子级性能回归对比（ops.sdpa_math.* 对基线 OK；embedding NEW 未入基线，同文另存 ops/embedding/reports/）
 
 备注：与历史 ascend910.lock.yaml（2026-09-16, vllm 空壳、框架级入口不可用） 的关键差异: 本栈 vllm 为 editable 安装（/vllm-workspace/vllm @ bc150f5 clean），并有 vllm-ascend 源码树（@367b8e62，M csrc/utils/inc/kernel/ moe_distribute_base.h + untracked csrc/build_out/——采集时如实记录， 非本仓库可控）作为真实框架入口；VLLM_PLUGINS=ascend。 C2 harness 要求 VLLM_WORKER_MULTIPROC_METHOD=spawn（fork 后 torch.npu 再初始化失败）；enforce_eager=True 禁 graph replay 绕过 Python 路径。 flag_gems 5.3.5 已安装但 C2 harness 未启用（范围 = torch 组合实现， 非 Triton/FlagGems kernel 对照）。 模型权重: HuggingFaceTB/SmolLM2-135M 快照 93efa2f097d58c2a74874c7e644dbc9b0cee75a2（HF cache 内，不在镜像内）。 卡况（2026-10-30 快照）: C2 用卡 0；1-5 等他租户占用。
 
