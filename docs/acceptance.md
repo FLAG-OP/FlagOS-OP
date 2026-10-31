@@ -101,7 +101,10 @@ C2 合并门禁（针对声称真实引擎交付的平台）:
 
 - 有真实 vLLM / 目标引擎双跑记录（版本、模型、profile、commit、
   调用计数、输出对比）
-- 无真实引擎 runtime 时，只能标 C0/C1 或 C2-routing-boundary，
+- 无真实引擎 runtime 时，只能标 C0/C1；若已在真实引擎环境内尝试
+  runtime 但默认路由未走到目标算子，才可标 C2-routing-boundary——
+  该级别必须附真实引擎尝试记录（引擎版本、注入方式、命中计数、
+  未命中原因），不得以「本环境无 runtime」为由直接标注；
   并在 REPORT 写明环境边界
 - mini consumer 结论只能支撑 C1
 

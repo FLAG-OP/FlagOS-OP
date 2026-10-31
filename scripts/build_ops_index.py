@@ -3,6 +3,13 @@
 
 The catalog is the scalable inventory source for a growing operator/platform
 matrix. The generated README is checked in for direct GitHub browsing.
+
+Evidence validation scope（#38 意见 6 / 协调 issue #41）: this script only
+performs a **structural/path check** — level enum membership, required
+evidence.report presence, and that referenced report files exist in the
+tree. It does NOT verify report contents, rerun experiments, or replace CI
+/ reviewer verification of the claims inside those reports. Keep the
+checks complementary to #41 rather than duplicating its semantics.
 """
 from __future__ import annotations
 
@@ -39,6 +46,9 @@ def _require_mapping(value, name: str) -> dict:
 def _validate_evidence(op_name: str, family: str, platform: dict,
                        root: Path) -> None:
     """校验 platforms.<family>.evidence（issue #41）。
+
+    仅结构性/路径检查（见模块 docstring）: 不解读报告内容、不重跑实验、
+    不替代 CI 与审阅复核。
 
     - level 必须在 C0/C1/C2/C2-routing-boundary；
     - C2 / C2-routing-boundary 必须提供 evidence.report 且路径存在；

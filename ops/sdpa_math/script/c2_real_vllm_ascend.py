@@ -37,6 +37,8 @@ p95/std），同步方式如实记录（llm.generate 同步阻塞；前向在 En
 
 用法:
   python3 ops/sdpa_math/script/c2_real_vllm_ascend.py --out reports/c2_ascend910
+  # 默认 --mode accept: 命中/正确性/性能门禁/归因任一未过 → 非零退出
+  # --mode collect: 显式采集模式，采集完成即 0（不得被当作验收通过）
 """
 from __future__ import annotations
 
@@ -52,6 +54,8 @@ import time
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "scripts"))
+from c2_acceptance import decide  # noqa: E402  纯函数验收判定（意见 4）
 MODEL_DEFAULT = (
     "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M"
     "/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2"
@@ -91,7 +95,8 @@ _CANN = [
 MODES = ("baseline", "baseline_math", "inject")
 
 
-def _child_env(mode: str, workdir: pathlib.Path, run_id: str) -> dict[str, str]:
+def _child_env(mode: str, workdir: pathlib.Path, run_id: str,
+               a1_impl: str | None = None) -> dict[str, str]:
     env = os.environ.copy()
     # spawn 模式: sitecustomize 在每个子进程启动时执行（NPU 未初始化），
     # 无 fork 再初始化冲突。injection/ 放 PYTHONPATH 首位。
@@ -115,9 +120,12 @@ def _child_env(mode: str, workdir: pathlib.Path, run_id: str) -> dict[str, str]:
         env["FLAGOS_A1_OPS"] = "sdpa_math"
         env["A1_DISPATCH_KEY"] = "AutogradPrivateUse1"
         env["FLAGOS_C2_COUNT_DIR"] = str(workdir)
-        # C2 引擎侧路径强制 torch impl: triton 在 bf16 大 GQA shape
-        # 首轮可能出现异常输出（见 reports/c2_ascend910.md 调试记录）。
-        env.setdefault("FLAGOS_A1_IMPL", "torch")
+        # C2 引擎侧路径显式指定 impl（意见 5: 不再用 setdefault 的
+        # 「隐式 torch」表述——此处为显式设置、且落盘到 summary）。
+        # triton 在 bf16 大 GQA shape 首轮可能出现异常输出（见
+        # reports/c2_ascend910.md 调试记录）。
+        if a1_impl:
+            env["FLAGOS_A1_IMPL"] = a1_impl
     return env
 
 
@@ -167,13 +175,16 @@ try:
         result["mp_method"] = os.environ.get("VLLM_WORKER_MULTIPROC_METHOD", "fork")
         result["flagos_attn"] = os.environ.get("FLAGOS_SDPA_MATH_ATTN", "0")
         result["a1_inject"] = os.environ.get("FLAGOS_A1_ATEN_INJECT", "0")
+        result["a1_impl_env"] = os.environ.get("FLAGOS_A1_IMPL")
 
         if mode == "inject":
             root = pathlib.Path(os.environ["FLAGOS_TEMPLATES_ROOT"])
             sys.path.insert(0, str(root / "injection"))
-            from a1_aten_ops import get_counter
+            from a1_aten_ops import get_counter, get_reg_info
             counter = get_counter("sdpa_math")
             result["a1_counter_retrieved"] = counter is not None
+            # 意见 5: 注册参数事实（impl/counter 是否真正传入 register_a1）
+            result["a1_reg_info"] = get_reg_info("sdpa_math")
             try:
                 from vllm_ascend.platform import NPUPlatform
                 patched = bool(getattr(NPUPlatform, "_flagos_math_attn_patched", False))
@@ -305,12 +316,13 @@ print(json.dumps(result, ensure_ascii=False))
 
 
 def run_mode(mode: str, model: str, out_dir: pathlib.Path, run_id: str,
-             warmup: int, repeats: int, timeout_s: int = 900) -> dict:
+             warmup: int, repeats: int, a1_impl: str | None = None,
+             timeout_s: int = 900) -> dict:
     out_path = out_dir / f"{mode}.json"
     # 每组开跑前清理旧 hits 文件 + 本组再以 run_id 复核，双保险防旧文件混入。
     for old in out_dir.glob("sdpa_math_hits_*.json"):
         old.unlink()
-    env = _child_env(mode, workdir=out_dir, run_id=run_id)
+    env = _child_env(mode, workdir=out_dir, run_id=run_id, a1_impl=a1_impl)
     env["FLAGOS_C2_PROMPTS_JSON"] = json.dumps(PROMPTS, ensure_ascii=False)
     env["FLAGOS_C2_MAX_TOKENS"] = str(MAX_TOKENS)
     env["FLAGOS_C2_WARMUP"] = str(warmup)
@@ -526,6 +538,12 @@ def main() -> int:
                     help="跳过 baseline/baseline_math（仅补 inject）")
     ap.add_argument("--warmup", type=int, default=DEFAULT_WARMUP)
     ap.add_argument("--repeats", type=int, default=DEFAULT_REPEATS)
+    ap.add_argument("--mode", choices=("accept", "collect"), default="accept",
+                    help="accept: 全部验收必需项通过才 exit 0（CI/验收入口）；"
+                         "collect: 显式采集模式，采集完成 exit 0（非验收）")
+    ap.add_argument("--a1-impl", default="torch",
+                    help="inject 组显式 FLAGOS_A1_IMPL（意见 5，如实落盘；"
+                         "空串=不设置，由算子默认实现）")
     args = ap.parse_args()
     model = args.model
     if not pathlib.Path(model).is_dir():
@@ -540,13 +558,14 @@ def main() -> int:
         + f"-{os.getpid()}")
     (out_dir / "run_id.txt").write_text(run_id + "\n")
 
+    a1_impl = args.a1_impl or None
     results: dict[str, dict] = {}
     for mode in MODES:
         if args.skip_baseline and mode != "inject":
             results[mode] = {"mode": mode, "ok": False, "skipped": True}
             continue
         results[mode] = run_mode(mode, model, out_dir, run_id,
-                                 args.warmup, args.repeats)
+                                 args.warmup, args.repeats, a1_impl=a1_impl)
     hits, stale = merge_hits(out_dir, run_id)
     inject = results["inject"]
     phases = inject.get("phases") or {}
@@ -602,7 +621,9 @@ def main() -> int:
             "attn_backend_patch": inject.get("attn_patched"),
             "flagos_attn_env": inject.get("flagos_attn"),
             "a1_ops": "sdpa_math",
-            "a1_impl": os.environ.get("FLAGOS_A1_IMPL", "torch"),
+            # 实际值取 inject 子进程亲测 env（意见 5: 显式设置、如实落盘）
+            "a1_impl": inject.get("a1_impl_env"),
+            "a1_reg_info": inject.get("a1_reg_info"),
         },
         "controls": {
             "note": "三组共用同一模型/权重快照/prompt 集/采样参数(温度0)"
@@ -610,6 +631,18 @@ def main() -> int:
                     "实现（baseline_math vs inject 同走 MATH 注意力路径）",
             "modes": list(MODES),
             "warmup": args.warmup, "repeats": args.repeats,
+            "env_overrides_inject": [
+                "FLAGOS_A1_ATEN_INJECT=1",
+                "FLAGOS_SDPA_MATH_ATTN=1",
+                "FLAGOS_A1_OPS=sdpa_math",
+                "A1_DISPATCH_KEY=AutogradPrivateUse1",
+                "FLAGOS_C2_RUN_ID=<run_id>",
+                f"FLAGOS_A1_IMPL={inject.get('a1_impl_env')!r}",
+            ],
+            "env_cleared_all_modes": [
+                "FLAGOS_A1_ATEN_INJECT", "FLAGOS_A1_OPS", "FLAGOS_C2_COUNT_DIR",
+                "A1_DISPATCH_KEY", "FLAGOS_SDPA_MATH_ATTN", "FLAGOS_A1_IMPL",
+            ],
         },
         "baseline": baseline,
         "baseline_math": bmath,
@@ -670,12 +703,29 @@ def main() -> int:
         summary["c2_status"] = "c2-failed"
         summary["notes"].append("至少一组跑失败，见 *.stderr.log")
 
+    # 意见 4: 验收判定与退出码收敛为纯函数（scripts/c2_acceptance.decide）。
+    # accept 模式: 命中/正确性 PASS/logprob 失效线/性能 OK/归因自洽任一
+    # 未过 → exit 1；采集失败/缺证据 → exit 2。
+    # collect 模式: 仅采集完成 exit 0（显式采集，不代表验收通过）。
+    decision = decide(summary, mode=args.mode)
+    summary["acceptance_decision"] = decision
+    summary["run_mode"] = args.mode
+
     (out_dir / "summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2))
     print(json.dumps({
         "run_id": run_id,
+        "run_mode": args.mode,
         "c2_status": summary["c2_status"],
         "acceptance": acceptance,
+        "acceptance_decision": {
+            "mode": decision["mode"],
+            "collection_status": decision["collection_status"],
+            "acceptance_status": decision["acceptance_status"],
+            "failed_checks": decision["failed_checks"],
+            "warnings": decision["warnings"],
+            "exit_code": decision["exit_code"],
+        },
         "forward_hits": forward_hits,
         "engine_core_hits": engine_hits,
         "main_process_hits": main_hits,
@@ -690,9 +740,10 @@ def main() -> int:
         "perf_ratios": {c["name"]: c.get("ratio_median")
                         for c in perf["comparisons"]},
         "attn_patched": inject.get("attn_patched"),
+        "a1_reg_info": inject.get("a1_reg_info"),
         "out": str(out_dir / "summary.json"),
     }, ensure_ascii=False, indent=2))
-    return 0 if summary["c2_status"] != "c2-failed" else 1
+    return decision["exit_code"]
 
 
 if __name__ == "__main__":

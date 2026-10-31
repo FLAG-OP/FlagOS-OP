@@ -197,13 +197,37 @@ def _maybe_counter(op: str):
 # counter 做主进程 probe 验证（避免二次注册产生独立 counter）。
 _COUNTERS: dict[str, dict] = {}
 
+# 每个算子的注册参数事实: {op: {impl_requested, impl_applied,
+# counter_requested, counter_passed}}（#38 意见 5——实现选择如实落盘）。
+_REG_INFO: dict[str, dict] = {}
+
 # 持有 register_a1 返回的 lib 列表——GC 后注册失效（见 register.py 注释）。
 _HELD_LIBS: list = []
 
 
 def get_counter(op: str):
-    """返回 register_all 存档的 counter dict，未注册则 None。"""
+    """返回 register_all 存档的 counter dict，未注册或未接线则 None。"""
     return _COUNTERS.get(op)
+
+
+def get_reg_info(op: str) -> dict | None:
+    """返回该算子最近一次 register_all 的参数事实（意见 5 证据）。"""
+    return _REG_INFO.get(op)
+
+
+def _param_acceptor(fn):
+    """按函数签名判断是否接受指定关键字参数（不用宽泛 TypeError 猜测）。"""
+    import inspect
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return lambda name: False
+    var_kw = any(p.kind == p.VAR_KEYWORD for p in params.values())
+
+    def accepts(name: str) -> bool:
+        return name in params or var_kw
+
+    return accepts
 
 
 def register_all(dispatch_key: str = "PrivateUse1",
@@ -222,31 +246,35 @@ def register_all(dispatch_key: str = "PrivateUse1",
                 setattr(mod, name, _wrap(fn, saved))
         try:
             counter, _dump = _maybe_counter(op)
-            # FLAGOS_A1_IMPL 可强制指定实现（如 torch），用于 C2 调试/规避
+            # FLAGOS_A1_IMPL 指定实现（如 torch），用于 C2 调试/规避
             # triton 在特定 shape 下的首轮异常。
             _impl = os.environ.get("FLAGOS_A1_IMPL") or None
-            libs = None
-            if counter is not None:
-                try:
-                    if _impl:
-                        libs = mod.register_a1(
-                            dispatch_key, counter=counter, impl=_impl)
-                    else:
-                        libs = mod.register_a1(dispatch_key, counter=counter)
-                except TypeError:
-                    # 个别算子 register_a1 未升级 counter/impl 参数时退回
-                    libs = mod.register_a1(dispatch_key)
-                # 注册成功后才存档 counter——失败时 get_counter 返回 None，
-                # 避免 harness 误报 a1_counter_retrieved=true 但 forward_hits=0。
+            # 按 register_a1 的签名能力传参（#38 意见 5）: 不再用
+            # try/TypeError 回退——宽泛 TypeError 会吞掉算子内部错误，
+            # 且回退丢 counter 仍存档假象（embedding 不接受 impl，
+            # 旧代码回退到 register_a1(dispatch_key) 把 counter 一起丢了）。
+            accepts = _param_acceptor(mod.register_a1)
+            kwargs: dict = {}
+            counter_passed = False
+            impl_applied = False
+            if counter is not None and accepts("counter"):
+                kwargs["counter"] = counter
+                counter_passed = True
+            if _impl and accepts("impl"):
+                kwargs["impl"] = _impl
+                impl_applied = True
+            libs = mod.register_a1(dispatch_key, **kwargs)
+            _REG_INFO[op] = {
+                "impl_requested": _impl,
+                "impl_applied": impl_applied,
+                "counter_requested": counter is not None,
+                "counter_passed": counter_passed,
+            }
+            # 仅当 counter 真正传入 register_a1 时存档——否则 get_counter
+            # 返回 None，harness 如实报 a1_counter_retrieved=false，
+            # 不再出现「存档了没接线的 counter」假象。
+            if counter is not None and counter_passed:
                 _COUNTERS[op] = counter
-            else:
-                if _impl:
-                    try:
-                        libs = mod.register_a1(dispatch_key, impl=_impl)
-                    except TypeError:
-                        libs = mod.register_a1(dispatch_key)
-                else:
-                    libs = mod.register_a1(dispatch_key)
             if libs is not None:
                 _HELD_LIBS.append(libs)
             registered.append(op)

@@ -16,14 +16,21 @@
 # 设计约束:
 #   - enforce_eager=True（禁 ACL/CUDA graph），否则 graph replay 绕过
 #     Python 路径（见 c2 harness 注入说明）;
-#   - max_num_seqs=1 时实现最简正确; 多序列场景按 TND 切分循环调 math op;
+#   - 多序列: 按累计端点切分 query（engine/attn_geometry.py），逐序列
+#     调 math op；无法解释的 metadata 布局显式 RuntimeError 拒绝；
+#   - causal: 普通 prefill 走 is_causal；cached/chunked prefill / decode
+#     用带历史偏移 mask（k <= Skv - Sq + q，见 attn_geometry.causal_mask）；
 #   - math op 消化 O(L^2) 内存，仅作 C2 证据路径，非生产默认。
 #
-# wt-2026-10-28-fix
+# wt-2026-10-28-fix  wt-2026-10-30-fix
 from __future__ import annotations
 
 import torch
 
+from ops.sdpa_math.engine.attn_geometry import (
+    causal_mask as _causal_mask,
+    resolve_q_boundaries as _resolve_q_boundaries,
+)
 from vllm_ascend.attention.attention_v1 import (
     AscendAttentionBackend,
     AscendAttentionBackendImpl,
@@ -79,10 +86,13 @@ class FlagOSMathAttentionBackendImpl(AscendAttentionBackendImpl):
         actual_q = attn_metadata.actual_seq_lengths_q
         num_seqs = len(seq_lens_list) if seq_lens_list else 1
 
-        # query: [T, H, Dh] → 按 actual_seq_lengths_q 切分为各序列
-        q_offsets = [0]
-        for L in (actual_q or [query.shape[0]]):
-            q_offsets.append(q_offsets[-1] + L)
+        # query: [T, H, Dh] → 按累计端点切分为各序列（#38 意见 1）:
+        # vllm-ascend builder 的 actual_seq_lengths_q =
+        # query_start_loc_cpu[1:].tolist() 已是累计端点，不得再累加——
+        # 再累加会把多请求 query 切错、混用相邻请求的 KV。
+        # 非法/歧义布局由 resolve_q_boundaries 显式 raise，拒绝静默算错。
+        q_offsets = _resolve_q_boundaries(
+            actual_q, query.shape[0], num_seqs=num_seqs)
 
         outs = []
         for i in range(num_seqs):
@@ -107,25 +117,30 @@ class FlagOSMathAttentionBackendImpl(AscendAttentionBackendImpl):
             k_b = k_i.transpose(0, 1).unsqueeze(0)   # [1, Hkv, Skv, Dh]
             v_b = v_i.transpose(0, 1).unsqueeze(0)
 
-            # causal 语义: math op 的 is_causal 是**左上对齐**的下三角
-            # mask——query 位置 i 只能看 key 位置 ≤i。
-            #   prefill (Sq==Skv): 左上对齐正确 → is_causal=True。
-            #   decode  (Sq=1, Skv=N): query 是序列**末尾**的 token，
-            #     应 attend 全部 N 个 key；is_causal=True 会让它只看
-            #     key[0]（实测 probs 全在第 0 列）→ 必须 is_causal=False。
-            # ChunkedPrefill / 其它 Sq<Skv 场景同理: 左上对齐 mask
-            # 错误遮蔽尾部 key，统一退化为非 causal + 由上层 attn_mask
-            # 保证语义（本 backend 仅作 C2 证据路径，不支持 sliding
-            # window / 稀疏 mask）。
-            if sq == skv and attn_metadata.causal:
-                is_causal = True
-            else:
-                is_causal = False
+            # causal 语义（#38 意见 2）:
+            #   普通 prefill (Sq==Skv): 左上对齐下三角即正确 → is_causal=True。
+            #   decode (Sq=1, Skv=N) 与 cached/chunked prefill (1<Sq<Skv):
+            #     query 是序列**尾部**连续段，允许位置 k <= Skv - Sq + q
+            #     （带历史位置偏移的下三角）——用显式 bool mask 构造。
+            #     此前 Sq<Skv 统一 is_causal=False 且 attn_mask=None，会让
+            #     chunk 内较早 query 读取后续 token（CPU 复现: Sq=2 Skv=4,
+            #     V=[0,0,0,100] → 错误 [25,25]，正确 [0,25]）。
+            is_causal = False
+            attn_mask = None
+            if getattr(attn_metadata, "causal", False):
+                if sq == skv:
+                    is_causal = True
+                else:
+                    # 加性 float mask（0.0/-inf）——math op 的 attn_mask
+                    # 不是 select 语义，bool 会被当 1.0/0.0 相加（见
+                    # attn_geometry.causal_mask 注释）。
+                    attn_mask = _causal_mask(
+                        sq, skv, device=q_b.device, dtype=q_b.dtype)
 
             # math op: 返回 (out, attn_probs)
             out_b, _probs = torch.ops.aten._scaled_dot_product_attention_math(
                 q_b, k_b, v_b,
-                None,          # attn_mask（causal 由 is_causal 处理）
+                attn_mask,      # causal 非左上对齐时的显式 mask
                 0.0,           # dropout_p
                 is_causal,
                 None,          # dropout_mask

@@ -19,6 +19,8 @@ embedding 无注意力路径差异，inject 与 baseline 的调用链完全同�
 
 用法:
   python3 ops/embedding/script/c2_real_vllm_ascend.py --out reports/c2_ascend910
+  # 默认 --mode accept: 命中/正确性/性能门禁/归因任一未过 → 非零退出
+  # --mode collect: 显式采集模式，采集完成即 0（不得被当作验收通过）
 """
 from __future__ import annotations
 
@@ -34,6 +36,8 @@ import time
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "scripts"))
+from c2_acceptance import decide  # noqa: E402  纯函数验收判定（意见 4）
 MODEL_DEFAULT = (
     "/root/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M"
     "/snapshots/93efa2f097d58c2a74874c7e644dbc9b0cee75a2"
@@ -138,12 +142,17 @@ try:
         result["npu_count"] = torch.npu.device_count() if result["npu_available"] else 0
         result["mp_method"] = os.environ.get("VLLM_WORKER_MULTIPROC_METHOD", "fork")
         result["a1_inject"] = os.environ.get("FLAGOS_A1_ATEN_INJECT", "0")
+        result["a1_impl_env"] = os.environ.get("FLAGOS_A1_IMPL")
         if mode == "inject":
             root = pathlib.Path(os.environ["FLAGOS_TEMPLATES_ROOT"])
             sys.path.insert(0, str(root / "injection"))
-            from a1_aten_ops import get_counter
+            from a1_aten_ops import get_counter, get_reg_info
             counter = get_counter("embedding")
             result["a1_counter_retrieved"] = counter is not None
+            # 意见 5: 注册参数事实（embedding register_a1 不接受 impl，
+            # 旧实现设 FLAGOS_A1_IMPL 时会经 TypeError 回退把 counter
+            # 一起丢掉；新实现按签名分发并如实记录 impl_applied=false）
+            result["a1_reg_info"] = get_reg_info("embedding")
 
     from vllm import LLM, SamplingParams
     import vllm
@@ -445,6 +454,9 @@ def main() -> int:
     ap.add_argument("--skip-baseline", action="store_true")
     ap.add_argument("--warmup", type=int, default=DEFAULT_WARMUP)
     ap.add_argument("--repeats", type=int, default=DEFAULT_REPEATS)
+    ap.add_argument("--mode", choices=("accept", "collect"), default="accept",
+                    help="accept: 全部验收必需项通过才 exit 0（CI/验收入口）；"
+                         "collect: 显式采集模式，采集完成 exit 0（非验收）")
     args = ap.parse_args()
     model = args.model
     if not pathlib.Path(model).is_dir():
@@ -518,6 +530,10 @@ def main() -> int:
             "mp_method": inject.get("mp_method"),
             "a1_ops": "embedding",
             "a1_dispatch_key": "PrivateUse1",
+            # 实际值取 inject 子进程亲测 env（意见 5: 显式清理/如实落盘；
+            # embedding 路径不设置 FLAGOS_A1_IMPL，故为 None）
+            "a1_impl": inject.get("a1_impl_env"),
+            "a1_reg_info": inject.get("a1_reg_info"),
         },
         "controls": {
             "note": "两组共用同一模型/权重快照/prompt 集/采样参数(温度0)"
@@ -525,6 +541,17 @@ def main() -> int:
                     "唯一变量 = 是否注册 FlagOS A1 embedding 实现",
             "modes": list(MODES),
             "warmup": args.warmup, "repeats": args.repeats,
+            "env_overrides_inject": [
+                "FLAGOS_A1_ATEN_INJECT=1",
+                "FLAGOS_A1_OPS=embedding",
+                "A1_DISPATCH_KEY=PrivateUse1",
+                "FLAGOS_C2_RUN_ID=<run_id>",
+                "FLAGOS_A1_IMPL=<unset — embedding register_a1 不接受 impl>",
+            ],
+            "env_cleared_all_modes": [
+                "FLAGOS_A1_ATEN_INJECT", "FLAGOS_A1_OPS", "FLAGOS_C2_COUNT_DIR",
+                "A1_DISPATCH_KEY", "FLAGOS_SDPA_MATH_ATTN", "FLAGOS_A1_IMPL",
+            ],
         },
         "baseline": baseline,
         "inject": inj,
@@ -576,12 +603,26 @@ def main() -> int:
         summary["c2_status"] = "c2-failed"
         summary["notes"].append("至少一组跑失败，见 *.stderr.log")
 
+    # 意见 4: 验收判定与退出码收敛为纯函数（scripts/c2_acceptance.decide）。
+    decision = decide(summary, mode=args.mode)
+    summary["acceptance_decision"] = decision
+    summary["run_mode"] = args.mode
+
     (out_dir / "summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2))
     print(json.dumps({
         "run_id": run_id,
+        "run_mode": args.mode,
         "c2_status": summary["c2_status"],
         "acceptance": acceptance,
+        "acceptance_decision": {
+            "mode": decision["mode"],
+            "collection_status": decision["collection_status"],
+            "acceptance_status": decision["acceptance_status"],
+            "failed_checks": decision["failed_checks"],
+            "warnings": decision["warnings"],
+            "exit_code": decision["exit_code"],
+        },
         "forward_hits": forward_hits,
         "engine_core_hits": engine_hits,
         "main_process_hits": main_hits,
@@ -595,9 +636,10 @@ def main() -> int:
         "perf_gate": perf["gate_verdict"],
         "perf_ratios": {c["name"]: c.get("ratio_median")
                         for c in perf["comparisons"]},
+        "a1_reg_info": inject.get("a1_reg_info"),
         "out": str(out_dir / "summary.json"),
     }, ensure_ascii=False, indent=2))
-    return 0 if summary["c2_status"] != "c2-failed" else 1
+    return decision["exit_code"]
 
 
 if __name__ == "__main__":

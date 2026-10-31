@@ -18,8 +18,8 @@ platform_families:
   ascend:
     display_name: 华为昇腾
     status: partial
-    current_profiles: [ascend910]
-    roadmap_note: 当前集中在注意力和 embedding 算子。
+    current_profiles: [ascend910, ascend910-c2-vllm]
+    roadmap_note: 当前集中在注意力和 embedding 算子；ascend910-c2-vllm 承接 embedding/sdpa_math C2 真实 vLLM-Ascend 证据（#38）。
   cambricon:
     display_name: 寒武纪
     status: partial
@@ -108,7 +108,7 @@ operators:
     key_result: 五份实现通过同一组 175 例黄金数据；Ascend910 引擎侧 C2 真实前向命中（验收状态 PARTIAL，见 reports/c2_ascend910.md）。
     platforms:
       ascend:
-        profiles: [ascend910]
+        profiles: [ascend910, ascend910-c2-vllm]
         implementation: Triton exact-P 路径（C2 证据经引擎侧 FlagOSMathAttentionBackend 调 aten math）
         evidence:
           level: C2
@@ -129,7 +129,7 @@ operators:
     key_result: p800/MLU/PPU 三平台交付且逐位覆盖；Ascend910 引擎侧 C2 真实前向命中（验收状态 PARTIAL，见 reports/c2_ascend910.md）。
     platforms:
       ascend:
-        profiles: [ascend910]
+        profiles: [ascend910, ascend910-c2-vllm]
         implementation: CANN index_select 行采集委托（Triton gather 仅探针）
         evidence:
           level: C2
