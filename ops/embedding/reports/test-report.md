@@ -2,10 +2,10 @@
 
 | 项 | 值 |
 |---|---|
-| 日期 | 2026-09-23（cambricon 接入复测 2026-09-24；thead-ppu 接入 2026-10-23）· Ascend910 C2 复测 2026-10-30 |
+| 日期 | 2026-09-23（cambricon 接入复测 2026-09-24；thead-ppu 接入 2026-10-23）· Ascend910 C2 复跑 2026-10-31 |
 | 设备 | p800-kunlunxin `cuda:1` · cambricon MLU590 `mlu:0` · thead-ppu PPU-ZW810E `cuda:6` |
 | 环境 | P800: Torch 2.9.0+cu129 / torch_xmlir / Triton 3.0；MLU: Torch 2.11.0+cpu / torch_mlu 1.33.1 / Triton 3.4.0+mlu2.1.1；PPU: Torch 2.10.0 CUDA 兼容层 / Triton 3.6.0 PPUDriver |
-| 结论 | 通过（p800 / MLU / PPU 三平台）；Ascend910 **C2 命中（验收状态 PARTIAL）**，见 §1 C2 行与 [c2_ascend910.md](c2_ascend910.md) |
+| 结论 | 通过（p800 / MLU / PPU 三平台）；Ascend910 **C2 命中（验收状态 complete-pending-review（待审阅））**，见 §1 C2 行与 [c2_ascend910.md](c2_ascend910.md) |
 
 ## 1. 测试范围
 
@@ -20,7 +20,7 @@
 | 边界 | sparse forward 接受、sparse backward / invalid padding 拒绝 | ✅ |
 | 第二平台 cambricon | kernel / op / framework / guard 同判据复跑 | ✅ |
 | 第三平台 thead-ppu | kernel / tail / op / framework / guard / 黄金同判据复跑 | ✅ |
-| C2 真实 vLLM-Ascend | `script/c2_real_vllm_ascend.py` | **c2-hit（验收状态 PARTIAL）**（2026-10-30 复测）：双跑 OK、token_ids 逐位一致（common prefix 8/8）；EngineCore 前向 `aten::embedding` 命中 9 次（1 init dummy + 8 generate）+ 主进程 0；按 pid 角色拆分防串算。同路径正确性/性能闭环与阶段计数补测进行中（#38 意见 2/3/4）。见 [c2_ascend910.md](c2_ascend910.md) |
+| C2 真实 vLLM-Ascend | `script/c2_real_vllm_ascend.py --mode accept` | **c2-hit（验收状态 complete-pending-review（待审阅））**（2026-10-31 复跑 @ `1dc1d8c`）：双跑 OK、accept 退出码 0、C1 恒等 6/6 位级一致（prompt logprob 0.0）；EngineCore 前向 `aten::embedding` 命中 **97** 次（init 1 + correctness 48 + warmup 8 + measured 40，阶段归因自洽）+ 主进程 0；性能门禁 inject/baseline 中位数比 0.94 OK；按 pid 角色拆分防串算。见 [c2_ascend910.md](c2_ascend910.md) |
 
 ## 2. 环境
 

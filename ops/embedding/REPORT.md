@@ -3,8 +3,9 @@
 > **当前汇总**：本页当前交付为 P800/Kunlunxin、Cambricon MLU590、
 > T-head PPU ZW810E（dev + **C2 真实 vLLM** 双栈）与
 > **Ascend910（C2 证据已注册：真实 vLLM-Ascend 前向命中 `aten::embedding`
-> 9 次，2026-10-30 复测，验收状态 PARTIAL——命中待复核、正确性与性能
-> 闭环进行中，见 [reports/c2_ascend910.md](reports/c2_ascend910.md)）**。
+> 97 次，2026-10-31 复跑 @ `1dc1d8c`，C1 恒等 6/6、性能门禁 0.94 OK，
+> 验收状态 complete-pending-review（待审阅，不写「C2 成立」）——见
+> [reports/c2_ascend910.md](reports/c2_ascend910.md)）**。
 > Ascend910 的三层/黄金（C0/C1）行是 2026-09-30 历史实验记录，保留追溯。
 > 当前验证以本页各平台表和对应 `reports/*.json` 为准；`README.md` 负责
 > 使用入口，`PLATFORM.md` 负责平台绑定，详细实验保留在 `reports/`。
@@ -13,14 +14,15 @@
 |---|---|
 | 算子名称 | `aten::embedding`（稠密查表 + dense 反向） |
 | 语义 | [reference.py](reference.py)（`weight[index]` 任意 index 形状；padding/scale_grad/sparse 不改前向） |
-| 当前硬件平台 | **4 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托）· thead-ppu / PPU ZW810E（厂商委托 + C2）· ascend910（**C2 证据已注册，验收状态 PARTIAL**） |
+| 当前硬件平台 | **4 个**：p800-kunlunxin（厂商委托）· cambricon / MLU590（厂商委托）· thead-ppu / PPU ZW810E（厂商委托 + C2）· ascend910（**C2 证据已注册，验收状态 complete-pending-review（待审阅）**） |
 | 路线 | **A1**（aten 拦截） |
-| 日期 / 状态 | 2026-10-23 三平台交付；2026-10-28 thead-ppu C2 PASS；Ascend910 C2 证据 2026-10-30（**PARTIAL**，三层历史记录见下方） |
+| 日期 / 状态 | 2026-10-23 三平台交付；2026-10-28 thead-ppu C2 PASS；Ascend910 C2 证据 2026-10-31（**complete-pending-review**，三层历史记录见下方） |
 
 ## Ascend910 记录（C0/C1 历史实验 + C2 当前证据）
 
 Ascend910 的 C2 当前证据在 [reports/c2_ascend910.md](reports/c2_ascend910.md)
-（真实 vLLM-Ascend 前向命中 9 次、输出逐位一致）。以下表格为 2026-09-30
+（真实 vLLM-Ascend 前向命中 97 次、输出逐位一致、性能门禁 OK，
+complete-pending-review）。以下表格为 2026-09-30
 的 C0/C1 实验记录，保留用于追溯。
 
 | 算子 | `aten::embedding` |

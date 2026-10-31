@@ -4,12 +4,15 @@
 > `PLATFORM.md` 负责平台绑定，`reports/` 保存带日期的实验和原始数据。
 > 当前为 Ascend910/P800/thead-ppu 三个硬件交付，CPU 仅作 ATen 对照。FlagOS E2E 使用
 > mini-LLM harness（C1），不等同于真实 vLLM。**C2（vLLM-Ascend）已实测**:
-> 2026-10-30 双跑完成、EngineCore 真实前向命中 math 后端 240 次
-> （`c2-hit`，引擎侧 `FLAGOS_SDPA_MATH_ATTN=1` backend 补丁）；**验收状态
-> PARTIAL**——与 native 注意力路径的输出差异已按预注册口径记录（共同前缀
-> 1/8、teacher-forced prompt logprob、首分歧位置），`baseline = 同 MATH 路径
-> 无 A1` 的同路径正确性双跑与性能对照为 #38 意见 2/4 的补测项，
+> 2026-10-31 同路径三跑 @ `1dc1d8c`、EngineCore 真实前向命中 math 后端
+> 2880 次（correctness/warmup/measured 阶段分解），`baseline = 同 MATH 路径
+> 无 A1` 的 C1 恒等 6/6 位级一致、prompt logprob max|Δ|=0.17 nats（<0.5
+> 失效线）、性能门禁 inject/baseline_math 中位数比 1.06 OK——
+> **验收状态 complete-pending-review（待审阅，不写「C2 成立」）**，
 > 详见 [reports/c2_ascend910.md](reports/c2_ascend910.md)。
+> 与 native 路径的输出差异为路径差（数值精度差），按预注册口径记录
+> （5/6 描述性对照、teacher-forced prompt logprob、首分歧位置），
+> 不豁免任何判据。
 > 无补丁时的真实路由仍为 `npu_fusion_attention`（known-issues #19）。
 > **thead-ppu-c2 已补真实 vLLM EngineCore C2**（显式 MATH 路径，
 > 见 [reports/thead-ppu-c2.md](reports/thead-ppu-c2.md)）。
