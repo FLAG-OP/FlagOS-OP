@@ -4,9 +4,11 @@
 # - 只登记已交付证据；不要把未来移植写成已完成。
 # - 规划中的厂商只放在 platform_families；测试和报告合入后再加入算子条目。
 # - 修改本文件后运行 scripts/build_ops_index.py。
+# - 每个 platforms.<family> 可带 evidence.level（C0/C1/C2/C2-routing-boundary）
+#   与可选 evidence.report；C2* 级别必须指向存在的报告（issue #41）。
 
 schema: 1
-updated: 2026-10-29
+updated: 2026-10-30
 
 target_scope:
   vendor_family_count: 6
@@ -16,8 +18,8 @@ platform_families:
   ascend:
     display_name: 华为昇腾
     status: partial
-    current_profiles: [ascend910]
-    roadmap_note: 当前集中在注意力和 embedding 算子。
+    current_profiles: [ascend910, ascend910-c2-vllm]
+    roadmap_note: 当前集中在注意力和 embedding 算子；ascend910-c2-vllm 承接 embedding/sdpa_math C2 真实 vLLM-Ascend 证据（#38）。
   cambricon:
     display_name: 寒武纪
     status: partial
@@ -83,12 +85,18 @@ operators:
       ascend:
         profiles: [ascend910]
         implementation: Triton
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: 厂商 efficient attention 委托
+        evidence:
+          level: C1
       cambricon:
         profiles: [mlu590]
         implementation: TMO / fused overrideable 委托
+        evidence:
+          level: C1
       thead:
         profiles: [thead-ppu]
         implementation: flash/efficient 分流委托
@@ -97,14 +105,19 @@ operators:
     directory: sdpa_math
     group: core
     purpose: 私有 SDPA math 后端，同时返回完整概率图。
-    key_result: 五份实现通过同一组 175 例黄金数据。
+    key_result: 五份实现通过同一组 175 例黄金数据；Ascend910 引擎侧 C2 真实前向命中（验收状态 PARTIAL，见 reports/c2_ascend910.md）。
     platforms:
       ascend:
-        profiles: [ascend910]
-        implementation: Triton exact-P 路径
+        profiles: [ascend910, ascend910-c2-vllm]
+        implementation: Triton exact-P 路径（C2 证据经引擎侧 FlagOSMathAttentionBackend 调 aten math）
+        evidence:
+          level: C2
+          report: ops/sdpa_math/reports/c2_ascend910.md
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: vendor O/LSE 加 exact-P 重建
+        evidence:
+          level: C1
       thead:
         profiles: [thead-ppu]
         implementation: flash/efficient 分流 O/LSE 加 exact-P 重建
@@ -113,14 +126,24 @@ operators:
     directory: embedding
     group: core
     purpose: 稠密 embedding 前向和 dense backward。
-    key_result: 已在三个当前厂商平台交付；MLU/PPU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
+    key_result: p800/MLU/PPU 三平台交付且逐位覆盖；Ascend910 引擎侧 C2 真实前向命中（验收状态 PARTIAL，见 reports/c2_ascend910.md）。
     platforms:
+      ascend:
+        profiles: [ascend910, ascend910-c2-vllm]
+        implementation: CANN index_select 行采集委托（Triton gather 仅探针）
+        evidence:
+          level: C2
+          report: ops/embedding/reports/c2_ascend910.md
       kunlunxin:
         profiles: [p800-kunlunxin]
         implementation: 原生 row-gather 与反向补偿
+        evidence:
+          level: C1
       cambricon:
         profiles: [cambricon]
         implementation: 原生 index_select 与 embedding_backward 委托
+        evidence:
+          level: C1
       thead:
         profiles: [thead-ppu]
         implementation: 原生 index_select 与 embedding_backward 委托
@@ -134,8 +157,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C1
 
   - name: clone
     directory: clone
@@ -146,8 +173,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C1
 
   - name: contiguous
     directory: contiguous
@@ -158,8 +189,13 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C2
+          report: ops/contiguous/reports/development.md
 
   - name: copy_
     directory: copy_
@@ -170,8 +206,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C1
 
   - name: dropout
     directory: dropout
@@ -182,8 +222,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C1
 
   - name: detach
     directory: detach
@@ -194,8 +238,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C1
 
   - name: detach_
     directory: detach_
@@ -206,8 +254,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C0
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C0
 
   - name: empty_like
     directory: empty_like
@@ -218,8 +270,13 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C2
+          report: ops/empty_like/reports/development.md
 
   - name: empty
     directory: empty
@@ -230,8 +287,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C0
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C0
 
   - name: empty_strided
     directory: empty_strided
@@ -242,8 +303,13 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C2
+          report: ops/empty_strided/reports/development.md
 
   - name: result_type
     directory: result_type
@@ -254,8 +320,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C0
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C0
 
   - name: item
     directory: item
@@ -266,8 +336,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C1
 
   - name: _local_scalar_dense
     directory: _local_scalar_dense
@@ -278,8 +352,12 @@ operators:
     platforms:
       cambricon:
         profiles: [cambricon]
+        evidence:
+          level: C1
       kunlunxin:
         profiles: [p800-kunlunxin]
+        evidence:
+          level: C1
 
 registration_contracts:
   cambricon-foundation:
