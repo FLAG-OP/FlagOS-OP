@@ -215,7 +215,7 @@ def _core_rows(catalog: dict) -> list[str]:
         )
         rows.append(
             f"| {_operator_link(op)} | {op['purpose']} | {platforms} | "
-            f"{op['key_result']} |"
+            f"{op.get('evidence') or '—'} | {op['key_result']} |"
         )
     return rows
 
@@ -233,7 +233,7 @@ def _foundation_rows(catalog: dict, group: str) -> list[str]:
         route = " / ".join(routes) or "—"
         rows.append(
             f"| {_operator_link(op)} | {op['purpose']} | {route} | "
-            f"{op['key_result']} |"
+            f"{op.get('evidence') or '—'} | {op['key_result']} |"
         )
     return rows
 
@@ -299,8 +299,8 @@ def render_index(catalog: dict) -> str:
             "",
             meta["description"].strip(),
             "",
-            "| 算子 | 作用 | 平台 | 关键结论 |",
-            "|---|---|---|---|",
+            "| 算子 | 作用 | 平台 | 证据 | 关键结论 |",
+            "|---|---|---|---|---|",
             *_core_rows(catalog),
             "",
         ])
@@ -320,8 +320,8 @@ def render_index(catalog: dict) -> str:
             "",
             meta["description"].strip(),
             "",
-            "| 算子 | 作用 | 交付路线 | 关键结论 |",
-            "|---|---|---|---|",
+            "| 算子 | 作用 | 交付路线 | 证据 | 关键结论 |",
+            "|---|---|---|---|---|",
             *_foundation_rows(catalog, name),
             "",
         ])

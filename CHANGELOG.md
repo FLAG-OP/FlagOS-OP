@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- **C1/C2 证据门禁（issue #41）**：新增 `scripts/evidence_check.py`
+  （CI `ops-catalog` job）——校验 `ops/catalog.yaml` 每算子
+  `evidence: C0|C1|C2` 声明、C1/C2 必须有 `test/framework_level.py`、
+  C2 必须锁 `evidence_basis` + 仓库内 `evidence_paths`（路径不存在即
+  失败）、平台状态三方一致（catalog ↔ `docs/operator-catalog.md` ↔
+  `ops/README.md`）与 `updated`/环境锁日期不晚于当天；16 个算子全部
+  回填（C2×5：`sdpa_math`/`embedding`（P800 5.0 真实 vLLM，#39）、
+  `empty_strided`/`empty_like`/`contiguous`（P800 4.2 真实 vLLM）；
+  其余 C1×11）；`ops/README.md` 生成表新增「证据」列；CI 增
+  `git diff --check` 空白字符检查；PR 模板增证据回填勾选项；配套
+  8 项单测（`tests/unit/test_evidence_check.py`）
 - **P800 5.0 真实 vLLM C2 证据（issue #39，2026-10-29）**：
   `p800-kunlunxin-gems5` profile 用随机权重 `/models/random-qwen3-tiny`
   跑通 `tests/framework_level/test_a1_aten_ops.py`（1 passed）：

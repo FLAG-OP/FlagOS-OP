@@ -79,6 +79,7 @@ operators:
     group: core
     purpose: 标准 scaled-dot-product attention 前向路径。
     key_result: 四平台黄金覆盖 397/397。
+    evidence: C1
     platforms:
       ascend:
         profiles: [ascend910]
@@ -98,6 +99,11 @@ operators:
     group: core
     purpose: 私有 SDPA math 后端，同时返回完整概率图。
     key_result: 五份实现通过同一组 175 例黄金数据。
+    evidence: C2
+    evidence_basis: "p800-kunlunxin-gems5（5.0 栈）真实 vLLM 双跑 2026-10-29，输出逐位一致，embedding 命中 19 / sdpa_math 真实 prefill 消费 8，含概率图与梯度证据（issue #39，见路径）"
+    evidence_paths:
+      - tests/framework_level/README.md
+      - tests/framework_level/evidence/p800-kunlunxin-gems5-2026-10-29.json
     platforms:
       ascend:
         profiles: [ascend910]
@@ -114,6 +120,11 @@ operators:
     group: core
     purpose: 稠密 embedding 前向和 dense backward。
     key_result: 已在三个当前厂商平台交付；MLU/PPU 侧具备逐位覆盖，Ascend 结果保留为历史实验。
+    evidence: C2
+    evidence_basis: "p800-kunlunxin-gems5（5.0 栈）真实 vLLM 双跑 2026-10-29，输出逐位一致，embedding 命中 19 / sdpa_math 真实 prefill 消费 8，含概率图与梯度证据（issue #39，见路径）"
+    evidence_paths:
+      - tests/framework_level/README.md
+      - tests/framework_level/evidence/p800-kunlunxin-gems5-2026-10-29.json
     platforms:
       kunlunxin:
         profiles: [p800-kunlunxin]
@@ -131,6 +142,7 @@ operators:
     purpose: 把 tensor 转换到另一个 tensor 的 dtype，并留在原设备。
     route: A1 · Triton
     key_result: 黄金 111/111，结果逐位一致。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -143,6 +155,7 @@ operators:
     purpose: 复制 tensor 到独立存储。
     route: A1 · Triton
     key_result: 黄金 48/48；op 层测试覆盖包态执行。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -155,6 +168,10 @@ operators:
     purpose: 返回连续存储；输入本身连续时保持别名。
     route: A1 · Triton
     key_result: 黄金 114/114；转置路径使用 2D swizzle 调度。
+    evidence: C2
+    evidence_basis: "p800-kunlunxin（4.2 栈）真实 vLLM 基线/注入双跑 2026-10-26，输出 token 逐位一致，aten 命中计入 total（见路径）"
+    evidence_paths:
+      - tests/framework_level/README.md
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -167,6 +184,7 @@ operators:
     purpose: 写入已有 tensor，支持布局和广播。
     route: A1 · Triton
     key_result: 黄金 78/78。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -179,6 +197,7 @@ operators:
     purpose: 验证随机 dropout 语义和统计行为。
     route: A1 · Triton
     key_result: 黄金 189/189。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -191,6 +210,7 @@ operators:
     purpose: 返回共享存储的非原地 detach 视图。
     route: A1 · torch
     key_result: 黄金 36/36。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -203,6 +223,7 @@ operators:
     purpose: 在基础算子族中保留原地 detach 语义。
     route: experimental · torch
     key_result: 按设计不可 A1 注册，保持 NotImplementedError。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -215,6 +236,10 @@ operators:
     purpose: 按另一个 tensor 的元数据分配未初始化 tensor。
     route: A1 · torch
     key_result: 元数据黄金 168/168。
+    evidence: C2
+    evidence_basis: "p800-kunlunxin（4.2 栈）真实 vLLM 基线/注入双跑 2026-10-26，输出 token 逐位一致，aten 命中计入 total（见路径）"
+    evidence_paths:
+      - tests/framework_level/README.md
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -227,6 +252,7 @@ operators:
     purpose: 按 size 分配未初始化 tensor。
     route: experimental · torch
     key_result: 不注册，避免与 empty_strided 递归；元数据黄金 48/48。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -239,6 +265,10 @@ operators:
     purpose: 按显式 size 和 stride 分配未初始化 tensor。
     route: A1 · torch
     key_result: 元数据黄金 30/30。
+    evidence: C2
+    evidence_basis: "p800-kunlunxin（4.2 栈）真实 vLLM 基线/注入双跑 2026-10-26，输出 token 逐位一致，aten 命中计入 total（见路径）"
+    evidence_paths:
+      - tests/framework_level/README.md
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -251,6 +281,7 @@ operators:
     purpose: 计算两个输入的 PyTorch dtype 提升结果。
     route: experimental · torch
     key_result: 纯元数据函数；按设计不可 A1 注册。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -263,6 +294,7 @@ operators:
     purpose: 把单元素 tensor 转换为 Python 标量。
     route: A1 · torch
     key_result: 黄金 36/36。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
@@ -275,6 +307,7 @@ operators:
     purpose: 覆盖 item 底层的稠密标量私有原语。
     route: A1 · torch
     key_result: 黄金 36/36。
+    evidence: C1
     platforms:
       cambricon:
         profiles: [cambricon]
