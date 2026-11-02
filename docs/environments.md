@@ -195,6 +195,7 @@ python3 scripts/build_env_index.py --check
 - ops/sdpa P800 backend
 - ops/sdpa_math P800 backend
 - ops/embedding P800 backend
+- embedding/sdpa_math 真实 vLLM C2（2026-11-02，USE_FLAGGEMS=0）
 - 13 个基础 aten 算子（clone/contiguous/copy_/detach/detach_/dropout/empty/empty_like/empty_strided/item/_local_scalar_dense/result_type/type_as）的 P800 三层验证、黄金与性能门禁
 - FlagGems / vLLM 组合使用验证
 
@@ -216,6 +217,7 @@ python3 scripts/build_env_index.py --check
 - [ops/embedding/REPORT.md](../ops/embedding/REPORT.md)：embedding 三层验证与 P800 性能证据
 - [ops/README.md](../ops/README.md)：13 个基础算子已登记 p800-kunlunxin（累计 16 个）
 - [ops/type_as/PLATFORM.md](../ops/type_as/PLATFORM.md)：13 算子 P800 绑定/黄金/性能矩阵入口（各算子目录同构）
+- [tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json](../tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json)：embedding/sdpa_math 真实 vLLM C2（embedding 20 / sdpa_math 11；P 行和 8.54e-3；梯度 max_abs≤0.016）
 
 备注：本锁对应 FlagGems 4.2 基线；5.0 复测栈使用独立的 `p800-kunlunxin-gems5` profile 与环境锁。选择与运行步骤见 [昆仑芯环境配置](installation.md#kunlunxin)。 flag_gems 与 vllm-plugin-fl 在共享镜像中为本地路径安装 （/env/FlagGems、/env/xvllm-plugin-FL），核对版本即可， 不建议 pip 覆盖安装。硬件快照来自 2026-10-16 的 `xpu-smi -q` 与 `scripts/env_snapshot.py --device p800-kunlunxin`。 `torch_xmlir` 对应发行包名 `xmlir`；`xtorch_ops` 对应发行包名 `XTorch-Ops`。 Triton 3.6.0 来自镜像内置的 FlagTree 0.6.1 构建，未安装 dist-info； `scripts/check_env.py` 在缺少发行元数据时回退读取模块 `__version__`。
 

@@ -1,0 +1,101 @@
+{
+  "ok": true,
+  "engine": "vllm",
+  "profile": "p800-kunlunxin",
+  "model": "/workspace/.cache/models/tiny-qwen3-v151936",
+  "output_match": true,
+  "output_tokens_sha256": "a525aba2564e6a584b078ca2890c7938efd1e9f2ef5d4c4e4e33524baab0a3d9",
+  "injection_tokens_sha256": "a525aba2564e6a584b078ca2890c7938efd1e9f2ef5d4c4e4e33524baab0a3d9",
+  "counts": {
+    "embedding": 20,
+    "sdpa_math": 11
+  },
+  "total_calls": 31,
+  "sdpa": {
+    "consumer": "vllm_prefill_attention",
+    "calls": 8,
+    "fallbacks": 8,
+    "fallback_reasons": [
+      "profiling_fake_meta"
+    ],
+    "prob_sample": {
+      "type": "consume",
+      "req": 0,
+      "qlen": 5,
+      "heads": 4,
+      "kv_heads": 2,
+      "head_size": 64,
+      "is_causal": true,
+      "probs_shape": [
+        1,
+        4,
+        5,
+        5
+      ],
+      "probs_rowsum_max_dev": 0.008544921875,
+      "probs_diag_mean": 0.4632202088832855,
+      "probs_entropy_mean": 0.7748606204986572
+    },
+    "grad": {
+      "ok": true,
+      "dtype": "bf16",
+      "ref": "cpu_float64_native_math",
+      "out_max_abs": 0.007622,
+      "out_max_rel": 1.70466,
+      "probs_max_abs": 0.009923,
+      "probs_max_rel": 0.028599,
+      "dq_max_abs": 0.007492,
+      "dq_max_rel": 0.004903,
+      "dk_max_abs": 0.011343,
+      "dk_max_rel": 0.003875,
+      "dv_max_abs": 0.016317,
+      "dv_max_rel": 0.002909
+    }
+  },
+  "latency_s": {
+    "base": 0.4563,
+    "inj": 0.561
+  },
+  "evidence_level": "C2",
+  "consumer": "vllm EngineCore / KunlunxinAttentionBackendImpl.context_forward (prefill equivalent consumer)",
+  "model_arch": {
+    "architectures": [
+      "Qwen3ForCausalLM"
+    ],
+    "model_type": "qwen3",
+    "hidden_size": 256,
+    "num_hidden_layers": 4,
+    "num_attention_heads": 4,
+    "num_key_value_heads": 2,
+    "head_dim": 64,
+    "vocab_size": 151936,
+    "note": "random weights; same architecture family as 5.0 random-qwen3-tiny"
+  },
+  "model_config_sha256": "0a0f00ba80303389e7a7ba1aa3fa67871b651ecbf685b89f3e8ba9935d09d249",
+  "env": {
+    "profile": "p800-kunlunxin",
+    "python": "3.10.18",
+    "packages": {
+      "torch": "2.9.0+cu129",
+      "torch_xmlir": "1.0.0.1",
+      "xtorch_ops": "0.1.2640+9bc36a18",
+      "triton": "3.6.0",
+      "flag_gems": "4.2.1rc0",
+      "vllm": "0.13.0",
+      "vllm_fl": "0.1.0",
+      "transformers": "4.57.1"
+    },
+    "lock_collected_at": "2026-10-26"
+  },
+  "embedding_perf": {
+    "source": "perf/baselines/p800-kunlunxin.json",
+    "p800_forward_ms": 0.050751,
+    "native_forward_ms": 0.051534,
+    "generation_latency_s": {
+      "base": 0.4563,
+      "inj": 0.561
+    }
+  },
+  "command": "FLAGOS_DEVICE=p800-kunlunxin FLAGOS_MODEL_PATH=/workspace/.cache/models/tiny-qwen3-v151936 USE_FLAGGEMS=0 CUDA_VISIBLE_DEVICES=0 FLAGOS_A1_OPS=embedding,sdpa_math python -m pytest tests/framework_level/test_a1_aten_ops.py -q -s",
+  "captured_at": "2026-11-02"
+}

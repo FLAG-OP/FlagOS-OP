@@ -29,6 +29,14 @@
 - XMLIR 呈现 CUDA 张量（AutogradCUDA）
 - vendor O/LSE 委托 + exact-P 补偿；`kernel/p800_fast_level.py`
 - probes/ 归档（7 个探针）为该平台的证据链
+- **真实 vLLM C2（2026-11-02）**：prefill 等价消费者命中 11 次
+  （真实 prefill 8 + profiling fallback 8）；P 行和 8.54e-3；
+  bf16 双输出反向梯度 max_abs≤0.016；证据
+  `tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json`；
+  C2 需 `USE_FLAGGEMS=0`（FlagGems 4.2 P800 gather 在采样阶段失败）
+- **边界**：4.2 `p800_fast_level` 的 P 在 Qwen2.5-0.5B 大 q/k
+  （absmax 80/130）下行和不稳定（1.29）；C2 使用随机权重 tiny Qwen3
+  （q/k ~3），后续需修 p800 fast 数值稳定性
 
 ## 3a. thead-ppu 绑定（平头哥 ZW810E，flash/efficient 分流 + exact-P）
 

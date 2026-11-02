@@ -34,6 +34,10 @@
   key 为 AutogradCUDA
 - gatherFIX 探针结论见 `reports/`（正确性 0 error；特化比 native 慢
   10.9-177.9x——与 ascend910 的 Triton 探针结论一致）
+- **真实 vLLM C2（2026-11-02）**：`aten::embedding` 命中 20 次，
+  注入前后 token ids 哈希一致；证据
+  `tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json`；
+  C2 需 `USE_FLAGGEMS=0`（FlagGems 4.2 P800 gather 在采样阶段失败）
 
 ## 4. cambricon（MLU590）绑定
 

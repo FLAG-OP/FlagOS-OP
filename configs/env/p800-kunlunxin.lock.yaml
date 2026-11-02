@@ -12,6 +12,7 @@ scope:
   - ops/sdpa P800 backend
   - ops/sdpa_math P800 backend
   - ops/embedding P800 backend
+  - embedding/sdpa_math 真实 vLLM C2（2026-11-02，USE_FLAGGEMS=0）
   - "13 个基础 aten 算子（clone/contiguous/copy_/detach/detach_/dropout/empty/empty_like/empty_strided/item/_local_scalar_dense/result_type/type_as）的 P800 三层验证、黄金与性能门禁"
   - FlagGems / vLLM 组合使用验证
 hardware:
@@ -57,6 +58,8 @@ evidence:
     note: 13 个基础算子已登记 p800-kunlunxin（累计 16 个）
   - path: ops/type_as/PLATFORM.md
     note: 13 算子 P800 绑定/黄金/性能矩阵入口（各算子目录同构）
+  - path: tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json
+    note: embedding/sdpa_math 真实 vLLM C2（embedding 20 / sdpa_math 11；P 行和 8.54e-3；梯度 max_abs≤0.016）
 base_images:
   - image_id: kunlunxin-p800-operator-runtime-v2
     relation: version-aligned

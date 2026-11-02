@@ -45,6 +45,23 @@ thead fast 均过同一 175 组黄金。
 | thead-ppu | `python3 example.py thead-ppu` | ☑ kernel 52 · tail 47 · 黄金 175/175 · A1 21 · framework 8 · perf gate OK | [reports/thead-ppu.md](reports/thead-ppu.md) |
 | FlagOS E2E | `python3 script/e2e_flagos.py --device cuda:1` | ☑ 4 层 mini-LLM · forward/backward/generate · A1 拦截 856 | [reports/e2e_flagos_p800-kunlunxin.json](reports/e2e_flagos_p800-kunlunxin.json) |
 | **真实 vLLM C2** | `python3 script/e2e_vllm_c2.py --model ... --model-impl transformers` | ☑ EngineCore 内 MATH 路径命中 20 · token 与同路径基线一致 · profile `thead-ppu-c2` | [reports/e2e_vllm_c2_thead-ppu-c2.json](reports/e2e_vllm_c2_thead-ppu-c2.json) · [reports/thead-ppu-c2.md](reports/thead-ppu-c2.md) |
+| **真实 vLLM C2（P800 4.2）** | `tests/framework_level/test_a1_aten_ops.py`（`A1_SDPA_CONSUMER=prefill`） | ☑ EngineCore prefill 等价消费者命中 11（真实 prefill 8 + profiling fallback 8）；P 行和 8.54e-3；bf16 双输出反向梯度 max_abs≤0.016；token 哈希一致 | [evidence](../../tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json) · [README](../../tests/framework_level/README.md) |
+
+### P800 4.2 C2 说明（2026-11-02）
+
+- 环境：FlagGems 4.2.1rc0 / vLLM 0.13.0 / vllm-plugin-fl 0.1.0 /
+  torch_xmlir 1.0.0.1；`USE_FLAGGEMS=0`（FlagGems 4.2 P800 `gather`
+  在 vLLM 采样阶段失败）。
+- 消费者：vLLM 0.13 vendor `KunlunxinAttentionBackendImpl.context_forward`
+  的 prefill 无前缀缓存分支，逐请求调用 A1
+  `torch.ops.aten._scaled_dot_product_attention_math`（O+P 双输出）。
+- 概率图：`probs_rowsum_max_dev=8.54e-3`（<1e-2）；梯度 probe 对
+  CPU fp64 原生 math：`dq/dk/dv max_abs≤0.016`。
+- 模型：random-weight Qwen3 4L/hidden256/heads4/kv2/head_dim64/vocab151936
+  （与 5.0 random-qwen3-tiny 同架构）。
+- **已知边界**：4.2 的 `p800_fast_level` P 在真实 Qwen2.5-0.5B 的大 q/k
+  （absmax 80/130）下不稳定，行和偏差 1.29；当前 C2 使用随机权重 tiny
+  Qwen3（q/k ~3），后续需修 p800 fast 的数值稳定性。
 
 ## 关键数字
 

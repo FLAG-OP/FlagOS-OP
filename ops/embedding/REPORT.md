@@ -59,6 +59,21 @@ gather，行采集是厂商库强项，**生产委托是两平台一致的工程
 | dispatch（p800） | `script/bench_dispatch.py` | **作废，待复测**（旧脚本未持有 `torch.library.Library`，测得未注册状态） |
 | gatherFIX 对照（p800） | `script/probe_gatherfix.py` | 正确性 0 error；P800 特化比 native 慢 10.9-177.9x |
 
+## P800 4.2 真实 vLLM C2（2026-11-02）
+
+- 环境：`p800-kunlunxin`（FlagGems 4.2.1rc0 / vLLM 0.13.0 /
+  vllm-plugin-fl 0.1.0 / torch_xmlir 1.0.0.1）
+- 入口：`tests/framework_level/test_a1_aten_ops.py`
+- 结果：`aten::embedding` 命中 **20 次**；注入前后输出 token ids 哈希一致；
+  `1 passed`
+- 模型：random-weight Qwen3 4L/hidden256/heads4/kv2/head_dim64/vocab151936
+  （与 5.0 random-qwen3-tiny 同架构）
+- 性能：4.2 baseline `ops.embedding.p800.forward` **0.0508 ms** /
+  native **0.0515 ms**；C2 生成 latency base 0.4563s / inj 0.5610s
+- 证据：`tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json`
+- 注意：C2 需 `USE_FLAGGEMS=0`（FlagGems 4.2 P800 `gather` 在 vLLM
+  采样阶段报 `Operation not permitted`）
+
 | 平台 / 级别 | 文件 | 状态 | 说明 |
 |---|---|---|---|
 | P800 厂商委托 | [kernel/p800_kunlunxin.py](kernel/p800_kunlunxin.py) | ✅ | forward 走 native `index_select`；dense backward 走 native `embedding_backward`；XPU 缺 `scale_grad_by_freq` → 自实现 inverse-frequency 补偿 |

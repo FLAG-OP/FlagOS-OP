@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Added
+- **p800-kunlunxin（4.2）embedding/sdpa_math 真实 vLLM C2（2026-11-02）**：
+  `aten::embedding` 命中 20 次、`sdpa_math` 命中 11 次（真实 prefill 8 +
+  profiling fallback 8）；注入前后 token ids 哈希一致；P 行和 8.54e-3；
+  bf16 双输出反向梯度 max_abs≤0.016；证据
+  `tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json`。
+  C2 使用 random-weight Qwen3 4L/hidden256/vocab151936（与 5.0
+  random-qwen3-tiny 同架构）与 `USE_FLAGGEMS=0`；4.2 `p800_fast_level`
+  在 Qwen2.5-0.5B 大 q/k 下 P 行和不稳定（1.29），记录为后续修复边界
 - **13 个基础 ATen 算子接入 p800-kunlunxin（2026-10-22）**：
   `clone/contiguous/copy_/detach/detach_/dropout/empty/empty_like/
   empty_strided/item/_local_scalar_dense/result_type/type_as` 完成

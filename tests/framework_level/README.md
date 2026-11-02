@@ -74,3 +74,41 @@ workspace 内使用，不占用任何其他人的容器。
   FlagGems 时 C2 不通过。
 - 更大的 Qwen3-8B 在本栈 EngineCore 初始化阶段挂起（GPU 100%、显存仅
   166MiB），因此当前 C2 证据使用 0.5B 现成模型；8B 需要另查栈/模型兼容性。
+
+## P800 4.2 真实 vLLM C2：embedding / sdpa_math（2026-11-02）
+
+在 `p800-kunlunxin`（FlagGems 4.2.1rc0 / vLLM 0.13.0 /
+vllm-plugin-fl 0.1.0 / torch_xmlir 1.0.0.1）自建容器内：
+
+```bash
+FLAGOS_DEVICE=p800-kunlunxin \
+FLAGOS_MODEL_PATH=/workspace/.cache/models/tiny-qwen3-v151936 \
+USE_FLAGGEMS=0 \
+CUDA_VISIBLE_DEVICES=0 \
+FLAGOS_A1_OPS=embedding,sdpa_math \
+python -m pytest tests/framework_level/test_a1_aten_ops.py -q -s
+```
+
+结果：`1 passed in 66.15s`
+
+| 算子 | 命中 | 证据 |
+|---|---:|---|
+| embedding | 20 | 注入前后 token ids 哈希一致 |
+| sdpa_math | 11 | 真实 prefill 8 + profiling fallback 8；P 行和 8.54e-3；bf16 双输出反向梯度 max_abs≤0.016 |
+
+证据：`tests/framework_level/evidence/p800-kunlunxin-2026-11-02.json`。
+
+模型：random-weight Qwen3 4L / hidden256 / heads4 / kv2 / head_dim64 /
+vocab151936（与 5.0 `random-qwen3-tiny` 同架构）。
+
+限制：
+
+- `USE_FLAGGEMS=0`：FlagGems 4.2 P800 `gather` 在 vLLM 采样阶段报
+  `xpuLaunchKernel ... Operation not permitted(err_code: 1)`。
+- 4.2 `p800_fast_level` 的 P 在 **Qwen2.5-0.5B** 的大 q/k
+  （absmax 80/130）下行和偏差 1.29；当前 C2 使用随机权重 tiny Qwen3
+  （q/k ~3），p800 fast 数值稳定性需后续修复。
+- 4.2 的 `KunlunxinAttentionBackendImpl.context_forward` 在
+  `attn_metadata` 之后以关键字传 `attn_type/key_cache/value_cache/
+  is_causal`；wrapper 已显式接住这些参数，避免误判为
+  `positional_extra_args` 而全部 fallback。
