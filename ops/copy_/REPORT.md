@@ -64,11 +64,42 @@
 | 8192² fp32 原地拷贝 | 0.242 ms | **0.237 ms** |
 | 原地返回 / 广播 / 哨兵 | ✅ / ✅ / ✅ | — |
 
+## A1 注入排除边界（2026-10-29，known-issues #26）
+
+P800 bf16 兜底路径会经 `aten::type_as` / `Tensor.to` 转换，而两者内部
+重新进入已注册的 `copy_`；`FLAGOS_A1_OPS` 同时含 `copy_` 与 `type_as`
+时形成 `copy_ ↔ type_as/to` 无限递归（4.2 真实 vLLM C2 实测）。
+
+因此 `copy_` **不进入真实 vLLM 编排的 A1 注入清单**：
+
+- 框架级/真实引擎 C2 跑法的 `FLAGOS_A1_OPS` 默认排除 `copy_`；
+- 单算子三层/黄金/性能验证不受影响（这些路径不经 vLLM 编排）；
+- 若未来要放开，需先在 `type_as`/`to` 侧切断对 `copy_` 的再入
+  （或改注册为「已注册不拦截」），不能仅靠约定。
+
 ## 结论与遗留
 
 适用层验证通过（C1 等价 torch API）、黄金 78/78、原地/广播/cast 语义正确，性能与原生持平。
 遗留: 高 rank 分块、真实 vLLM 应用层。注意 copy_ 全局注册侵入性强，
 编排里框架层用子进程隔离。
+
+## A1 注入排除边界（C2 实测，2026-10-26/#26）
+
+P800 bf16 兜底路径会经 `aten::type_as` / `Tensor.to` 转换，而两者内部
+重新进入已注册的 `copy_`；`FLAGOS_A1_OPS` 同时含 `copy_` 与 `type_as`
+时形成 `copy_ ↔ type_as/to` 无限递归（4.2 栈真实 vLLM C2 实测）。
+
+边界约定：
+
+- 框架级 `FLAGOS_A1_OPS` 默认列表**不含** `copy_`（与 `empty`/`detach_`/
+  `result_type` 同类「按设计不注入」）；
+- 需要等价 cast 时改用不经过 `copy_` 的路径（如 `type_as` 单独注入、
+  或 `torch.empty` + 原生拷贝）；
+- 5.0 栈本轮 C2（#39）未注入 `copy_`，未触发；
+- 调试时若怀疑递归，用 `A1_OPS_DEBUG=1` 看 A1 dispatch 日志里
+  `copy_` 是否被 `type_as/to` 间接重入。
+
+详见 [known-issues #26](../../docs/known-issues.md)。
 
 ## 交付物清单
 
