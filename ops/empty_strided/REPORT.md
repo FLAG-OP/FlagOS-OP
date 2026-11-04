@@ -63,3 +63,13 @@
 
 [reports/development.md](reports/development.md) · [reports/test-report.md](reports/test-report.md) ·
 [reports/accuracy.md](reports/accuracy.md) · [reports/performance.md](reports/performance.md)
+
+## 证据分级（C0 / C1 / C2，对齐 #42 P800）
+
+| 级别 | 含义 | 本 PR |
+|---|---|---|
+| **C0** | 黄金 + op 层 | ✅ |
+| **C1** | per-op 等价消费方（等价 torch API 子进程） | ✅ |
+| **C2** | 真实 vLLM 前向实际命中（EngineCore 三段，生成阶段命中） | ✅（init=98 / **gen=11** / final=109，token 逐位一致；见 [reports/c2_ascend910/summary.json](reports/c2_ascend910/summary.json)） |
+
+结论：本算子达到 **C2**（EngineCore 三段：init=98 / gen=11 / final=109，见 reports/c2_ascend910/summary.json）。

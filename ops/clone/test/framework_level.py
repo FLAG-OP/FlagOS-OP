@@ -42,7 +42,11 @@ def _app_child(out_path: str, register: bool, device: str) -> None:
 
     if register:
         import register as reg
-        reg.register_a1("CUDA" if "cuda" in device else "PrivateUse1")
+        _plat = ("ascend" if "npu" in device else
+                 "cambricon" if "mlu" in device else
+                 "p800-kunlunxin" if "cuda" in device else None)
+        reg.register_a1("CUDA" if "cuda" in device else "PrivateUse1",
+                        platform=_plat)
     y = _app_forward(device)
     calls = None
     if register:

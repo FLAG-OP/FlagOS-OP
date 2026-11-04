@@ -1,0 +1,1 @@
+built by scripts/c2_enginecore/make_model.py; seed=0; vocab=24 WordLevel; LlamaConfig(hidden=64, intermediate=128, layers=2, heads=4, kv_heads=4, max_pos=256); engine dtype auto->bfloat16

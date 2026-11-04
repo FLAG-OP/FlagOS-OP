@@ -32,3 +32,17 @@
 ## 平台差异与兜底
 
 - bf16/fp16/fp32 同 dtype 拷贝正常；无额外兜底。
+
+## 验证矩阵（Ascend910 / C1）
+
+| 层 | 命令 | 结果 |
+|---|---|---|
+| kernel | `python3 test/kernel_level.py ascend910` | PASS |
+| op | `python3 test/op_level.py ascend910` | PASS |
+| 应用 | `python3 example.py ascend910` | 三层全绿（应用层=C1 等价消费方） |
+| 黄金 | `python3 script/check_accuracy.py --impl triton --device npu` | 全过 |
+| 性能 | `python3 scripts/perf_run.py --device ascend910 --pattern "ops.clone." --update-baseline` | OK |
+
+Ascend 接入要点：`register.py` 增加 `ascend` 后端与成对 key
+（`AutogradPrivateUse1` + `PrivateUse1`）；基础 aten 默认不在真实 vLLM 全局启用
+（见 `PLATFORM.md` 与 `docs/known-issues.md` #26）。

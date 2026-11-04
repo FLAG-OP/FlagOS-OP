@@ -25,7 +25,7 @@ def run(profile):
 
     reg.CALL_COUNT["empty_strided"] = 0
     _CALLS = {"n": 0}
-    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS)
+    lib = reg.register_a1(profile.dispatch_key, counter=_CALLS, platform=profile.vendor)
     assert lib is not None
 
     before = reg.CALL_COUNT["empty_strided"]

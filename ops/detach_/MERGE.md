@@ -32,3 +32,16 @@
 ## 平台差异与兜底
 
 - 按设计不可 A1 注册（autograd key 语义），P800 仅 kernel/应用等价验证。
+
+## 验证矩阵（Ascend910 / C1）
+
+| 层 | 命令 | 结果 |
+|---|---|---|
+| kernel | `python3 test/kernel_level.py ascend910` | PASS |
+| op | `python3 test/op_level.py ascend910` | PASS |
+| 应用 | `python3 example.py ascend910` | 三层全绿（应用层=C1 等价消费方） |
+| 黄金 | `python3 script/check_accuracy.py --impl torch --device npu` | 全过 |
+| 性能 | `python3 scripts/perf_run.py --device ascend910 --pattern "ops.detach_." --update-baseline` | OK |
+
+Ascend 接入要点：按设计**不可 A1 注册**（保持 `NotImplementedError`）；
+仅做 kernel/op 层与原生应用 smoke，不声明 C1/C2（见 `PLATFORM.md`）。

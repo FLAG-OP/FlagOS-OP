@@ -35,7 +35,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 目标平台 | 当前状态 | 已登记算子 | 当前 profile / 型号 |
 |---|---|---:|---|
-| 华为昇腾（`ascend`） | 部分交付 | 3 | `ascend910` · `ascend910-c2-vllm` |
+| 华为昇腾（`ascend`） | 部分交付 | 12 | `ascend910` · `ascend910-c2-vllm` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
 | 昆仑芯（`kunlunxin`） | 部分交付 | 16 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
 | 平头哥（`thead`） | 部分交付 | 3 | `thead-ppu` · `thead-ppu-c2` |

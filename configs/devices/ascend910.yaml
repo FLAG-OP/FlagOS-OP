@@ -1,6 +1,13 @@
 # Ascend 910 (初代, 910_9382) — 首个接入本库的 NPU 设备 profile
 # 实测环境: CANN 9.0.0 / torch_npu 2.10.0 / triton-ascend 3.5.1
 # 首个算子: ops/sdpa（A1 路线，注册点 AutogradPrivateUse1——见该算子 PLATFORM.md）
+#
+# ⚠️ 排序前提: 必须 TASK_QUEUE_ENABLE=0（早于 torch_npu 初始化）。镜像默认 1，
+# 会让 torch 算子异步入队、与 triton-ascend 直发的 raw stream 无序，自研 kernel
+# 读到未完成输入（非确定性错值/NaN）。common/device.py 顶部已强制；见
+# docs/known-issues.md #24。
+# 训练/布局算子族（clone/empty_like/empty_strided/detach/detach_/item/
+# _local_scalar_dense/result_type/type_as）已接入 ascend910（各 op 的 PLATFORM.md）。
 name: ascend910
 vendor: ascend                 # 与 flag_gems DeviceDetector().vendor_name 一致
 
@@ -16,8 +23,9 @@ device:
   dispatch_key: AutogradPrivateUse1
 
 framework:
-  # 本栈 vllm 0.20.2+empty 为空壳安装——框架级/应用级测试暂不可跑，
-  # 仅 kernel 层与 op 层有效（算子交付以两层 + 黄金 + 性能对照收口）
+  # vllm 0.20.2+empty + vllm-plugin-fl（PlatformFL）在本 profile 可用：真实
+  # EngineCore 前向已验证（见 scripts/c2_enginecore/、known-issues #26）。
+  # 注意与 ascend910-c2-vllm（vLLM-Ascend 栈）区分。
   tensor_parallel_size: 1
   distributed_executor_backend: mp
   max_model_len: 4096
@@ -32,7 +40,7 @@ framework:
   quirks:
     keep_default_prefer: false
     require_two_visible_devices: false
-    no_vllm_runtime: true       # 空壳 vllm: 跳过框架/应用层入口
+    no_vllm_runtime: false      # 真实 vLLM（vllm-plugin-fl）可用；C2 见 known-issues #26
 
 vendor_delegate: null
 
@@ -41,3 +49,22 @@ reference_fallback: reference.torch
 # 厂商 kernel 直测清单（可选）: 初代 910 无独立厂商 kernel 包，
 # 原生参照走 torch_npu 的 F.scaled_dot_product_attention（CANN 内核）
 vendor_kernels: []
+
+# A1 真实 vLLM 启用策略（见 docs/known-issues.md #26）
+# enabled=false 表示“禁止默认全量启用”；白名单 c2_verified_ops 曾按 EngineCore
+# 三段（init/gen/final）+ token 对拍验证。其余算子按 excluded_ops 的原因排除，
+# 需要时走作用域/子进程隔离（only_enable / use_gems(exclude=...)）。
+real_vllm:
+  enabled: false
+  # 经真实 vLLM（EngineCore 多进程，生成阶段计数）逐算子实测：
+  #   C2（生成阶段命中且输出一致）: empty_like(gen=16), empty_strided(gen=11)
+  #   其余: C1（未命中/不兼容）或 C0（不可注册/未消费）
+  c2_verified_ops: [empty_like, empty_strided]
+  excluded_ops:
+    - clone            # Triton kernel 在真实 vLLM 前向触发 vector core（待修）
+    - detach           # 注册破坏 nn.Parameter/FakeTensor 构造（已知不兼容）
+    - detach_          # 按设计不可 A1 注册
+    - item             # 生成阶段未命中（engine 阶段计数 gen=0）
+    - _local_scalar_dense  # 生成阶段未命中（engine 阶段计数 gen=0）
+    - type_as          # 生成阶段未命中（engine 阶段计数 gen=0）
+    - result_type      # 按设计不可 A1 注册
