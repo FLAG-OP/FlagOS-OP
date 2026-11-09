@@ -29,7 +29,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 ## 平台覆盖口径
 
-目标范围是 **6 个厂商平台家族**。当前登记 **16 个算子**：**3 个核心多平台算子**、**13 个基础 ATen 算子**。
+目标范围是 **6 个厂商平台家族**。当前登记 **17 个算子**：**3 个核心多平台算子**、**14 个基础 ATen 算子**。
 这是一个增量交付子集，不是完整平台矩阵。`planned` 只表示目标范围，
 不表示支持完成；只有进入算子条目并带有测试与报告的平台才计为已交付。
 
@@ -37,7 +37,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 |---|---|---:|---|
 | 华为昇腾（`ascend`） | 部分交付 | 3 | `ascend910` · `ascend910-c2-vllm` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
-| 昆仑芯（`kunlunxin`） | 部分交付 | 16 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
+| 昆仑芯（`kunlunxin`） | 部分交付 | 17 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
 | 平头哥（`thead`） | 部分交付 | 3 | `thead-ppu` · `thead-ppu-c2` |
 | 燧原 GCU（`enflame`） | 规划中 | 0 | 计划覆盖：GCU300 / GCU400 / GCU410 |
 | 壁仞（`biren`） | 规划中 | 0 | 待首个交付算子确定 |
@@ -57,6 +57,14 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 这些算子主要验证基础语义、执行链路和 A1 注册；应用消费者证据按报告标注为 mini consumer 或真实引擎。
 它们不一定以性能提升为首要目标，因此按用途分组，避免和核心计算
 算子混在同一张长表里。
+
+### 逐元素激活
+
+覆盖常用激活函数的尺寸、dtype、布局、特殊值和 A1 注册范围。
+
+| 算子 | 作用 | 交付路线 | 关键结论 |
+|---|---|---|---|
+| [sigmoid](sigmoid/) | 标准 aten sigmoid 推理前向，覆盖 LLM 激活形状和安全 dtype 回退。 | A1 · Triton | P800 kernel 75 例、黄金 93/93；C1 Transformer 激活覆盖三种核心浮点 dtype。 |
 
 ### 布局、复制与类型转换
 

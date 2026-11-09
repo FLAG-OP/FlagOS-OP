@@ -14,7 +14,7 @@
 #   （区别于 platform_families 的 partial = 平台交付部分完成）。
 
 schema: 1
-updated: 2026-11-01
+updated: 2026-11-09
 
 target_scope:
   vendor_family_count: 6
@@ -60,28 +60,51 @@ operator_groups:
     rank: 1
     description: >-
       覆盖注意力、私有 math 后端和 embedding，具备跨平台交付证据。
+  # wt-2026-11-09-sigmoid-p800
+  # wt <liyanze1560495@hotmail.com>
+  pointwise-activation:
+    title: 逐元素激活
+    kind: foundation
+    rank: 2
+    description: 覆盖常用激活函数的尺寸、dtype、布局、特殊值和 A1 注册范围。
   layout-copy:
     title: 布局、复制与类型转换
     kind: foundation
-    rank: 2
+    rank: 3
     description: 覆盖张量布局、存储、广播和类型转换语义，用于验证执行链路和注册链路。
   random-autograd:
     title: 随机与 autograd 语义
     kind: foundation
-    rank: 3
+    rank: 4
     description: 覆盖随机分支和 detach 语义，用于验证非纯逐元素行为和 autograd 层语义。
   allocation-metadata:
     title: 分配与元数据
     kind: foundation
-    rank: 4
+    rank: 5
     description: 覆盖分配、stride、未初始化内存和 dtype 提升语义；这类算子以元数据判卷。
   host-scalar:
     title: Host 标量
     kind: foundation
-    rank: 5
+    rank: 6
     description: 覆盖单元素 tensor 转 Python 标量的路径，包括公开 item API 底层的私有 ATen 原语。
 
 operators:
+  # wt-2026-11-09-sigmoid-p800
+  # wt <liyanze1560495@hotmail.com>
+  - name: sigmoid
+    directory: sigmoid
+    group: pointwise-activation
+    purpose: 标准 aten sigmoid 推理前向，覆盖 LLM 激活形状和安全 dtype 回退。
+    route: A1 · Triton
+    key_result: P800 kernel 75 例、黄金 93/93；C1 Transformer 激活覆盖三种核心浮点 dtype。
+    platforms:
+      kunlunxin:
+        profiles: [p800-kunlunxin-gems5]
+        implementation: FlagGems pointwise_dynamic + P800 CodeGenConfig
+        evidence:
+          level: C1
+          report: ops/sigmoid/reports/test-report.md
+
   - name: sdpa
     directory: sdpa
     group: core

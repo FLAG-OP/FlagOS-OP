@@ -35,6 +35,9 @@ PROVIDERS = [
     ("ops.item", ROOT / "ops/item/example.py"),
     ("ops._local_scalar_dense", ROOT / "ops/_local_scalar_dense/example.py"),
     ("ops.result_type", ROOT / "ops/result_type/example.py"),
+    # wt-2026-11-09-sigmoid-p800
+    # wt <liyanze1560495@hotmail.com>
+    ("ops.sigmoid", ROOT / "ops/sigmoid/example.py"),
 ]
 
 _cache: dict[str, object] = {}

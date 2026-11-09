@@ -1,0 +1,43 @@
+# wt-2026-11-09-sigmoid-p800
+# wt <liyanze1560495@hotmail.com>
+op: aten.sigmoid
+seed_base: 20261010
+cases:
+  - name: small
+    shapes: [[1], [17], [64, 1024]]
+    dtypes: [bfloat16, float16, float32]
+    distribution: normal
+    scale: 2.0
+    special: [zeros]
+  - name: long_tail
+    shapes: [[1, 14336], [8, 5000], [7, 4097]]
+    dtypes: [bfloat16, float16, float32]
+    distribution: normal
+    scale: 8.0
+    special: [boundary]
+  - name: extreme
+    shapes: [[128, 5120]]
+    dtypes: [float32]
+    distribution: uniform
+    scale: 16.0
+    special: [large]
+    seeds_per_case: 3
+  - name: launch_edges
+    shapes: [[255], [256], [257], [511], [512], [513],
+             [65535], [65536], [65537]]
+    dtypes: [bfloat16, float16, float32]
+    distribution: normal
+    scale: 8.0
+    special: [boundary]
+    seeds_per_case: 1
+  - name: transformer
+    shapes: [[2, 128, 768], [2, 64, 4096], [1, 4, 32, 512]]
+    dtypes: [bfloat16, float16, float32]
+    distribution: normal
+    scale: 4.0
+    special: [zeros, boundary]
+    seeds_per_case: 1
+seeds_per_case: 3
+tolerance:
+  pointwise_abs: {float32: 2.0e-6, float16: 1.0e-3, bfloat16: 8.0e-3}
+  relative: 2.0e-2
