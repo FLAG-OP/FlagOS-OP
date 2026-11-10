@@ -70,6 +70,26 @@
 遗留: 高 rank 分块、真实 vLLM 应用层。注意 copy_ 全局注册侵入性强，
 编排里框架层用子进程隔离。
 
+## A1 注入排除边界（P800 4.2 C2 实测，2026-10-26）
+
+P800 bf16 兜底路径会经 `aten::type_as` / `Tensor.to` 转换，而两者内部
+重新进入已注册的 `copy_`；当 `FLAGOS_A1_OPS` 同时含 `copy_` 与 `type_as`
+时会形成 `copy_ ↔ type_as/to` 无限递归。这是 4.2 栈真实 vLLM C2
+复验得到的编排边界，本 PR 只记录该边界，不修改 vLLM 编排代码。
+
+边界约定：
+
+- 框架级 `FLAGOS_A1_OPS` 默认列表**不含** `copy_`（与 `empty`/`detach_`/
+  `result_type` 同类「按设计不注入」）；
+- 单算子三层、黄金和性能验证不受影响；这些路径不经真实 vLLM 编排；
+- 5.0 栈本轮 C2（#39）未注入 `copy_`，未触发；
+- 若未来要放开，需先在 `type_as`/`to` 侧切断对 `copy_` 的再入
+  （或改注册为「已注册不拦截」），不能仅靠约定；
+- 调试时若怀疑递归，用 `A1_OPS_DEBUG=1` 看 A1 dispatch 日志里
+  `copy_` 是否被 `type_as/to` 间接重入。
+
+详见 [P800 基础 aten 接入复审记录（PR #42）](https://github.com/FLAG-OP/FlagOS-OP/pull/42)。
+
 ## 交付物清单
 
 | 交付物 | 位置 |
