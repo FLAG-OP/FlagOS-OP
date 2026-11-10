@@ -11,6 +11,8 @@
   `ASCEND_RT_VISIBLE_DEVICES=1`
 - **结果**: baseline/injected token 均 `[7, 21, 1, 18, 10, 23, 21, 1]`（逐位一致）；
   **init=81 · generation=16 · final=97**；`passed=true`
+- **性能**: 本次归档材料未采集同路径的预热后重复计时；C2 结论仅覆盖生成阶段命中与
+  token 正确性。需按采集 README 的 `--require-performance` 命令补跑性能门禁。
 - **证据**: [c2_ascend910/summary.json](c2_ascend910/summary.json) + `baseline/stdout` 日志 +
   每 PID `count_<pid>.json`（init/generation/final）
 - **复现**: 见 [scripts/c2_enginecore/README.md](../../../scripts/c2_enginecore/README.md)

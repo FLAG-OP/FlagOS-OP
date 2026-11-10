@@ -35,7 +35,7 @@
 
 **P800 绑定结论**：元数据分配，P800 直接复用。
 
-## 4. ascend910 绑定（证据级别 C1）
+## 4. ascend910 绑定（证据级别 C2）
 
 | 项 | 结论 |
 |---|---|
@@ -43,18 +43,18 @@
 | 设备探测 | `import torch_npu` + `torch.npu.is_available()` |
 | 实现路径 | torch 级 |
 | 工厂算子 dispatch | `torch.empty_strided` 在 torch_npu 落 `PrivateUse1`（非 AutogradPrivateUse1）；成对注册两键后命中 |
-| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#24)） |
+| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[Ascend task queue](../../docs/known-issues.md#ascend-task-queue)） |
 | 证据级别 | **C2**（EngineCore 多进程三段：init=98/gen=11/final=109，token 与基线逐位一致；见 [reports/c2_ascend910/summary.json](reports/c2_ascend910/summary.json)） |
 
-## 5. 证据分级（C0 / C1 / C2，对齐 #42 P800）
+## 5. ascend910 证据分级（C0 / C1 / C2）
 
 | 级别 | 含义 | 本 PR |
 |---|---|---|
 | **C0** | 黄金 + op 层 | ✅ |
 | **C1** | per-op 等价消费方（等价 torch API 子进程） | ✅ |
-| **C2** | 真实 vLLM 前向实际命中 | ✅（count=109） |
+| **C2** | 真实 vLLM 前向实际命中 | ✅（生成阶段 gen=11；生命周期 final=109） |
 
-本算子达到 **C2**（真实 vLLM 前向命中，count=109）。
+本算子达到 **C2**（真实 vLLM 生成阶段 gen=11；init=98 / final=109）。
 
 ### 复现与替代路径
 

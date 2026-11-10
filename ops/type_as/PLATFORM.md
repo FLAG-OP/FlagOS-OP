@@ -44,7 +44,7 @@
 | 实现路径 | A1 · Triton |
 | Triton tile 上限 | Ascend UB 192KB：连续 16384 / strided 8192（超出触发 BiShengHIR `ub overflow`）；`_caps(device.type)` 自适应 |
 | channels_last | torch_npu 不支持；测试在 npu 跳过该 view |
-| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#24)） |
+| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#ascend-task-queue)） |
 | 证据级别 | **C1**：注册正常但参考 tiny 模型前向未调用（count=0），未能证明命中 |
 
 ## 5. 证据分级（C0 / C1 / C2，对齐 #42 P800）

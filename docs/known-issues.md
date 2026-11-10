@@ -336,8 +336,34 @@ impl_id + 双张量** `fn(obj, x, gate)` 注册:
 DEFAULT=150）；② `fn` 改 packed 单张量协议；③ 上游允许插件覆盖同名
 内置注册；④ A2 演示改用内置未占用的算子。
 
-<a id="24"></a>
-### 24. ⚠️ Ascend: torch_npu task queue 与 triton-ascend 无序（严重）
+### 24. FlagGems 4.2 P800 `gather` 在 vLLM 采样阶段报 err_code 1
+4.2 栈开 FlagGems 跑真实 vLLM 生成时，采样阶段
+`xpuLaunchKernel ... Operation not permitted (err_code: 1)`，C2 直接不过；
+`USE_FLAGGEMS=0`（走 torch/vendor 兜底）后通过（4.2 与 5.0 两轮 C2 实测均
+用该口径）。同硬件的 `gatherFIX` 探针
+（`ops/embedding/script/probe_gatherfix.py`）正确性 0 error、但比 native
+慢 10.9-177.9x，尚未合入默认路径。5.0 栈开 FlagGems 的 C2 未复测
+（本轮同口径 `USE_FLAGGEMS=0`）——FlagGems 侧修复验证前，C2 建议保持
+该开关并在此记录。
+
+### 25. Qwen3-8B 在 P800 4.2 栈 EngineCore 初始化阶段挂起
+vllm 0.13.0 + vllm_fl 0.1.0（4.2 共享镜像）加载 Qwen3-8B 时 EngineCore
+初始化挂死：GPU 100%、显存仅占 166MiB，无 traceback（4.2 C2 实测记录，
+见[框架级 README](../tests/framework_level/README.md)）。规避: 4.2 侧 C2
+改用现成 Qwen2.5-0.5B。5.0 栈（vllm 0.20.2）未复测 8B；5.0 侧 C2 用
+随机权重 random-qwen3-tiny（4L）跑通。根因未查（疑与该栈 8B 权重/配置
+路径相关），8B 级验证前需先复现定位。
+
+### 26. P800 bf16 下 `copy_` 与 `type_as`/`Tensor.to` 的 A1 注入递归
+P800 bf16 兜底路径会经 `aten::type_as` / `Tensor.to` 转换，而两者内部
+重新进入已注册的 `copy_`，`FLAGOS_A1_OPS` 同时含 `copy_` 与
+`type_as` 时形成 `copy_ ↔ type_as/to` 无限递归（4.2 C2 实测）。规避:
+`copy_` 从 `FLAGOS_A1_OPS` 排除（框架级默认列表不含；需要时改用不经过
+`copy_` 的 cast）。5.0 侧本轮未注入 `copy_`，未触发。设计层面
+`copy_` 的可注入边界见其 op 报告。
+
+<a id="ascend-task-queue"></a>
+### Ascend: torch_npu task queue 与 triton-ascend 无序（严重）
 
 镜像（flagrt ascend routeA）默认 `TASK_QUEUE_ENABLE=1`：torch_npu 把算子排入
 task queue 异步执行，而 triton-ascend 直接在 raw stream 上启动 kernel
@@ -357,8 +383,8 @@ task queue 的少量吞吐，对带宽型算子可忽略。检测: kernel 层哨
 
 首现: 9 个布局/分配算子 Ascend 移植。
 
-<a id="25"></a>
-### 25. Ascend torch_npu 的三处设备能力/语义差异
+<a id="ascend-capabilities"></a>
+### Ascend torch_npu 的三处设备能力/语义差异
 
 1. **不支持 channels_last**: `.to(memory_format=torch.channels_last)` /
    `empty_like(..., memory_format=channels_last)` 抛
@@ -376,8 +402,8 @@ task queue 的少量吞吐，对带宽型算子可忽略。检测: kernel 层哨
 复现: `ops/type_as`、`ops/empty_like`、`ops/empty_strided` 的 `example.py
 ascend910` 与 `PLATFORM.md`。
 
-<a id="26"></a>
-### 26. Ascend A1 注入的真实边界（按算子实测，非全局阻断）
+<a id="ascend-a1-boundary"></a>
+### Ascend A1 注入的真实边界（按算子实测，非全局阻断）
 
 在真实 vLLM 0.20.2 + `vllm_fl`（Ascend910，in-process EngineCore，tiny llama
 head_dim=16）上，对 9 个基础 aten 算子逐个做「直接注册（`platform=ascend`）+
@@ -401,13 +427,14 @@ head_dim=16）上，对 9 个基础 aten 算子逐个做「直接注册（`platf
 3. 参考模型 `head_dim=4`（CANN 融合注意力不支持）+ 共享卡高负载；
 4. 个别算子的真实缺陷（如 `clone` 的 Triton strided kernel）。
 
-因此不要把 #26 当成「所有基础算子 C2 不可行」的通用阻断；应按算子 allowlist 处理。
+因此不要把“Ascend A1 注入边界”当成「所有基础算子 C2 不可行」的通用阻断；应按算子 allowlist 处理。
 
 复现: `scripts/c2_enginecore/validate.py`（EngineCore 多进程 baseline/init-only/injected，`execute_model` 前后快照区分 init 与生成阶段命中；失败非零退出，负例见 `tests/unit/test_c2_enginecore_decide.py`）。
 
 **做法**：Ascend 真实 vLLM 默认只允许 `c2_verified_ops`（当前 `empty_like` /
 `empty_strided`）全局启用，见 `configs/devices/ascend910.yaml::real_vllm`；
 其余按上表原因排除或后续修复。
+
 
 ## 通用检测方法
 
@@ -427,9 +454,9 @@ head_dim=16）上，对 9 个基础 aten 算子逐个做「直接注册（`platf
 | 钉选落空（选中预期外 impl） | 打印/断言 `call_op` 选中 impl_id，`VLLM_FL_PER_OP` 钉选对照；对照 #20 |
 | 插件注册整体无效 | 日志搜 `Error calling plugin` / `Duplicate impl_id`；对照 #23 |
 | 栈升级后 codegen / 脚本回归 | 路线样例与 bench 脚本全量重跑；对照 #21 / #22 |
-| Ascend triton 非确定/NaN | 同输入两次 `torch.equal` 哨兵；`TASK_QUEUE_ENABLE` 1/0 对照；见 #24 |
-| Ascend channels_last / empty_like stride | 设备能力探测 + 对齐 reference；见 #25 |
-| Ascend A1 注入后 0-grid/vector-core | 逐算子 allowlist + 同进程 CALL_COUNT/token 对比；见 #26 |
+| Ascend triton 非确定/NaN | 同输入两次 `torch.equal` 哨兵；`TASK_QUEUE_ENABLE` 1/0 对照；见 [Ascend task queue](#ascend-task-queue) |
+| Ascend channels_last / empty_like stride | 设备能力探测 + 对齐 reference；见 [Ascend capabilities](#ascend-capabilities) |
+| Ascend A1 注入后 0-grid/vector-core | 逐算子 allowlist + EngineCore 分阶段 CALL_COUNT/token 对比；见 [Ascend A1 boundary](#ascend-a1-boundary) |
 
 ---
 

@@ -16,6 +16,7 @@ Env:
   A1_PLATFORM          ascend (default)
   A1_DISPATCH_KEY      AutogradPrivateUse1 (default)
   FLAGOS_C2_COUNT_DIR  directory for per-PID dump files
+  FLAGOS_C2_PHASE_FILE  shared file containing init/generation/done phase
   FLAGOS_TEMPLATES_ROOT repo root (defaults to this file's ../..)
 """
 import atexit
@@ -37,6 +38,7 @@ if _RUN_ID:
     _key = os.environ.get("A1_DISPATCH_KEY", "AutogradPrivateUse1")
     _plat = os.environ.get("A1_PLATFORM", "ascend")
     _dump_dir = os.environ.get("FLAGOS_C2_COUNT_DIR", "")
+    _phase_file = os.environ.get("FLAGOS_C2_PHASE_FILE", "")
 
     _regmods: dict = {}
     for _op in _ops:
@@ -50,7 +52,7 @@ if _RUN_ID:
     def _counts():
         return {op: m.CALL_COUNT.get(op, 0) for op, m in _regmods.items()}
 
-    _exec_calls = []  # [{"before": {...}, "after": {...}}]
+    _exec_calls = []  # [{"phase", "before": {...}, "after": {...}}]
     _patched = False
     if _regmods:
         try:
@@ -63,7 +65,15 @@ if _RUN_ID:
                 before = _counts()
                 out = _orig(self, *args, **kwargs)
                 after = _counts()
-                _exec_calls.append({"before": before, "after": after})
+                phase = "init"
+                if _phase_file:
+                    try:
+                        with open(_phase_file, encoding="utf-8") as fh:
+                            phase = fh.read().strip()
+                    except OSError:
+                        pass
+                _exec_calls.append({"phase": phase, "before": before,
+                                    "after": after})
                 return out
 
             _cls.execute_model = execute_model
@@ -80,13 +90,11 @@ if _RUN_ID:
             final = _counts()
             init = {op: 0 for op in _regmods}
             gen = {op: 0 for op in _regmods}
-            if _exec_calls:
-                first = _exec_calls[0]["before"]
-                init = dict(first)
-                for call in _exec_calls:
-                    for op in _regmods:
-                        gen[op] += call["after"][op] - call["before"][op]
-            else:
+            for call in _exec_calls:
+                target = gen if call["phase"] == "generation" else init
+                for op in _regmods:
+                    target[op] += call["after"][op] - call["before"][op]
+            if not _exec_calls:
                 init = dict(final)
             rec = {
                 "run_id": _RUN_ID,

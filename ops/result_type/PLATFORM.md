@@ -35,23 +35,23 @@
 
 **P800 绑定结论**：P800 无 fp64，float64 黄金用例按设备能力 skip（7 pass / 0 fail / 1 skip）。
 
-## 4. ascend910 绑定（证据级别 C1）
+## 4. ascend910 绑定（证据级别 C0）
 
 | 项 | 结论 |
 |---|---|
-| A1 拦截 key | `AutogradPrivateUse1`（成对覆盖 `PrivateUse1`；工厂算子实际落 `PrivateUse1`） |
+| A1 拦截 key | 不适用；按设计不注册，`register_a1` 保持 `NotImplementedError` |
 | 设备探测 | `import torch_npu` + `torch.npu.is_available()` |
 | 实现路径 | torch 级 |
 | 路线 | 纯元数据（dtype 提升），按设计不可 A1 注册；仅 kernel 层验证 |
-| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#24)） |
+| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[Ascend task queue](../../docs/known-issues.md#ascend-task-queue)） |
 | 证据级别 | **C0**（原生应用 smoke；未消费仓库实现） |
 
-## 5. 证据分级（C0 / C1 / C2，对齐 #42 P800）
+## 5. ascend910 证据分级（C0 / C1 / C2）
 
 | 级别 | 含义 | 本 PR |
 |---|---|---|
 | **C0** | 黄金 + op 层 | ✅ |
-| **C1** | per-op 等价消费方（等价 torch API 子进程） | ✅ |
+| **C1** | 消费仓库实现的等价消费方 | ✖（当前仅原生 torch smoke） |
 | **C2** | 真实 vLLM 前向实际命中 | ✖（不适用：未消费仓库实现） |
 
 本算子按 **C0**（原生应用 smoke）登记：framework 测试只调原生 torch API，未消费仓库实现；不声明 C1/C2。

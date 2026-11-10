@@ -43,7 +43,7 @@
 | 设备探测 | `import torch_npu` + `torch.npu.is_available()` |
 | 实现路径 | torch 级 |
 | host 标量 | `item` 底层稠密标量原语；命中 `AutogradPrivateUse1` |
-| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#24)） |
+| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#ascend-task-queue)） |
 | 证据级别 | **C1**：注册正常但参考 tiny 模型前向未调用（count=0），未能证明命中 |
 
 ## 5. 证据分级（C0 / C1 / C2，对齐 #42 P800）

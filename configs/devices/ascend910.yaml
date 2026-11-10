@@ -5,7 +5,7 @@
 # ⚠️ 排序前提: 必须 TASK_QUEUE_ENABLE=0（早于 torch_npu 初始化）。镜像默认 1，
 # 会让 torch 算子异步入队、与 triton-ascend 直发的 raw stream 无序，自研 kernel
 # 读到未完成输入（非确定性错值/NaN）。common/device.py 顶部已强制；见
-# docs/known-issues.md #24。
+# docs/known-issues.md#ascend-task-queue。
 # 训练/布局算子族（clone/empty_like/empty_strided/detach/detach_/item/
 # _local_scalar_dense/result_type/type_as）已接入 ascend910（各 op 的 PLATFORM.md）。
 name: ascend910
@@ -24,7 +24,7 @@ device:
 
 framework:
   # vllm 0.20.2+empty + vllm-plugin-fl（PlatformFL）在本 profile 可用：真实
-  # EngineCore 前向已验证（见 scripts/c2_enginecore/、known-issues #26）。
+  # EngineCore 前向已验证（见 scripts/c2_enginecore/、known-issues#ascend-a1-boundary）。
   # 注意与 ascend910-c2-vllm（vLLM-Ascend 栈）区分。
   tensor_parallel_size: 1
   distributed_executor_backend: mp
@@ -40,7 +40,7 @@ framework:
   quirks:
     keep_default_prefer: false
     require_two_visible_devices: false
-    no_vllm_runtime: false      # 真实 vLLM（vllm-plugin-fl）可用；C2 见 known-issues #26
+    no_vllm_runtime: false      # 真实 vLLM（vllm-plugin-fl）可用；C2 见 known-issues#ascend-a1-boundary
 
 vendor_delegate: null
 

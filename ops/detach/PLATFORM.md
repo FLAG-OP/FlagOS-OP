@@ -43,7 +43,7 @@
 | 设备探测 | `import torch_npu` + `torch.npu.is_available()` |
 | 实现路径 | torch 级 |
 | autograd | `aten::detach` 落 `AutogradPrivateUse1`；实现保持共享存储视图语义 |
-| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#24)） |
+| task queue 排序 | 镜像默认 `TASK_QUEUE_ENABLE=1`，torch 异步队列与 triton-ascend 直发 raw stream 无序；`common/device.py` 在 Ascend 显式 opt-in 下置 0（[#24](../../docs/known-issues.md#ascend-task-queue)） |
 | 证据级别 | **C1**：注册破坏 nn.Parameter/FakeTensor 构造（已知 vLLM 不兼容） |
 
 ## 5. 证据分级（C0 / C1 / C2，对齐 #42 P800）

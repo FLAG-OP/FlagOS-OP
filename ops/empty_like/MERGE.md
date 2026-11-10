@@ -45,4 +45,4 @@
 
 Ascend 接入要点：`register.py` 增加 `ascend` 后端与成对 key
 （`AutogradPrivateUse1` + `PrivateUse1`）；基础 aten 默认不在真实 vLLM 全局启用
-（见 `PLATFORM.md` 与 `docs/known-issues.md` #26）。
+（见 `PLATFORM.md` 与 [Ascend A1 注入边界](../../docs/known-issues.md#ascend-a1-boundary)）。

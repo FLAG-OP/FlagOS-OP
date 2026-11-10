@@ -4,8 +4,8 @@
 |---|---|
 | 算子名称 | `detach_`（别名/元数据（autograd）类） |
 | 语义 | [reference.py](reference.py)：原地脱离 autograd，返回 self (requires_grad=False) |
-| 硬件平台 | **2 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；register 契约保留，但该算子不可 A1 注册）· p800-kunlunxin（P800 / XMLIR；按设计不注册） |
-| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ `p800-kunlunxin`（P800）/ **自用/实验** |
+| 硬件平台 | **3 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；register 契约保留，但该算子不可 A1 注册）· p800-kunlunxin（P800 / XMLIR；按设计不注册） · Ascend 910（profile `ascend910`，torch_npu；证据范围见文末） |
+| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ `p800-kunlunxin`（P800）/ `ascend910`（Ascend 910）/ **自用/实验** |
 | 日期 / 状态 | 2026-09-18 定稿 / 2026-10-12 注册契约同步 / 2026-10-22 P800 交付 / 2026-10-26 复验 |
 
 ## p800-kunlunxin 接入（2026-10-22 交付 / 2026-10-26 复验）
@@ -61,12 +61,12 @@
 [reports/development.md](reports/development.md) · [reports/test-report.md](reports/test-report.md) ·
 [reports/accuracy.md](reports/accuracy.md) · [reports/performance.md](reports/performance.md)
 
-## 证据分级（C0 / C1 / C2，对齐 #42 P800）
+## ascend910 证据分级（C0 / C1 / C2）
 
 | 级别 | 含义 | 本 PR |
 |---|---|---|
 | **C0** | 黄金 + op 层 | ✅ |
-| **C1** | per-op 等价消费方（等价 torch API 子进程） | ✅ |
+| **C1** | 消费仓库实现的等价消费方 | ✖（当前仅原生 torch smoke） |
 | **C2** | 真实 vLLM 前向实际命中 | ✖（不适用：未消费仓库实现） |
 
 结论：本算子按 **C0**（原生应用 smoke）登记；未消费仓库实现，不声明 C1/C2。
