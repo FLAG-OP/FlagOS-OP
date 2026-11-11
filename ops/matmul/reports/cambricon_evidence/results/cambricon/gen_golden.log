@@ -1,0 +1,3 @@
+/torch/venv3/pytorch/lib/python3.12/site-packages/torch_mlu/mlu/storage.py:312: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  if obj.device.type == "mlu" and obj.dtype in torch_64bit_dtypes:
+[gen-golden] 144 forward/backward cases -> /root/FlagOS-OP-zbk/ops/matmul/goldendata/data

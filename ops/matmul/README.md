@@ -5,6 +5,11 @@
 当前交付状态为 **PARTIAL**。合并后的 CPU CI、包化导入和 P800 功能回归见
 [PR 自查记录](reports/pr-readiness.md)；历史性能门禁遗留单独保留。
 
+2026-11-11 由赵俊堯、张哲、张子煜、赵炳凯增加寒武纪 MLU590
+兼容性复验：通用测试容器完成 kernel
+144/144、A1 黄金 144/144、三层测试和 144 条初始性能记录。由于容器
+版本低于环境锁，锁定栈复验和第二次独立性能复跑仍未完成。
+
 按 `templates/operator/` 开发。需求是 FP32/FP16/BF16 的向量、矩阵、批量及广播 matmul，前向和左右输入一阶反向分别验证。昆仑芯 P800 锁定镜像个人容器已在正式物理 XPU 2 完成黄金和三级功能测试，并建立 144 条性能基线；独立复测也已补齐到 144 条，门禁保留 4 FAIL / 4 WARN（均为原生路径）。2026-10-14 确认本阶段应用层以小型 framework 为准，真实模型及 tiny vLLM 不在本阶段范围。
 
 ## 一页看全
@@ -17,6 +22,7 @@
 | 反向 | 两次自研 matmul + 广播维归约 |
 | 正确性 | CPU 参考生成 144 组；直调 Triton、A1 在物理 XPU 2 均对黄金 144/144；三级测试全绿 |
 | 性能记录 | XPU 2：12 非空形状 × 3 dtype × 前后向 × 自研/原生，基线和独立复测均 144 条；门禁 4 FAIL / 4 WARN 均为原生路径，当前不进行性能优化 |
+| 寒武纪 | kernel/A1 各 144/144；A1 命中 15 次、framework 命中 2 次；144 条初始性能基线；当前自研慢于 MLU 原生 |
 
 ## 实现要点
 
@@ -44,3 +50,6 @@ CUDA_VISIBLE_DEVICES=1,2 python scripts/perf_run.py --device p800-kunlunxin --pa
 物理 XPU 1 的 PyTorch 标量读回曾卡住，问题发生在 matmul 之前；`example.py` 先做 30 秒设备读回预检，并对每层设置 180 秒超时。`test/real_model.py` 和相关 vLLM 日志保留作历史探索记录，不属于当前运行流程或交付阻塞项。
 
 查看 [需求](requirement.md)、[总体报告](REPORT.md)、[开发报告](reports/development.md)、[测试报告](reports/test-report.md)和[性能报告](reports/performance.md)。
+
+寒武纪兼容性复验环境、命令和限制见
+[cambricon.md](reports/cambricon.md) 与 [MERGE.md](MERGE.md)。

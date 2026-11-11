@@ -1,0 +1,4 @@
+native  median=0.050356 ms p20=0.050030 p80=0.050820
+direct  median=0.245296 ms p20=0.244451 p80=0.249011
+a1      median=0.278312 ms p20=0.276642 p80=0.282662
+A1 minus direct: 0.033016 ms

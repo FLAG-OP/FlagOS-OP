@@ -8,7 +8,7 @@
 | 测试日期 | 2026-10-14～2026-10-15；合并后功能复测 2026-10-23 |
 | 环境 | 个人锁定容器；Python 3.10.18、Torch 2.9.0+cu129、Triton 3.0.0+03c4c9be |
 | 设备 | P800 物理 XPU 2：`CUDA_VISIBLE_DEVICES=1,2`，逻辑 `cuda:1` |
-| 结论 | PARTIAL：历史正式目标卡黄金、三级、FlagGems 共存测试通过；性能基线与独立复测均完成 144 条，门禁 FAIL 4 / WARN 4 |
+| 结论 | PARTIAL：昆仑芯历史黄金、三级与 FlagGems 共存通过；寒武纪兼容性环境三层与 144/144 黄金通过；两侧锁定环境和性能门禁边界分别保留 |
 
 2026-10-14 当前范围：应用层只需小型 framework，真实模型接入和 tiny
 vLLM 不作为本阶段验收项。模型探索已归档，不再安排复测。
@@ -101,3 +101,25 @@ CUDA_VISIBLE_DEVICES=1,2 python ops/matmul/test/op_level.py p800-kunlunxin --wit
 残留回归 36/36。测试覆盖三种 dtype、向量/矩阵/批量/广播/非连续布局、
 前向和左右输入一阶反向。性能记录及遗留门禁状态见
 [性能报告](performance.md)，不影响本阶段功能结论。
+
+## 8. 寒武纪 MLU590 兼容性复验
+
+复验团队：赵俊堯、张哲、张子煜、赵炳凯。
+
+2026-11-11 在共享容器 `mlu-baseline`、设备 `mlu:0` 上完成功能复验。
+当前容器为 Python 3.12.3、PyTorch 2.10.0、torch_mlu 1.32.2、
+Triton 3.4.0+mlu2.0.3，FlagGems 5.3.5 使用源码路径
+`/root/FlagGems-src/src`；版本低于 `mlu590` 环境锁，因此本结果标记为
+兼容性验证，正式锁定环境仍需重跑。
+
+| 层 | 结果 |
+|---|---|
+| kernel | 144/144；前向/反向最坏误差 `6.26e-3` / `7.41e-3` |
+| A1 op | 15 次 `AutogradPrivateUse1` 命中，最坏原生相对误差 `6.09e-4` |
+| framework | 输出和三个梯度误差 `[3.18e-4, 7.28e-4, 7.04e-4, 2.87e-4]`，命中 2 次 |
+| A1 黄金 | 144/144，A1 命中 144 次 |
+| 一键三层 | PASS |
+
+FlagGems 5.3.5 将 `DeviceDetector` 移至
+`flag_gems.runtime.backend.device_finder`，实现已增加新旧路径兼容导入。
+详细日志和性能状态见 [cambricon.md](cambricon.md)。

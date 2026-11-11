@@ -14,6 +14,13 @@ def dispatch_key_for_profile(profile) -> str:
     # P800's CUDA key catches forward but leaves aten::matmul_backward broken.
     if profile.vendor == "kunlunxin" and profile.dispatch_key == "CUDA":
         return "AutogradCUDA"
+    # torch_mlu exposes the private-use backend key through AutogradPrivateUse1
+    # for operators carrying a custom first-order backward. The generic
+    # PrivateUse1 key is retained as the compatibility spelling in older
+    # device profiles but misses the backward wrapper.
+    if (profile.vendor == "cambricon"
+            and profile.dispatch_key in ("PrivateUse1", "AutogradPrivateUse1")):
+        return "AutogradPrivateUse1"
     return profile.dispatch_key
 
 

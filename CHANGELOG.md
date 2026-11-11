@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Added
+- matmul 增加寒武纪 MLU590 兼容性复验入口：兼容 FlagGems 5.3.5 的
+  `DeviceDetector` 路径，规范化 `AutogradPrivateUse1` 注册，并补充
+  kernel/A1 黄金 144/144、三层测试、应用消费者、144 条初始性能记录及
+  平台报告与绑定文档
 - 新增 [软硬件环境版本汇总](docs/environments.md) 与
   `scripts/build_env_index.py`：从 `configs/env/*.lock.yaml` 生成各实测
   profile 的硬件、系统、Python、厂商运行时和软件包版本索引，并声明

@@ -3,9 +3,9 @@
 | 项 | 值 |
 |---|---|
 | 算子 / 路线 | `aten::matmul` / A1 `AutogradCUDA` |
-| 目标设备 | Kunlunxin P800，物理 XPU 2 |
+| 目标设备 | Kunlunxin P800（物理 XPU 2）；Cambricon MLU590（兼容性复验） |
 | 环境 | `tyanfeng-flagos-p800-lock`；Torch 2.9.0+cu129；Triton 3.0.0+03c4c9be |
-| 报告状态 | PASS（昆仑芯已测精度范围）；FlagGems matmul 对照不可用原因已记录 |
+| 报告状态 | PASS（昆仑芯与寒武纪兼容性环境已测精度范围）；锁定寒武纪环境仍待复核 |
 
 ## 1. 用例与判卷
 
@@ -34,7 +34,7 @@ CPU 黄金由 `reference.py` 调用 CPU PyTorch 生成，用作设备实现的�
 
 进一步用 [`probes/k1_lowering.py`](../probes/k1_lowering.py) 控制前一条 kernel：FP32 全 1 的 K=32 matmul 后，BF16 K=1 全零输入得到 31、全 1 输入得到 32。逐 pass IR 显示 `TritonSDNNCombineBefore` 在 BF16→FP32 融合时删掉 tile 清零，而 MMA 仍计算 K=32；结果取决于 SRAM 残留。原始路径 72 次中 18 次失败，禁止 K 专门化后 72 次全通过。
 
-生产 dot 已加 `do_not_specialize=["K"]` 并撤掉自动外积回退；fast mode 0 新缓存下重跑黄金各 144/144、三级和 FlagGems 共存均通过，新加 kernel 残留回归 36/36。完整证据、设置和复现命令见 [K=1 根因报告](k1_root_cause.md)。其他平台待验证。
+生产 dot 已加 `do_not_specialize=["K"]` 并撤掉自动外积回退；fast mode 0 新缓存下重跑黄金各 144/144、三级和 FlagGems 共存均通过，新加 kernel 残留回归 36/36。完整证据、设置和复现命令见 [K=1 根因报告](k1_root_cause.md)。寒武纪见下文兼容性复验，昇腾和壁仞仍待验证。
 
 ## 3. 关键精度决策
 
@@ -48,7 +48,7 @@ CPU 黄金由 `reference.py` 调用 CPU PyTorch 生成，用作设备实现的�
 
 ## 4. 对照边界
 
-锁定版 FlagGems `bmm` 在自动调参阶段报错，无法形成有效精度/性能对照。寒武纪、昇腾和壁仞尚未验证。
+锁定版 FlagGems `bmm` 在自动调参阶段报错，无法形成有效精度/性能对照。寒武纪的独立复验见第 5 节；昇腾和壁仞尚未验证。
 
 复现：`script/gen_golden.py`、`script/check_accuracy.py --impl triton --device p800-kunlunxin`、`--impl a1-triton`；执行前设置本轮设备映射。环境和命令见 [开发报告](development.md)。
 
@@ -58,3 +58,20 @@ CPU 黄金由 `reference.py` 调用 CPU PyTorch 生成，用作设备实现的�
 直调 Triton、A1 各 144/144，A1 命中 144 次，最坏相对误差均为 `7.75e-3`。
 kernel 的 144 组、哨兵、零 stride 反向及 K=1/2 残留回归 36/36 通过。
 该结果针对注册延迟导入改动后的快照，源码身份见 [PR 自查记录](pr-readiness.md)。
+
+## 5. 寒武纪 MLU590 兼容性精度
+
+寒武纪复验团队：赵俊堯、张哲、张子煜、赵炳凯。
+
+2026-11-11 在 `mlu-baseline` 通用容器重建同一套 CPU 黄金，并在
+`mlu:0` 上分别运行直调 Triton 和 A1：
+
+| 路径 | 结果 | A1 命中 | 最坏相对误差 |
+|---|---:|---:|---:|
+| 自研 Triton dot | 144/144 | 不适用 | `7.41e-3` |
+| A1 Triton | 144/144 | 144 | `7.41e-3` |
+
+三种 dtype、三种子、非整 tile、广播、非连续输入、零 K、空输出、零值、
+大值、`K=1`、前向及左右输入梯度均包含在回归中。当前测试容器版本与
+`mlu590` 环境锁不一致，因此结论限定为兼容性范围，不能替代锁定栈的
+正式平台验收。完整环境与日志入口见 [cambricon.md](cambricon.md)。

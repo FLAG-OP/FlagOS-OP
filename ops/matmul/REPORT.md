@@ -5,10 +5,10 @@
 | 算子 | `aten::matmul` |
 | 实现路线 | **A1**：`AutogradCUDA` 接管 `torch.matmul` |
 | 开发级别 | **Triton 级**（自研 `tl.dot`）；硬件级本期置空 |
-| 目标平台 | Kunlunxin P800，正式物理 XPU 2 |
-| 开发者 | 陶焱烽 |
+| 目标平台 | Kunlunxin P800（正式物理 XPU 2）；Cambricon MLU590（兼容性复验） |
+| 开发者 | 陶焱烽；寒武纪移植与复验：赵俊堯、张哲、张子煜、赵炳凯 |
 | 环境 | 个人容器 `tyanfeng-flagos-p800-lock`；Torch 2.9.0+cu129；Triton 3.0.0+03c4c9be |
-| 报告日期 / 状态 | 2026-10-23 / PARTIAL：已有昆仑芯功能与 C1 证据；性能门禁保留 4 FAIL / 4 WARN，尚未完成最终验收 |
+| 报告日期 / 状态 | 2026-11-11 / PARTIAL：昆仑芯已有功能与 C1 证据；寒武纪 MLU590 兼容性环境功能与精度通过，已建立 144 条性能基线；锁定环境和独立性能复跑仍待完成 |
 
 本阶段按第一周期要求交付功能版本、正确性证据和初始性能记录。应用层以
 小型 framework 消费者为准，真实模型接入和 tiny vLLM 不属于本阶段范围；
@@ -57,7 +57,8 @@ CPU reference 采用 FP32 内部计算，GEMM 非零结果按相对误差 `5e-2`
 | BF16 `K=1` 专项 | `probes/k1_lowering.py` | ✅ 动态 K 72/72；SRAM 残留回归 36/36 |
 
 应用层不使用真实模型；物理 XPU 1 曾在 matmul 前的最小标量读回阶段超时，
-不列为已验证设备。寒武纪、昇腾和壁仞尚未进行 matmul 验证。
+不列为已验证设备。寒武纪已完成兼容性环境复验，锁定环境仍待复核；
+昇腾和壁仞尚未进行 matmul 验证。
 
 ### 应用消费者证据（历史验证：PASS）
 
@@ -71,6 +72,24 @@ CPU reference 采用 FP32 内部计算，GEMM 非零结果按相对误差 `5e-2`
 | commit / 源码身份 | 历史结果采集时工作树未提交；对应代码已收录于 `f697348`，实测源码以 [SHA256 记录](reports/performance_xpu2_v1/provenance.json) 为准，不声称当时直接测试了该 commit |
 | 可支持结论 | 此消费者输出、梯度及两次 A1 命中通过；不代表 C2 真实引擎验证 |
 
+### 寒武纪 MLU590 兼容性矩阵（2026-11-11）
+
+共享容器 `mlu-baseline` 使用 PyTorch 2.10.0、torch_mlu 1.32.2、
+Triton 3.4.0+mlu2.0.3 与 FlagGems 5.3.5 源码；版本低于
+`mlu590` 环境锁，因此只形成兼容性证据。
+
+| 层级 | 入口 | 结果 |
+|---|---|---|
+| kernel | `test/kernel_level.py mlu590` | ✅ 144/144；最坏前向/反向 `6.26e-3` / `7.41e-3` |
+| A1 黄金 | `check_accuracy.py --impl a1-triton --device mlu590` | ✅ 144/144，命中 144 次 |
+| A1 op | `test/op_level.py mlu590` | ✅ 15 次 `AutogradPrivateUse1` 命中 |
+| framework | `test/framework_level.py mlu590` | ✅ 输出/梯度误差均低于 `7.28e-4` |
+| 一键三层 | `example.py mlu590` | ✅ PASS |
+| 性能 | `perf_run.py --device mlu590` | ✅ 144/144 初始基线，0 跳过 |
+
+完整记录见 [cambricon.md](reports/cambricon.md) 和
+[cambricon_evidence](reports/cambricon_evidence/)。
+
 ## 4. 关键问题与修复
 
 BF16 `K=1` 错误来自昆仑芯 `TritonSDNNCombineBefore` 融合：K 被专门化后，
@@ -82,6 +101,12 @@ BF16 `K=1` 错误来自昆仑芯 `TritonSDNNCombineBefore` 融合：K 被专门�
 不可用结果已记录，不把缺失对照记成通过。高阶梯度、真实 vLLM、厂商硬件
 语言实现和其他平台属于本阶段边界外或后续工作。
 
+FlagGems 5.3.5 将 `DeviceDetector` 从
+`flag_gems.runtime.backend.device` 移至
+`flag_gems.runtime.backend.device_finder`。实现增加新旧路径兼容导入，
+不改变正式 kernel。寒武纪 A1 反向需使用 `AutogradPrivateUse1`，注册
+选择器已在 profile 层统一规范化。
+
 ## 5. 性能记录状态
 
 XPU 2 建立了 12 个非空形状 × 3 dtype × 前后向 × 自研/原生的 144 条基线，
@@ -89,6 +114,11 @@ XPU 2 建立了 12 个非空形状 × 3 dtype × 前后向 × 自研/原生的 1
 WARN 4 / FAIL 4`，8 条异常均来自原生路径，追加复核显示运行间波动。
 当前不进行性能优化；完整数据见 [性能报告](reports/performance.md) 和
 [门禁记录](reports/performance_xpu2_v1/gate.md)。
+
+寒武纪另建立了 144 条独立基线，计时前精度检查全部通过。当前自研
+Triton 在小 shape 上前向约为原生 `5.14–5.31x` 耗时，反向约为
+`2.45–2.49x`；该结果说明功能可用但尚未达到性能目标，不能沿用 P800
+数字，也不能把它写成加速成果。
 
 ## 6. 交付物
 
@@ -101,3 +131,5 @@ WARN 4 / FAIL 4`，8 条异常均来自原生路径，追加复核显示运行�
 | 性能报告 | [reports/performance.md](reports/performance.md) |
 | K=1 根因与修复 | [reports/k1_root_cause.md](reports/k1_root_cause.md) |
 | XPU 2 性能记录 | [reports/performance_xpu2_v1/](reports/performance_xpu2_v1/) |
+| 寒武纪复验报告 | [reports/cambricon.md](reports/cambricon.md) |
+| 寒武纪原始证据 | [reports/cambricon_evidence/](reports/cambricon_evidence/) |

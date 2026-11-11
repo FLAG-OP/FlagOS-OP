@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "case_id": "ops.matmul.dot.float16.backward.triton",
+  "group": "ops",
+  "level": "kernel",
+  "device": "mlu590",
+  "metrics": {
+    "latency_ms": 0.501439,
+    "GFLOPS": 0.001,
+    "max_check_error": 0.0
+  },
+  "warmup": 20,
+  "iters": 100,
+  "timestamp": "2026-11-10T16:36:58.688413+00:00",
+  "git_commit": "4df994d31962c3135a6dcb22a9fbc313761e90ac",
+  "git_dirty": true,
+  "env_fingerprint": {
+    "torch": "2.10.0+cpu",
+    "triton": "3.4.0",
+    "flag_gems": "unknown",
+    "vllm_fl": null,
+    "vllm": null
+  }
+}

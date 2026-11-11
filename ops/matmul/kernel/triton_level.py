@@ -14,7 +14,12 @@ from ._shape import matmul_backward, matrix_inputs, restore_output
 @lru_cache(maxsize=1)
 def _runtime_vendor() -> str:
     """Distinguish XMLIR's CUDA tensors from other vendors' CUDA tensors."""
-    from flag_gems.runtime.backend.device import DeviceDetector
+    try:
+        # FlagGems 5.3+ exports DeviceDetector from the package root.
+        from flag_gems.runtime import DeviceDetector
+    except ImportError:
+        # Keep the locked 4.2/5.0 source layouts working.
+        from flag_gems.runtime.backend.device import DeviceDetector
 
     return DeviceDetector().vendor_name
 

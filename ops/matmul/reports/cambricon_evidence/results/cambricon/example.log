@@ -1,0 +1,43 @@
+[matmul] mlu590 [vendor=cambricon dev=mlu:0 visible=0 key=AutogradPrivateUse1]
+
+[kernel]
+/torch/venv3/pytorch/lib/python3.12/site-packages/torch_mlu/utils/model_transfer/__init__.py:2: FutureWarning: `torch_mlu.utils.model_transfer` is deprecated. Please use `torch_mlu.utils.gpu_migration` instead.
+  warnings.warn("`torch_mlu.utils.model_transfer` is deprecated. "
+/root/FlagGems-src/src/flag_gems/utils/libentry.py:411: RuntimeWarning: active Triton backend does not provide a replay benchmarker; falling back to event timing
+  resolved_benchmark = resolve_benchmarker(
+kernel: 144 forward/backward cases; worst_fwd=6.262e-03 worst_bwd=7.407e-03; sentinel and zero-stride backward PASS
+{'ok': True, 'cases': 144, 'max_forward_err': 0.006262076250657841, 'max_backward_err': 0.007407407407407408, 'sentinel': True}
+
+[op]
+/torch/venv3/pytorch/lib/python3.12/site-packages/torch/library.py:357: UserWarning: Warning only once for all operators,  other operators may also be overridden.
+  Overriding a previously registered kernel for the same operator and the same dispatch key
+  operator: aten::matmul(Tensor self, Tensor other) -> Tensor
+    registered at /pytorch/build/aten/src/ATen/RegisterSchema.cpp:6
+  dispatch key: AutogradPrivateUse1
+  previous kernel: registered at /pytorch/aten/src/ATen/autocast_mode.cpp:169
+       new kernel: registered at /root/FlagOS-OP-zbk/ops/matmul/register.py:66 (Triggered internally at /pytorch/aten/src/ATen/core/dispatch/OperatorEntry.cpp:208.)
+  self.m.impl(
+/torch/venv3/pytorch/lib/python3.12/site-packages/torch_mlu/utils/model_transfer/__init__.py:2: FutureWarning: `torch_mlu.utils.model_transfer` is deprecated. Please use `torch_mlu.utils.gpu_migration` instead.
+  warnings.warn("`torch_mlu.utils.model_transfer` is deprecated. "
+/root/FlagGems-src/src/flag_gems/utils/libentry.py:411: RuntimeWarning: active Triton backend does not provide a replay benchmarker; falling back to event timing
+  resolved_benchmark = resolve_benchmarker(
+A1 matmul (triton, AutogradPrivateUse1, flaggems=False): 15 interceptions; worst native-relative error=6.094e-04
+{'ok': True, 'intercepted': 15, 'max_native_rel_err': 0.0006094088441347558}
+
+[framework]
+/torch/venv3/pytorch/lib/python3.12/site-packages/torch_mlu/utils/model_transfer/__init__.py:2: FutureWarning: `torch_mlu.utils.model_transfer` is deprecated. Please use `torch_mlu.utils.gpu_migration` instead.
+  warnings.warn("`torch_mlu.utils.model_transfer` is deprecated. "
+/root/FlagGems-src/src/flag_gems/utils/libentry.py:411: RuntimeWarning: active Triton backend does not provide a replay benchmarker; falling back to event timing
+  resolved_benchmark = resolve_benchmarker(
+/torch/venv3/pytorch/lib/python3.12/site-packages/torch/library.py:357: UserWarning: Warning only once for all operators,  other operators may also be overridden.
+  Overriding a previously registered kernel for the same operator and the same dispatch key
+  operator: aten::gelu(Tensor self, *, str approximate="none") -> Tensor
+    registered at /pytorch/build/aten/src/ATen/RegisterSchema.cpp:6
+  dispatch key: PrivateUse1
+  previous kernel: registered at /pytorch/aten/src/ATen/functorch/BatchRulesUnaryOps.cpp:63
+       new kernel: registered at /torch/venv3/pytorch/lib/python3.12/site-packages/torch_mlu/utils/gpu_migration/migration.py:576 (Triggered internally at /pytorch/aten/src/ATen/core/dispatch/OperatorEntry.cpp:208.)
+  self.m.impl(
+FlagGems GELU + application consumer (triton, AutogradPrivateUse1): calls=2 output/gradient errors=[0.000318, 0.000728, 0.000704, 0.000287]
+{'ok': True, 'consumer': 'MatmulConsumer', 'calls': 2, 'max_native_rel_err': 0.0007278706242326296}
+
+[matmul] three levels passed in this environment

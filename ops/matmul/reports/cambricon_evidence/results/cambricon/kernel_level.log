@@ -1,0 +1,6 @@
+/torch/venv3/pytorch/lib/python3.12/site-packages/torch_mlu/utils/model_transfer/__init__.py:2: FutureWarning: `torch_mlu.utils.model_transfer` is deprecated. Please use `torch_mlu.utils.gpu_migration` instead.
+  warnings.warn("`torch_mlu.utils.model_transfer` is deprecated. "
+/root/FlagGems-src/src/flag_gems/utils/libentry.py:411: RuntimeWarning: active Triton backend does not provide a replay benchmarker; falling back to event timing
+  resolved_benchmark = resolve_benchmarker(
+kernel: 144 forward/backward cases; worst_fwd=6.262e-03 worst_bwd=7.407e-03; sentinel and zero-stride backward PASS
+{'ok': True, 'cases': 144, 'max_forward_err': 0.006262076250657841, 'max_backward_err': 0.007407407407407408, 'sentinel': True}
