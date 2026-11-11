@@ -102,9 +102,18 @@ def load_profile(name: str | None = None) -> LocalProfile:
             dispatch_key="AutogradCUDA",
             default_impl="thead",  # flash/efficient 分流 + exact-P
         )
+    if name in ("mlu590", "cambricon", "mlu"):
+        return LocalProfile(
+            name="mlu590",
+            vendor="cambricon",
+            torch_device=os.environ.get(
+                "SDPA_MATH_TEST_DEVICE", "mlu:0"),
+            dispatch_key="AutogradPrivateUse1",  # torch_mlu 实测拦截点（同 torch_npu）
+            default_impl="mlu590",
+        )
     raise ValueError(
         f"未知设备 profile: {name}"
-        f"（内置 cpu / ascend910 / p800-kunlunxin / thead-ppu）")
+        f"（内置 cpu / ascend910 / p800-kunlunxin / thead-p / mlupu）")
 
 
 def detect_profile() -> LocalProfile:
@@ -114,6 +123,12 @@ def detect_profile() -> LocalProfile:
             return load_profile("ascend910")
         if _is_ppu_stack():
             return load_profile("thead-ppu")
+        try:
+            import torch_mlu  # noqa: F401
+            if hasattr(torch, "mlu") and torch.mlu.is_available():
+                return load_profile("mlu590")
+        except ImportError:
+            pass
         if torch.cuda.is_available():
             try:
                 import torch_xmlir  # noqa: F401

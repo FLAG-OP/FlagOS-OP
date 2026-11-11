@@ -36,6 +36,7 @@ IMPLS = {
     "p800": ("kernel/p800_fast_level.py", "sdpa_math_p800_fast"),
     "thead": ("kernel/thead_fast_level.py", "sdpa_math_thead_fast"),
     "thead-ppu": ("kernel/thead_fast_level.py", "sdpa_math_thead_fast"),
+    "mlu590": ("kernel/mlu590_fast_level.py", "sdpa_math_mlu590_fast"),
 }
 
 

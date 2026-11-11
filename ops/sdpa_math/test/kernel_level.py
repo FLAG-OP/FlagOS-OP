@@ -41,6 +41,8 @@ def _impl_for(profile):
         from kernel.p800_fast_level import sdpa_math_p800_fast as fn
     elif profile.vendor == "thead":
         from kernel.thead_fast_level import sdpa_math_thead_fast as fn
+    elif profile.vendor == "cambricon":
+        from kernel.mlu590_fast_level import sdpa_math_mlu590_fast as fn
     else:
         from kernel.torch_level import sdpa_math_torch as fn
     return fn
