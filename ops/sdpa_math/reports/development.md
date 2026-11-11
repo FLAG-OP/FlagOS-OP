@@ -108,7 +108,7 @@ dispatch dump），旧代码零改动。
 | 黄金回归 | ☑ 175/175 | reference / torch(CPU) / triton(NPU) / p800(P800) 四实现全过；`--impl native` 131/131（44 组 bool 按 §2 分歧跳过） |
 | perf 门禁 | ☑ FAIL 0 | `perf_run --pattern sdpa_math` + `perf_compare`：triton 0.543ms(+7.8%) / torch 0.567ms / reference 0.874ms（warmup 20 · iters 50，融合改动后复测） |
 | P800 | ☑ PASS | kernel 52/52；黄金 p800 @ cuda:1 175/175（worst 3.906e-3，bf16 容差内）；A1 22/22；FlagGems 应用层 9/9；P800 perf gate FAIL 0 |
-| FlagOS E2E | ☑ PASS | 4 层 mini-LLM + GELU/GQA/熵正则/训练/生成；A1 拦截 856 次，logits L∞ 1.56e-2，贪心序列一致 |
+| FlagOS E2E | ☑ PASS | 4 层 mini-LLM + GELU/GQA/熵正则/训练/生成；profile `p800-kunlunxin`（device `cuda:1`，同 §1.1 与 `configs/devices/p800-kunlunxin.yaml`）；A1 拦截 936 次——计数来源 [e2e_flagos_p800-kunlunxin.json](e2e_flagos_p800-kunlunxin.json) 的 `plugin.interceptions`（与 [test-report.md](test-report.md)「A1 拦截 936 次」及 [flaggems5-p800-retest.md](../../../docs/flaggems5-p800-retest.md) 4.2 列一致；本行原记 856，全仓及全历史无对应原始数据，2026-11-11 按 JSON 核定，原始测量值未改），logits L∞ 1.56e-2，贪心序列一致 |
 
 ## 5. 性能
 

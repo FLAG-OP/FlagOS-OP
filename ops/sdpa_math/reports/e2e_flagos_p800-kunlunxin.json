@@ -1,6 +1,7 @@
 {
   "ok": true,
   "framework": "FlagOS/FlagGems GELU + sdpa_math A1",
+  "profile": "p800-kunlunxin",
   "comparison": {
     "ok": true,
     "logits_linf": 0.015625,
