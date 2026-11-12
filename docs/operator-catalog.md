@@ -240,16 +240,20 @@ ops/<operator>/MERGE.md
 | 真实 vLLM C2 作为合并前检查、mini consumer 只能标 C1 | CI `ops-catalog` 跑 `evidence_check`；`scope` 的 `ops/<op> C[012]` 必须等于该 profile 记录并有合格支撑，C2 支撑须有效且通过、与记录 `report`/`consumer` 同源 | `.github/workflows/ci.yml`、`scripts/evidence_check.py` | 572aaf6、b95849a、e7a4914、375d970 |
 | stale roadmap/过期结论（脚本可判的部分） | 日期格式与不晚于当天、证据路径存在性、生成页一致由门禁覆盖；**结论是否过期**由本页下方人工复核记录，不进脚本 | `scripts/evidence_check.py` | 572aaf6、b95849a |
 | `git diff --check` 空白与长行规范 | CI `docs-and-syntax` 跑 `git diff --check`（PR 用 merge-base 全量）；本分支提交与工作树均无空白错误 | `.github/workflows/ci.yml` | 572aaf6 |
-| development 分册 E2E 成功行补 profile 与证据关联、拦截计数口径核定（R1） | `ops/sdpa_math/reports/development.md` 的 FlagOS E2E 行补 `profile p800-kunlunxin` 与证据 JSON 链接；计数按 JSON `plugin.interceptions=936` 核定（原行内 856 全仓及全历史无原始数据支撑，`git log -S` 仅 `79b1b1a` 引入），原始测量值零改动 | `ops/sdpa_math/reports/development.md`、`ops/sdpa_math/REPORT.md` | 本轮单提交（哈希见 #41 回帖） |
-| REPORT 关键数字 E2E 倍率行补 profile 与原始性能数据（R2） | 行内补 `profile p800-kunlunxin`、采集环境（torch `2.9.0+cu129` + torch_xmlir + FlagGems `4.2.1rc0`、`cuda:1`）与原始 `performance` 数据链接——走「补数据」而非「保留」路径，门禁规则未收紧 | `ops/sdpa_math/REPORT.md` | 本轮单提交（哈希见 #41 回帖） |
-| 存量 E2E JSON 补 `profile` 字段（R3） | 顶层增 `"profile": "p800-kunlunxin"`（依据：文件名、`device=cuda:1` ↔ `configs/devices/p800-kunlunxin.yaml`、4.2 环境锁、性能列与 4.2 报告同值且与 5.0 复测列可区分），**原始测量值一行未改** | `ops/sdpa_math/reports/e2e_flagos_p800-kunlunxin.json` | 本轮单提交（哈希见 #41 回帖） |
+| development 分册 E2E 成功行补 profile 与证据关联、拦截计数口径核定（R1） | `ops/sdpa_math/reports/development.md` 的 FlagOS E2E 行补 `profile p800-kunlunxin` 与证据 JSON 链接；计数按后续原始 JSON `plugin.interceptions=936` 核定——早期实验 [`944b050`](https://github.com/FLAG-OP/FlagOS-OP/commit/944b0500d72ca0c6e73e05c98cdb3b955e3bd752) 记 856 次，P800 backward 优化后的复验 [`4671389`](https://github.com/FLAG-OP/FlagOS-OP/commit/4671389931185e247fd480004e5fafb13f9c8f70) 更新为 936 次，原汇总报告未同步，本次改为 936 并保留两轮历史来源（2026-11-12 更正此前「856 全仓及全历史无原始数据、仅 `79b1b1a` 引入」的错误说明——该结论是本地 clone 为 shallow、历史截断于 `79b1b1a` 造成的误判），原始测量值零改动 | `ops/sdpa_math/reports/development.md`、`ops/sdpa_math/REPORT.md` | `9e2bc8e` + 2026-11-12 历史说明修正（哈希见 #41 回帖） |
+| REPORT 关键数字 E2E 倍率行补 profile 与原始性能数据（R2） | 行内补 `profile p800-kunlunxin`、采集环境（torch `2.9.0+cu129` + torch_xmlir + FlagGems `4.2.1rc0`、`cuda:1`）与原始 `performance` 数据链接——走「补数据」而非「保留」路径，门禁规则未收紧；范围＝既有 4.2 环境 C1 mini-LLM 证据，非 5.0 / C2 vLLM 验证 | `ops/sdpa_math/REPORT.md` | `9e2bc8e`（哈希见 #41 回帖） |
+| 存量 E2E JSON 补 `profile` 字段（R3） | 顶层增 `"profile": "p800-kunlunxin"`（依据：文件名、`device=cuda:1` ↔ `configs/devices/p800-kunlunxin.yaml`、4.2 环境锁、性能列与 4.2 报告同值且与 5.0 复测列可区分），**原始测量值一行未改** | `ops/sdpa_math/reports/e2e_flagos_p800-kunlunxin.json` | `9e2bc8e`（哈希见 #41 回帖） |
 
 ### 明确保留（未覆盖，继续在 #41 或拆分跟踪）
 
-1. stale roadmap/过期结论的**自动判定**——日期合法不等于结论仍适用，
-   历史日期本身也不是错误；按 #41 复审 comment `6785290485` 本轮选择
-   **人工路径**（不加脚本规则），复核记录见下方 2026-11-11 复核，
-   **下一次复核时点 2026-12-11**，超期未复核即视为该路径未完成。
+1. stale roadmap/过期结论——状态分两层，不混成一笔欠账：
+   - **本轮人工复核完成、后续定期复核**：按 #41 复审 comment `6785290485`
+     本轮选择**人工路径**（不加脚本规则），2026-11-11 复核记录见下方
+     （#41 comment `6820871863` 已确认本轮通过），**下一次复核时点
+     2026-12-11**，超期未复核即视为该期未完成；
+   - **自动判定能力尚未实现**：日期合法不等于结论仍适用，历史日期本身
+     也不是错误，结论性判断仍不进脚本——按 #41 comment `6820871863`
+     **不作为本轮合入/验收的额外条件**，作为能力现状继续跟踪。
 2. **Ascend NPU 同进程双算子消费回归**（`ops/test_packaging.py`）——需
    Ascend + `torch_npu` 真实执行；本容器无该环境（2026-11-11 实测
    `ModuleNotFoundError: torch_npu`，rc=1），CPU 导入/导出扫描不能替代。
@@ -319,6 +323,9 @@ ops/<operator>/MERGE.md
   （由 #50 记为未完成项），不以「曾复核过」替代当期记录。
 - 该复核仍需逐页语义判断，按 #41 口径**只作人工记录、不进脚本规则**；
   自动判定侧继续作为「明确保留 1」跟踪。
+- **复审确认（2026-11-12，#41 comment `6820871863`）**：本轮人工路径 B
+  通过，下一次复核仍为 **2026-12-11**；自动判定能力不再作为本轮合入的
+  额外条件（状态拆分见「明确保留 1」）。
 
 ## 新增算子
 
