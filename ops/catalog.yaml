@@ -33,7 +33,7 @@ platform_families:
     display_name: 华为昇腾
     status: partial
     current_profiles: [ascend910, ascend910-c2-vllm]
-    roadmap_note: 当前集中在注意力和 embedding 算子；ascend910-c2-vllm 承接 embedding/sdpa_math C2 真实 vLLM-Ascend 证据（#38）。
+    roadmap_note: 注意力/embedding + 训练与布局算子族（clone/empty_like/empty_strided/detach/detach_/item/_local_scalar_dense/result_type/type_as）；ascend910-c2-vllm 承接 C2 真实 vLLM-Ascend 证据（#38）。
   cambricon:
     display_name: 寒武纪
     status: partial
@@ -256,6 +256,13 @@ operators:
     key_result: 黄金 111/111，结果逐位一致。
     evidence: C1
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: Triton
+        evidence:
+          - profile: ascend910
+            level: C1
+            basis: framework_level 基线/注入双跑，等价应用子进程直接消费 .type_as 并完成输出对拍；真实 vLLM 生成阶段未命中
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -277,6 +284,13 @@ operators:
     key_result: 黄金 48/48；op 层测试覆盖包态执行。
     evidence: C1
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: Triton
+        evidence:
+          - profile: ascend910
+            level: C1
+            basis: framework_level 基线/注入双跑，等价应用子进程直接消费 clone 并完成输出对拍；真实 vLLM 命中后 vector core 路径待修
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -366,6 +380,13 @@ operators:
     key_result: 黄金 36/36。
     evidence: C1
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
+        evidence:
+          - profile: ascend910
+            level: C1
+            basis: framework_level 基线/注入双跑，等价应用子进程消费 detach 并完成输出对拍；真实 vLLM 构造阶段不兼容
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -387,6 +408,11 @@ operators:
     key_result: 按设计不可 A1 注册，保持 NotImplementedError。
     evidence: C0
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
+        evidence:
+          level: C0
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -410,7 +436,18 @@ operators:
     evidence_basis: "p800-kunlunxin（4.2 栈）真实 vLLM 基线/注入双跑 2026-10-26，输出 token 逐位一致，aten 命中计入 total（见路径）"
     evidence_paths:
       - tests/framework_level/README.md
+      - ops/empty_like/reports/ascend910-c2.md
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
+        evidence:
+          - profile: ascend910
+            level: C2
+            basis: 真实 vLLM EngineCore 多进程 baseline/init-only/injected；生成阶段计数与 token 对拍，见报告
+            consumer: vllm-enginecore
+            report: ops/empty_like/reports/ascend910-c2.md
+            status: complete-pending-review
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -457,7 +494,18 @@ operators:
     evidence_basis: "p800-kunlunxin（4.2 栈）真实 vLLM 基线/注入双跑 2026-10-26，输出 token 逐位一致，aten 命中计入 total（见路径）"
     evidence_paths:
       - tests/framework_level/README.md
+      - ops/empty_strided/reports/ascend910-c2.md
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
+        evidence:
+          - profile: ascend910
+            level: C2
+            basis: 真实 vLLM EngineCore 多进程 baseline/init-only/injected；生成阶段计数与 token 对拍，见报告
+            consumer: vllm-enginecore
+            report: ops/empty_strided/reports/ascend910-c2.md
+            status: complete-pending-review
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -481,6 +529,11 @@ operators:
     key_result: 纯元数据函数；按设计不可 A1 注册。
     evidence: C0
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
+        evidence:
+          level: C0
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -502,6 +555,13 @@ operators:
     key_result: 黄金 36/36。
     evidence: C1
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
+        evidence:
+          - profile: ascend910
+            level: C1
+            basis: framework_level 基线/注入双跑，等价应用子进程直接消费 item 并完成输出对拍；真实 vLLM 生成阶段未命中
       cambricon:
         profiles: [cambricon]
         evidence:
@@ -523,6 +583,13 @@ operators:
     key_result: 黄金 36/36。
     evidence: C1
     platforms:
+      ascend:
+        profiles: [ascend910]
+        implementation: torch 级
+        evidence:
+          - profile: ascend910
+            level: C1
+            basis: framework_level 基线/注入双跑，等价应用子进程直接消费 _local_scalar_dense 并完成输出对拍；真实 vLLM 生成阶段未命中
       cambricon:
         profiles: [cambricon]
         evidence:

@@ -362,6 +362,80 @@ P800 bf16 兜底路径会经 `aten::type_as` / `Tensor.to` 转换，而两者内
 `copy_` 的 cast）。5.0 侧本轮未注入 `copy_`，未触发。设计层面
 `copy_` 的可注入边界见其 op 报告。
 
+<a id="ascend-task-queue"></a>
+### Ascend: torch_npu task queue 与 triton-ascend 无序（严重）
+
+镜像（flagrt ascend routeA）默认 `TASK_QUEUE_ENABLE=1`：torch_npu 把算子排入
+task queue 异步执行，而 triton-ascend 直接在 raw stream 上启动 kernel
+（`triton/backends/ascend/backend_register.py::get_current_stream` →
+`_npu_getCurrentRawStream`）。两者之间**没有顺序保证**——生产者算子
+（`randn`/`.to`/`mul`）尚未完成，自研 Triton kernel 就读到未初始化输入。
+
+表现极具迷惑性：**同一输入两次调用结果不同**、首次调用错而第二次对、偶发
+`NaN`；且与分配历史/调用节奏相关（在循环里插入 reference 计算或
+`synchronize()` 会改变是否命中）。实测 type_as 的 fp16→bf16 视图用例：
+`max_err` 在 0 / 4.3 / NaN 间抖动。
+
+修复: 在 torch_npu 初始化**之前**置 `TASK_QUEUE_ENABLE=0`
+（`common/device.py` 顶部强制；容器内 `/etc/profile.d` 兜底）。代价是牺牲
+task queue 的少量吞吐，对带宽型算子可忽略。检测: kernel 层哨兵的“确定性”
+子项（同输入 `torch.equal` 两次）；或 `TASK_QUEUE_ENABLE` 1/0 对照。
+
+首现: 9 个布局/分配算子 Ascend 移植。
+
+<a id="ascend-capabilities"></a>
+### Ascend torch_npu 的三处设备能力/语义差异
+
+1. **不支持 channels_last**: `.to(memory_format=torch.channels_last)` /
+   `empty_like(..., memory_format=channels_last)` 抛
+   `Only contiguous_format or preserve_format is supported`。测试在 npu 跳过
+   该 view 分支。
+2. **empty_like(preserve_format) 不保留非连续 stride**: torch_npu 原生对
+   transposed 输入返回**连续**布局（CPU 保留 `(1,1024)`）。本库 empty_like 按
+   PyTorch 文档语义（dense 保留 stride）经 meta 推导，**设备无关**；op 层判卷
+   对齐 `reference` 而非原生，黄金仍为 CPU 语义。
+3. **工厂算子 dispatch key 不同**: `aten::empty_strided` 在 torch_npu 落
+   **PrivateUse1**（无 Autograd 包装），而带 autograd 的算子落
+   **AutogradPrivateUse1**。故 A1 注册**成对覆盖两键**
+   （`register.py::_a1_keys`，sdpa_math 范式）。
+
+复现: `ops/type_as`、`ops/empty_like`、`ops/empty_strided` 的 `example.py
+ascend910` 与 `PLATFORM.md`。
+
+<a id="ascend-a1-boundary"></a>
+### Ascend A1 注入的真实边界（按算子实测，非全局阻断）
+
+在真实 vLLM 0.20.2 + `vllm_fl`（Ascend910，in-process EngineCore，tiny llama
+head_dim=16）上，对 9 个基础 aten 算子逐个做「直接注册（`platform=ascend`）+
+基线/注入双跑 + 同进程 `CALL_COUNT` + token 对比」，结论是**按算子分化**，
+并非「内部重入导致全部不可用」：
+
+| 算子 | 实测结果 | 级别 |
+|---|---|---|
+| `empty_strided` | 生成阶段命中 gen=11（init=98/final=109），token 逐位一致 | **C2** |
+| `empty_like` | 生成阶段命中 gen=16（init=81/final=97），一致 | **C2** |
+| `type_as` / `item` / `_local_scalar_dense` | 注册正常、不崩，但参考模型前向未调用（count=0） | C1 |
+| `clone` | Triton kernel 在真实前向触发 vector core（待修） | C1 |
+| `detach` | 注册破坏 `nn.Parameter`/FakeTensor 构造（已知不兼容） | C1 |
+| `detach_` / `result_type` | 按设计不可 A1 注册 | C1 |
+
+**重要更正**：早期观察到的「大批 0-grid/vector-core」**未被证明**是
+「`PrivateUse1` 覆盖导致 torch_npu 内部调用普遍失效」。控制变量后，主要诱因是：
+
+1. `injection/a1_aten_ops` 的 `sys.modules` 切换机制（多算子注入时）；
+2. 计数文件「每调用写盘」的同步 I/O 扰动时序；
+3. 参考模型 `head_dim=4`（CANN 融合注意力不支持）+ 共享卡高负载；
+4. 个别算子的真实缺陷（如 `clone` 的 Triton strided kernel）。
+
+因此不要把“Ascend A1 注入边界”当成「所有基础算子 C2 不可行」的通用阻断；应按算子 allowlist 处理。
+
+复现: `scripts/c2_enginecore/validate.py`（EngineCore 多进程 baseline/init-only/injected，`execute_model` 前后快照区分 init 与生成阶段命中；失败非零退出，负例见 `tests/unit/test_c2_enginecore_decide.py`）。
+
+**做法**：Ascend 真实 vLLM 默认只允许 `c2_verified_ops`（当前 `empty_like` /
+`empty_strided`）全局启用，见 `configs/devices/ascend910.yaml::real_vllm`；
+其余按上表原因排除或后续修复。
+
+
 ## 通用检测方法
 
 | 问题类型 | 检测工具 |
@@ -380,6 +454,9 @@ P800 bf16 兜底路径会经 `aten::type_as` / `Tensor.to` 转换，而两者内
 | 钉选落空（选中预期外 impl） | 打印/断言 `call_op` 选中 impl_id，`VLLM_FL_PER_OP` 钉选对照；对照 #20 |
 | 插件注册整体无效 | 日志搜 `Error calling plugin` / `Duplicate impl_id`；对照 #23 |
 | 栈升级后 codegen / 脚本回归 | 路线样例与 bench 脚本全量重跑；对照 #21 / #22 |
+| Ascend triton 非确定/NaN | 同输入两次 `torch.equal` 哨兵；`TASK_QUEUE_ENABLE` 1/0 对照；见 [Ascend task queue](#ascend-task-queue) |
+| Ascend channels_last / empty_like stride | 设备能力探测 + 对齐 reference；见 [Ascend capabilities](#ascend-capabilities) |
+| Ascend A1 注入后 0-grid/vector-core | 逐算子 allowlist + EngineCore 分阶段 CALL_COUNT/token 对比；见 [Ascend A1 boundary](#ascend-a1-boundary) |
 
 ---
 

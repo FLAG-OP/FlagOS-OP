@@ -35,12 +35,14 @@ def run(profile):
                     assert got.data_ptr() != self_t.data_ptr(), "共享存储"
                     n_checks += 1
 
-    # channels_last 分支
-    cl = torch.randn(2, 3, 16, 16, dtype=torch.float32, device=dev).to(
-        memory_format=torch.channels_last)
-    got = empty_like_torch(cl, memory_format=torch.preserve_format)
-    assert got.stride() == cl.stride(), "channels_last preserve stride"
-    n_checks += 1
+    # channels_last 分支（Ascend torch_npu 不支持 channels_last，设备能力
+    # 差异，见 PLATFORM.md）
+    if not str(dev).startswith("npu"):
+        cl = torch.randn(2, 3, 16, 16, dtype=torch.float32, device=dev).to(
+            memory_format=torch.channels_last)
+        got = empty_like_torch(cl, memory_format=torch.preserve_format)
+        assert got.stride() == cl.stride(), "channels_last preserve stride"
+        n_checks += 1
 
     # 零元素
     z = torch.empty(0, 5, dtype=torch.float32, device=dev)

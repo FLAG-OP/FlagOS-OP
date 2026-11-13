@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "kind": "c2_enginecore",
+  "op": "empty_strided",
+  "run_id": "20261104T031036Z-39197",
+  "created_at": "2026-11-04T03:12:49.121255+00:00",
+  "model": "/tmp/c2model",
+  "env": {
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0",
+    "flagtree": "0.6.0+ascend.git15ec1a6c",
+    "flag_gems": "0.0.0+f7ae8e6b934a",
+    "vllm": "0.20.2+empty",
+    "vllm_plugin_fl": "0.0.0+g8b059122e.d20261008",
+    "python": "3.11.15",
+    "ascend_rt_visible_devices": "1",
+    "git_commit": "5a9203a97ac6011ed1823ea83b1322ac88607570",
+    "note": "vllm-plugin-fl / PlatformFL stack (not vLLM-Ascend)"
+  },
+  "baseline_rc": 0,
+  "injected_full_rc": 0,
+  "injected_init_rc": 0,
+  "baseline_ids": [
+    7,
+    21,
+    1,
+    18,
+    10,
+    23,
+    21,
+    1
+  ],
+  "injected_ids": [
+    7,
+    21,
+    1,
+    18,
+    10,
+    23,
+    21,
+    1
+  ],
+  "init_ids": [],
+  "init_only": {
+    "init": 98,
+    "gen": 0,
+    "final": 98,
+    "exec_calls": 0,
+    "pids": [
+      39962,
+      39961
+    ]
+  },
+  "injected": {
+    "init": 98,
+    "gen": 11,
+    "final": 109,
+    "exec_calls": 10,
+    "pids": [
+      40079,
+      40078
+    ]
+  },
+  "init_hits": 98,
+  "generation_hits": 11,
+  "final_hits": 109,
+  "has_full_dump": true,
+  "logs": {
+    "baseline": "/tmp/c2out2/empty_strided/baseline.stdout.log",
+    "init": "/tmp/c2out2/empty_strided/init.stdout.log",
+    "inject": "/tmp/c2out2/empty_strided/inject.stdout.log"
+  },
+  "passed": true,
+  "reasons": []
+}

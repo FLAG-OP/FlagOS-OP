@@ -4,8 +4,8 @@
 |---|---|
 | 算子名称 | `empty_like`（分配/元数据类） |
 | 语义 | [reference.py](reference.py)：未初始化，只约束 shape/dtype/stride/device |
-| 硬件平台 | **2 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；A1 canonical `AutogradPrivateUse1`，兼容 `PrivateUse1`）· p800-kunlunxin（P800 / XMLIR；A1 canonical `AutogradCUDA`，兼容 `CUDA`） |
-| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ `p800-kunlunxin`（P800）/ **A1** |
+| 硬件平台 | **3 个**：Cambricon MLU590（profile `cambricon`，torch_mlu；A1 canonical `AutogradPrivateUse1`，兼容 `PrivateUse1`）· p800-kunlunxin（P800 / XMLIR；A1 canonical `AutogradCUDA`，兼容 `CUDA`） · Ascend 910（profile `ascend910`，torch_npu；证据范围见文末） |
+| 目标设备 / 路线 | `cambricon`（MLU590-M9）/ `p800-kunlunxin`（P800）/ `ascend910`（Ascend 910）/ **A1** |
 | 日期 / 状态 | 2026-09-18 定稿 / 2026-10-12 注册契约同步 / 2026-10-22 P800 交付 / 2026-10-26 复验 |
 
 ## p800-kunlunxin 接入（2026-10-22 交付 / 2026-10-26 复验）
@@ -64,3 +64,13 @@
 
 [reports/development.md](reports/development.md) · [reports/test-report.md](reports/test-report.md) ·
 [reports/accuracy.md](reports/accuracy.md) · [reports/performance.md](reports/performance.md)
+
+## ascend910 证据分级（C0 / C1 / C2）
+
+| 级别 | 含义 | 本 PR |
+|---|---|---|
+| **C0** | 黄金 + op 层 | ✅ |
+| **C1** | per-op 等价消费方（等价 torch API 子进程） | ✅ |
+| **C2** | 真实 vLLM 前向实际命中（EngineCore 三段，生成阶段命中） | ✅（init=81 / **gen=16** / final=97，token 逐位一致；见 [reports/c2_ascend910/summary.json](reports/c2_ascend910/summary.json)） |
+
+结论：本算子达到 **C2**（EngineCore 三段：init=81 / gen=16 / final=97，见 reports/c2_ascend910/summary.json）。

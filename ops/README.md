@@ -35,7 +35,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 目标平台 | 当前状态 | 已登记算子 | 当前 profile / 型号 |
 |---|---|---:|---|
-| 华为昇腾（`ascend`） | 部分交付 | 3 | `ascend910` · `ascend910-c2-vllm` |
+| 华为昇腾（`ascend`） | 部分交付 | 12 | `ascend910` · `ascend910-c2-vllm` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
 | 昆仑芯（`kunlunxin`） | 部分交付 | 16 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
 | 平头哥（`thead`） | 部分交付 | 3 | `thead-ppu` · `thead-ppu-c2` |
@@ -64,8 +64,8 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 算子 | 作用 | 交付路线 | 证据 | 关键结论 |
 |---|---|---|---|---|
-| [type_as](type_as/) | 把 tensor 转换到另一个 tensor 的 dtype，并留在原设备。 | A1 · Triton | C1（cambricon · p800-kunlunxin） | 黄金 111/111，结果逐位一致。 |
-| [clone](clone/) | 复制 tensor 到独立存储。 | A1 · Triton | C1（cambricon · p800-kunlunxin） | 黄金 48/48；op 层测试覆盖包态执行。 |
+| [type_as](type_as/) | 把 tensor 转换到另一个 tensor 的 dtype，并留在原设备。 | A1 · Triton | C1（ascend910 · cambricon · p800-kunlunxin） | 黄金 111/111，结果逐位一致。 |
+| [clone](clone/) | 复制 tensor 到独立存储。 | A1 · Triton | C1（ascend910 · cambricon · p800-kunlunxin） | 黄金 48/48；op 层测试覆盖包态执行。 |
 | [contiguous](contiguous/) | 返回连续存储；输入本身连续时保持别名。 | A1 · Triton | C2（p800-kunlunxin） / C1（cambricon） | 黄金 114/114；转置路径使用 2D swizzle 调度。 |
 | [copy_](copy_/) | 写入已有 tensor，支持布局和广播。 | A1 · Triton | C1（cambricon · p800-kunlunxin） | 黄金 78/78。 |
 
@@ -76,8 +76,8 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 | 算子 | 作用 | 交付路线 | 证据 | 关键结论 |
 |---|---|---|---|---|
 | [dropout](dropout/) | 验证随机 dropout 语义和统计行为。 | A1 · Triton | C1（cambricon · p800-kunlunxin） | 黄金 189/189。 |
-| [detach](detach/) | 返回共享存储的非原地 detach 视图。 | A1 · torch | C1（cambricon · p800-kunlunxin） | 黄金 36/36。 |
-| [detach_](detach_/) | 在基础算子族中保留原地 detach 语义。 | experimental · torch | C0（cambricon · p800-kunlunxin） | 按设计不可 A1 注册，保持 NotImplementedError。 |
+| [detach](detach/) | 返回共享存储的非原地 detach 视图。 | A1 · torch | C1（ascend910 · cambricon · p800-kunlunxin） | 黄金 36/36。 |
+| [detach_](detach_/) | 在基础算子族中保留原地 detach 语义。 | experimental · torch | C0（ascend910 · cambricon · p800-kunlunxin） | 按设计不可 A1 注册，保持 NotImplementedError。 |
 
 ### 分配与元数据
 
@@ -85,10 +85,10 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 算子 | 作用 | 交付路线 | 证据 | 关键结论 |
 |---|---|---|---|---|
-| [empty_like](empty_like/) | 按另一个 tensor 的元数据分配未初始化 tensor。 | A1 · torch | C2（p800-kunlunxin） / C1（cambricon） | 元数据黄金 168/168。 |
+| [empty_like](empty_like/) | 按另一个 tensor 的元数据分配未初始化 tensor。 | A1 · torch | C2（ascend910 · p800-kunlunxin） / C1（cambricon） | 元数据黄金 168/168。 |
 | [empty](empty/) | 按 size 分配未初始化 tensor。 | experimental · torch | C0（cambricon · p800-kunlunxin） | 不注册，避免与 empty_strided 递归；元数据黄金 48/48。 |
-| [empty_strided](empty_strided/) | 按显式 size 和 stride 分配未初始化 tensor。 | A1 · torch | C2（p800-kunlunxin） / C1（cambricon） | 元数据黄金 30/30。 |
-| [result_type](result_type/) | 计算两个输入的 PyTorch dtype 提升结果。 | experimental · torch | C0（cambricon · p800-kunlunxin） | 纯元数据函数；按设计不可 A1 注册。 |
+| [empty_strided](empty_strided/) | 按显式 size 和 stride 分配未初始化 tensor。 | A1 · torch | C2（ascend910 · p800-kunlunxin） / C1（cambricon） | 元数据黄金 30/30。 |
+| [result_type](result_type/) | 计算两个输入的 PyTorch dtype 提升结果。 | experimental · torch | C0（ascend910 · cambricon · p800-kunlunxin） | 纯元数据函数；按设计不可 A1 注册。 |
 
 ### Host 标量
 
@@ -96,8 +96,8 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 算子 | 作用 | 交付路线 | 证据 | 关键结论 |
 |---|---|---|---|---|
-| [item](item/) | 把单元素 tensor 转换为 Python 标量。 | A1 · torch | C1（cambricon · p800-kunlunxin） | 黄金 36/36。 |
-| [_local_scalar_dense](_local_scalar_dense/) | 覆盖 item 底层的稠密标量私有原语。 | A1 · torch | C1（cambricon · p800-kunlunxin） | 黄金 36/36。 |
+| [item](item/) | 把单元素 tensor 转换为 Python 标量。 | A1 · torch | C1（ascend910 · cambricon · p800-kunlunxin） | 黄金 36/36。 |
+| [_local_scalar_dense](_local_scalar_dense/) | 覆盖 item 底层的稠密标量私有原语。 | A1 · torch | C1（ascend910 · cambricon · p800-kunlunxin） | 黄金 36/36。 |
 
 ## 平台注册契约
 

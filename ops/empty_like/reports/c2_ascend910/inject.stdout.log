@@ -1,0 +1,102 @@
+can not use command: npu-smi info
+/usr/local/python3.11.15/lib/python3.11/site-packages/flag_gems/utils/libentry.py:411: RuntimeWarning: active Triton backend does not provide a replay benchmarker; falling back to event timing
+  resolved_benchmark = resolve_benchmarker(
+/usr/local/python3.11.15/lib/python3.11/site-packages/torch_npu/npu/__init__.py:539: UserWarning: You can set the device capability via the environment variable TORCH_NPU_DEVICE_CAPABILITY. The return value of get_device_capability is only for compatibility with PyTorch and does not represent the actual capability of the NPU device.
+  warnings.warn(f"You can set the device capability via the environment variable TORCH_NPU_DEVICE_CAPABILITY. {warning_str}")
+/usr/local/python3.11.15/lib/python3.11/site-packages/flag_gems/utils/device_info.py:58: UserWarning: [device_info] torch_device_fn.get_device_capability returned None for device_id=0, fallback to (0, 0).
+  warnings.warn(
+2026-11-04 03:10:05,770 - 38430 - ServiceProfiler - INFO - VLLM_USE_V1 not set, auto-detected via vLLM 0.20.2+empty: default 1
+WARNING 11-04 03:10:05 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:06 [nixl_utils.py:34] NIXL is not available
+WARNING 11-04 03:10:06 [nixl_utils.py:44] NIXL agent config is not available
+WARNING 11-04 03:10:06 [registry.py:945] Model architecture DeepseekV4ForCausalLM is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4:DeepseekV4ForCausalLM.
+WARNING 11-04 03:10:06 [registry.py:945] Model architecture DeepSeekV4MTPModel is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4_mtp:DeepSeekV4MTP.
+[2026-11-04 03:10:06] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched HybridAttentionMambaModelConfig for Ascend
+WARNING 11-04 03:10:06 [vllm.py:896] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+WARNING 11-04 03:10:06 [vllm.py:914] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+[2026-11-04 03:10:06] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Block size is set to 128 if prefix cache or chunked prefill is enabled.
+can not use command: npu-smi info
+can not use command: npu-smi info
+/usr/local/python3.11.15/lib/python3.11/site-packages/flag_gems/utils/libentry.py:411: RuntimeWarning: active Triton backend does not provide a replay benchmarker; falling back to event timing
+  resolved_benchmark = resolve_benchmarker(
+/usr/local/python3.11.15/lib/python3.11/site-packages/flag_gems/utils/libentry.py:411: RuntimeWarning: active Triton backend does not provide a replay benchmarker; falling back to event timing
+  resolved_benchmark = resolve_benchmarker(
+/usr/local/python3.11.15/lib/python3.11/site-packages/torch_npu/npu/__init__.py:539: UserWarning: You can set the device capability via the environment variable TORCH_NPU_DEVICE_CAPABILITY. The return value of get_device_capability is only for compatibility with PyTorch and does not represent the actual capability of the NPU device.
+  warnings.warn(f"You can set the device capability via the environment variable TORCH_NPU_DEVICE_CAPABILITY. {warning_str}")
+/usr/local/python3.11.15/lib/python3.11/site-packages/flag_gems/utils/device_info.py:58: UserWarning: [device_info] torch_device_fn.get_device_capability returned None for device_id=0, fallback to (0, 0).
+  warnings.warn(
+/usr/local/python3.11.15/lib/python3.11/site-packages/torch_npu/npu/__init__.py:539: UserWarning: You can set the device capability via the environment variable TORCH_NPU_DEVICE_CAPABILITY. The return value of get_device_capability is only for compatibility with PyTorch and does not represent the actual capability of the NPU device.
+  warnings.warn(f"You can set the device capability via the environment variable TORCH_NPU_DEVICE_CAPABILITY. {warning_str}")
+/usr/local/python3.11.15/lib/python3.11/site-packages/flag_gems/utils/device_info.py:58: UserWarning: [device_info] torch_device_fn.get_device_capability returned None for device_id=0, fallback to (0, 0).
+  warnings.warn(
+WARNING 11-04 03:10:18 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:18 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:19 [nixl_utils.py:34] NIXL is not available
+WARNING 11-04 03:10:19 [nixl_utils.py:34] NIXL is not available
+WARNING 11-04 03:10:19 [nixl_utils.py:44] NIXL agent config is not available
+WARNING 11-04 03:10:19 [nixl_utils.py:44] NIXL agent config is not available
+WARNING 11-04 03:10:20 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:20 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:20 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:20 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:20 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-04 03:10:20 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+(EngineCore pid=38462) 2026-11-04 03:10:20,609 - 38462 - ServiceProfiler - INFO - VLLM_USE_V1 not set, auto-detected via vLLM 0.20.2+empty: default 1
+(EngineCore pid=38462) WARNING 11-04 03:10:20 [registry.py:945] Model architecture DeepseekV4ForCausalLM is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4:DeepseekV4ForCausalLM.
+(EngineCore pid=38462) WARNING 11-04 03:10:20 [registry.py:945] Model architecture DeepSeekV4MTPModel is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4_mtp:DeepSeekV4MTP.
+(EngineCore pid=38462) [2026-11-04 03:10:20] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched HybridAttentionMambaModelConfig for Ascend
+(EngineCore pid=38462) [2026-11-04 03:10:20] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.impl.attention] NPU compatibility enabled: torch.Event -> torch.npu.Event
+(EngineCore pid=38462) [2026-11-04 03:10:20] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched causal_conv1d ops for Ascend (pure-PyTorch)
+(EngineCore pid=38462) [2026-11-04 03:10:21] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched FLA ops for Ascend NPU (proper recurrent chunk_gated_delta_rule)
+(EngineCore pid=38462) [2026-11-04 03:10:21] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched MMEncoderAttention for NPU (matmul attention)
+(EngineCore pid=38462) [2026-11-04 03:10:21] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched fused_moe for Ascend
+(EngineCore pid=38462) [2026-11-04 03:10:21] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Disabled GDN prefill kernel warmup for Ascend NPU
+(EngineCore pid=38462) [2026-11-04 03:10:21] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched all GDN Triton kernels with pure-PyTorch for Ascend NPU
+(EngineCore pid=38462) [2026-11-04 03:10:21] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Patched GDN _forward_core ssm_state gather for Ascend (index_select).
+(EngineCore pid=38462) `Qwen2VLImageProcessorFast` is deprecated. The `Fast` suffix for image processors has been removed; use `Qwen2VLImageProcessor` instead.
+(EngineCore pid=38462) [2026-11-04 03:10:21] [INFO] [vllm_fl.dispatch.backends.vendor.ascend.patch] Forced native ViT pos-embed interpolation for Ascend.
+(EngineCore pid=38462) WARNING:root:Skipped registering operator: This is not allowed since there's already a kernel registered from python overriding ne_.Scalar's behavior for PrivateUse1 dispatch key and aten namespace.
+(EngineCore pid=38462) WARNING:root:Skipped registering operator: This is not allowed since there's already a kernel registered from python overriding ne_.Tensor's behavior for PrivateUse1 dispatch key and aten namespace.
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch] Registering vendor backends for current platform: ascend
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] OpManager initialized: 36 ops with 70 implementations
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.policy] Using custom config from '/usr/local/python3.11.15/lib/python3.11/site-packages/vllm_fl/dispatch/config/ascend.yaml'
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'attention_backend' using 'vendor.ascend' (kind=vendor, vendor=ascend)
+(EngineCore pid=38462) Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+(EngineCore pid=38462) Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:00<00:00, 124.53it/s]
+(EngineCore pid=38462) 
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'silu_and_mul' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'gelu_and_mul' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'silu_and_mul_with_clamp' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'indexer_k_quant_and_cache' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'cp_gather_indexer_k_quant_cache' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'top_k_per_row_prefill' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'pack_seq_triton' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'top_k_per_row_decode' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'unpack_seq_triton' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'fused_inv_rope_fp8_quant' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'deepseek_v4_fp8_einsum' using 'reference.torch' (kind=reference, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'fused_q_kv_rmsnorm' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'compute_global_topk_indices_and_lens' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'flash_mla_with_kvcache' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'dequantize_and_gather_k_cache' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'combine_topk_swa_indices' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'flash_mla_sparse_fwd' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'fused_indexer_q_rope_quant' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'cutlass_scaled_mm' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'topk_softmax' using 'vendor.ascend' (kind=vendor, vendor=ascend)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'grouped_topk' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'fused_topk_bias' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'moe_align_block_size' using 'vendor.ascend' (kind=vendor, vendor=ascend)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'invoke_fused_moe_triton_kernel' using 'vendor.ascend' (kind=vendor, vendor=ascend)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'moe_sum' using 'vendor.ascend' (kind=vendor, vendor=ascend)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'fused_marlin_moe' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'router_gemm_bf16_fp32' using 'default.flagos' (kind=flagos, vendor=None)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'rms_norm' using 'vendor.ascend' (kind=vendor, vendor=ascend)
+(EngineCore pid=38462) [2026-11-04 03:10:23] [INFO] [vllm_fl.dispatch.manager] Op 'rotary_embedding' using 'vendor.ascend' (kind=vendor, vendor=ascend)
+(EngineCore pid=38462) WARNING 11-04 03:10:25 [vllm.py:896] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+(EngineCore pid=38462) WARNING 11-04 03:10:25 [vllm.py:914] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+Rendering prompts:   0%|          | 0/1 [00:00<?, ?it/s]Rendering prompts: 100%|██████████| 1/1 [00:00<00:00, 13.27it/s]
+Processed prompts:   0%|          | 0/1 [00:00<?, ?it/s, est. speed input: 0.00 toks/s, output: 0.00 toks/s][rank0]:[W1104 03:10:25.278928898 TensorFactories.cpp:340] Warning: Cannot create tensor with interal format while allow_internel_format=False, tensor will be created with base format. (function operator())
+Processed prompts: 100%|██████████| 1/1 [00:00<00:00,  1.47it/s, est. speed input: 7.37 toks/s, output: 11.79 toks/s]Processed prompts: 100%|██████████| 1/1 [00:00<00:00,  1.47it/s, est. speed input: 7.37 toks/s, output: 11.79 toks/s]Processed prompts: 100%|██████████| 1/1 [00:00<00:00,  1.47it/s, est. speed input: 7.37 toks/s, output: 11.79 toks/s]
+C2_RUN {"op": "empty_like", "mode": "full", "run_id": "20261104T030824Z-37580", "ids": [7, 21, 1, 18, 10, 23, 21, 1], "model": "/tmp/c2model"}

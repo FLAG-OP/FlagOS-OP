@@ -32,3 +32,16 @@
 ## 平台差异与兜底
 
 - P800 无 fp64，float64 黄金用例按设备能力 skip（7 pass / 0 fail / 1 skip）。
+
+## 验证矩阵（Ascend910 / C0）
+
+| 层 | 命令 | 结果 |
+|---|---|---|
+| kernel | `python3 test/kernel_level.py ascend910` | PASS |
+| op | `python3 test/op_level.py ascend910` | PASS |
+| 应用 | `python3 example.py ascend910` | 适用层通过；应用层仅原生 torch smoke，不声明 C1 |
+| 黄金 | `python3 script/check_accuracy.py --impl torch --device npu` | 全过 |
+| 性能 | `python3 scripts/perf_run.py --device ascend910 --pattern "ops.result_type." --update-baseline` | OK |
+
+Ascend 接入要点：按设计**不可 A1 注册**（保持 `NotImplementedError`）；
+仅做 kernel/op 层与原生应用 smoke，不声明 C1/C2（见 `PLATFORM.md`）。

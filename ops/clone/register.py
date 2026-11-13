@@ -44,7 +44,8 @@ def clone_aten(self, *, memory_format=None):
 # Dashener2 2026-10-09-fix register_a1 签名升级（issue #19）: counter + platform，
 # 默认 dispatch_key 对齐模板（AutogradPrivateUse1）；_DEVICE_PROBE 注册守卫。
 # # Dashener2 <dashen272@outlook.com>
-_BACKENDS = {"cambricon": "cambricon", "p800-kunlunxin": "p800-kunlunxin"}
+_BACKENDS = {"cambricon": "cambricon", "p800-kunlunxin": "p800-kunlunxin",
+             "ascend": "ascend"}
 
 
 def _backend_for(dispatch_key: str, platform=None):
@@ -80,7 +81,31 @@ def _probe_ok(backend: str) -> bool:
         except Exception:
             return False
         return torch.cuda.is_available()
+
+    if backend == "ascend":
+        try:
+            import torch_npu  # noqa: F401  触发 torch.npu 注册
+        except Exception:
+            return False
+        return hasattr(torch, "npu") and torch.npu.is_available()
     return False
+
+
+# A1 注册键成对覆盖: torch_npu 上工厂算子落 PrivateUse1、带 autograd 的落
+# AutogradPrivateUse1；P800 侧同理为 CUDA/AutogradCUDA。成对注册避免漏命中。
+_A1_KEY_PAIRS = {
+    "AutogradPrivateUse1": "PrivateUse1",
+    "PrivateUse1": "AutogradPrivateUse1",
+    "AutogradCUDA": "CUDA",
+    "CUDA": "AutogradCUDA",
+}
+
+
+def _a1_keys(dispatch_key: str) -> list:
+    keys = [dispatch_key]
+    if dispatch_key in _A1_KEY_PAIRS:
+        keys.append(_A1_KEY_PAIRS[dispatch_key])
+    return keys
 
 
 def register_a1(dispatch_key: str = "AutogradPrivateUse1",
@@ -105,7 +130,8 @@ def register_a1(dispatch_key: str = "AutogradPrivateUse1",
             counter["n"] = counter.get("n", 0) + 1
             return clone_aten(*args, **kwargs)
     _LIB = torch.library.Library("aten", "IMPL")
-    _LIB.impl("clone", fn, dispatch_key)
+    for _k in _a1_keys(dispatch_key):
+        _LIB.impl("clone", fn, _k)
     return _LIB
 
 
