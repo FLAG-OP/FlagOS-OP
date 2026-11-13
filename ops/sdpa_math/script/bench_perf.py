@@ -94,6 +94,8 @@ def main() -> int:
         from kernel.torch_level import sdpa_math_torch as ours_fn
     elif dev.startswith("cuda"):
         from kernel.p800_fast_level import sdpa_math_p800_fast as ours_fn
+    elif dev.startswith("mlu"):
+        from kernel.mlu590_fast_level import sdpa_math_mlu590_fast as ours_fn
     else:
         from kernel.triton_level import sdpa_math_triton as ours_fn
     # 注册推迟到 native 基线测完（注册后 torch.ops 就是本实现，测不到原生）
@@ -140,6 +142,8 @@ def main() -> int:
             key, impl = "AutogradPrivateUse1", "triton"
         elif dev.startswith("cuda") and has_xmlir:
             key, impl = "AutogradCUDA", "p800"
+        elif dev.startswith("mlu"):
+            key, impl = "AutogradPrivateUse1", "mlu590"
         else:
             key, impl = "CPU", "torch"
         libs = register_a1(key, None, impl)
