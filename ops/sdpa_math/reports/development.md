@@ -108,7 +108,7 @@ dispatch dump），旧代码零改动。
 | 黄金回归 | ☑ 175/175 | reference / torch(CPU) / triton(NPU) / p800(P800) 四实现全过；`--impl native` 131/131（44 组 bool 按 §2 分歧跳过） |
 | perf 门禁 | ☑ FAIL 0 | `perf_run --pattern sdpa_math` + `perf_compare`：triton 0.543ms(+7.8%) / torch 0.567ms / reference 0.874ms（warmup 20 · iters 50，融合改动后复测） |
 | P800 | ☑ PASS | kernel 52/52；黄金 p800 @ cuda:1 175/175（worst 3.906e-3，bf16 容差内）；A1 22/22；FlagGems 应用层 9/9；P800 perf gate FAIL 0 |
-| FlagOS E2E | ☑ PASS | 4 层 mini-LLM + GELU/GQA/熵正则/训练/生成；A1 拦截 856 次，logits L∞ 1.56e-2，贪心序列一致 |
+| FlagOS E2E | ☑ PASS | 4 层 mini-LLM + GELU/GQA/熵正则/训练/生成；profile `p800-kunlunxin`（device `cuda:1`，同 §1.1 与 `configs/devices/p800-kunlunxin.yaml`）；A1 拦截 936 次——计数来源 [e2e_flagos_p800-kunlunxin.json](e2e_flagos_p800-kunlunxin.json) 的 `plugin.interceptions`（与 [test-report.md](test-report.md)「A1 拦截 936 次」及 [flaggems5-p800-retest.md](../../../docs/flaggems5-p800-retest.md) 4.2 列一致；本行原记 856——早期实验 [`944b050`](https://github.com/FLAG-OP/FlagOS-OP/commit/944b0500d72ca0c6e73e05c98cdb3b955e3bd752) 的原始 JSON 记 856 次，P800 backward 优化后的复验 [`4671389`](https://github.com/FLAG-OP/FlagOS-OP/commit/4671389931185e247fd480004e5fafb13f9c8f70) 更新为 936 次；原汇总报告未同步，2026-11-11 按后续原始 JSON 将当前汇总改为 936 并保留两轮历史来源（2026-11-12 更正先前「全历史无 856 原始数据」的错误说明），原始测量值未改），logits L∞ 1.56e-2，贪心序列一致 |
 
 ## 5. 性能
 
