@@ -14,6 +14,8 @@ sys.path.insert(0, str(ROOT))
 
 # wt-2026-11-09-sigmoid-p800
 # wt <liyanze1560495@hotmail.com>
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
 
 
 def _bench(fn, device: str, warmup: int = 20, iters: int = 100) -> float:
@@ -43,7 +45,9 @@ def main() -> int:
     x = torch.randn(64, 1024, dtype=torch.float32,
                     device=profile.torch_device)
     direct_us = _bench(lambda: sigmoid_triton(x), profile.torch_device)
-    register.register_a1(profile.dispatch_key, platform=profile.name)
+    register.register_a1(
+        profile.dispatch_key, impl="triton", platform=profile.name,
+    )
     aten_us = _bench(lambda: torch.sigmoid(x), profile.torch_device)
     overhead_us = aten_us - direct_us
     print(f"A1 sigmoid: direct={direct_us:.3f} us, "

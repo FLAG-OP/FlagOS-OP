@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
+import importlib.metadata
 import json
 import os
 import subprocess
@@ -15,6 +17,8 @@ sys.path.insert(0, str(ROOT))
 
 # wt-2026-11-09-sigmoid-p800
 # wt <liyanze1560495@hotmail.com>
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
 
 CASES = [
     ("tail_hidden", [1, 14336]),
@@ -24,6 +28,13 @@ CASES = [
 ]
 DTYPES = ["float16", "bfloat16", "float32"]
 IMPLS = ["triton", "flaggems", "native"]
+
+
+def _version(distribution: str) -> str | None:
+    try:
+        return importlib.metadata.version(distribution)
+    except importlib.metadata.PackageNotFoundError:
+        return None
 
 
 def _run_one(device: str, case_name: str, shape: list[int],
@@ -70,11 +81,14 @@ def main() -> int:
     parser.add_argument("--profile", default="p800-kunlunxin")
     parser.add_argument("--warmup", type=int, default=20)
     parser.add_argument("--iters", type=int, default=100)
-    parser.add_argument("--out", help="可选 JSON 输出路径（生成物不入库）")
+    parser.add_argument("--out", help="可选 JSON 输出路径")
     args = parser.parse_args()
 
     from common.device import load_profile
     profile = load_profile(args.profile)
+    # 子进程按官方 profile 暴露物理卡；父进程本身不分配设备。
+    os.environ["CUDA_VISIBLE_DEVICES"] = profile.visible_devices
+    os.environ["XPU_VISIBLE_DEVICES"] = profile.visible_devices
     records = []
     total = len(CASES) * len(DTYPES) * len(IMPLS)
     completed = 0
@@ -91,11 +105,48 @@ def main() -> int:
 
     print()
     _print_markdown(records)
+    by_key = {(r["case"], r["dtype"], r["impl"]): r for r in records}
+    ratios = []
+    for case_name, _shape in CASES:
+        for dtype in DTYPES:
+            triton_ms = by_key[(case_name, dtype, "triton")]["latency_ms"]
+            native_ms = by_key[(case_name, dtype, "native")]["latency_ms"]
+            ratios.append(triton_ms / native_ms)
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        commit = "unknown"
     bundle = {
         "schema": 1,
         "operator": "aten.sigmoid",
         "profile": profile.name,
+        "collected_at": datetime.now(timezone.utc).isoformat(),
+        "git_commit": commit,
+        "command": (
+            "python3 ops/sigmoid/script/bench_matrix.py "
+            f"--profile {profile.name} --warmup {args.warmup} "
+            f"--iters {args.iters} --out {args.out or '<path>'}"
+        ),
+        "device": profile.torch_device,
+        "visible_devices": profile.visible_devices,
+        "environment": {
+            "python": sys.version.split()[0],
+            "torch": _version("torch"),
+            "triton": _version("triton"),
+            "flag_gems": _version("flag-gems"),
+        },
+        "default_route": "native",
+        "verification_route": "triton",
         "isolated_subprocess_per_case": True,
+        "summary": {
+            "cases": len(records),
+            "triton_combinations": len(ratios),
+            "triton_faster_than_native": sum(ratio < 1.0 for ratio in ratios),
+            "triton_native_ratio_min": round(min(ratios), 6),
+            "triton_native_ratio_max": round(max(ratios), 6),
+        },
         "records": records,
     }
     if args.out:

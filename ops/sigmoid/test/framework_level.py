@@ -15,6 +15,8 @@ sys.path.insert(0, str(ROOT))
 
 # wt-2026-11-09-sigmoid-p800
 # wt <liyanze1560495@hotmail.com>
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
 
 
 def _app_forward(device: str, dtype_name: str):
@@ -37,7 +39,7 @@ def _child(out_path: str, register: bool, device: str,
     if register:
         import importlib
         reg = importlib.import_module("ops.sigmoid.register")
-        reg.register_a1(dispatch_key, platform=platform)
+        reg.register_a1(dispatch_key, impl="triton", platform=platform)
     y = _app_forward(device, dtype_name)
     calls = 0
     if register:

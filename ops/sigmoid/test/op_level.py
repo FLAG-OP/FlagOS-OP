@@ -10,6 +10,8 @@ sys.path.insert(0, str(OP_DIR.parent.parent))
 
 # wt-2026-11-09-sigmoid-p800
 # wt <liyanze1560495@hotmail.com>
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
 
 
 def run(profile):
@@ -36,9 +38,10 @@ def run(profile):
 
     reg.CALL_COUNT["sigmoid"] = 0
     counter = {"n": 0}
-    lib = reg.register_a1(profile.dispatch_key, counter=counter,
-                          platform=profile.name)
-    assert lib is not None
+    libs = reg.register_a1(profile.dispatch_key, counter=counter,
+                           impl="triton", platform=profile.name)
+    assert len(libs) == 2
+    assert reg._REGISTERED_KEYS == ("AutogradCUDA", "CUDA")
 
     before = reg.CALL_COUNT["sigmoid"]
     out = torch.sigmoid(x)
@@ -71,7 +74,8 @@ def run(profile):
 
     return {
         "ok": True,
-        "registered": f"aten::sigmoid@{profile.dispatch_key}",
+        "registered": "aten::sigmoid@AutogradCUDA+CUDA",
+        "impl": "triton",
         "intercepted_calls": reg.CALL_COUNT["sigmoid"],
         "contract_counter": counter["n"],
         "optimized_dtypes": ["float16", "bfloat16", "float32"],

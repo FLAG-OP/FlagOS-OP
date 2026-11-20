@@ -16,6 +16,9 @@ import os
 import time
 from pathlib import Path
 
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -31,9 +34,15 @@ def main() -> None:
         import torch_xmlir  # noqa: F401
     from vllm import LLM, SamplingParams
 
+    tensor_parallel_size = int(os.environ.get("A1_VLLM_TP", "1"))
+    engine_kwargs = {}
+    if tensor_parallel_size > 1:
+        engine_kwargs["distributed_executor_backend"] = os.environ.get(
+            "A1_VLLM_EXECUTOR", "mp")
     llm = LLM(model=args.model, enforce_eager=True, max_model_len=128,
-              tensor_parallel_size=1, gpu_memory_utilization=0.2,
-              trust_remote_code=True, disable_log_stats=True)
+              tensor_parallel_size=tensor_parallel_size,
+              gpu_memory_utilization=0.2, trust_remote_code=True,
+              disable_log_stats=True, **engine_kwargs)
     t0 = time.perf_counter()
     outs = llm.generate(
         ["the future of AI is", "hello world"],
@@ -41,6 +50,7 @@ def main() -> None:
     )
     latency = time.perf_counter() - t0
     result = {
+        "runner_pid": os.getpid(),
         "output_token_ids": [list(o.outputs[0].token_ids) for o in outs],
         "latency_s": round(latency, 4),
     }

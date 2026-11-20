@@ -9,6 +9,8 @@ from flag_gems.runtime import torch_device_fn
 
 # wt-2026-11-09-sigmoid-p800
 # wt <liyanze1560495@hotmail.com>
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
 
 PLATFORM = "multi-triton"
 _SUPPORTED = (torch.float16, torch.bfloat16, torch.float32)
@@ -29,6 +31,9 @@ def _sigmoid_kernel(x_ptr, y_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
 def _native_fallback(x: torch.Tensor) -> torch.Tensor:
     """绕过当前 CUDA 注册，避免 A1 实现递归调用自身。"""
     return torch.ops.aten.sigmoid.default.redispatch(_FALLBACK_KEYSET, x)
+
+
+sigmoid_native = _native_fallback
 
 
 def sigmoid_triton(x: torch.Tensor) -> torch.Tensor:

@@ -19,6 +19,9 @@ from pathlib import Path
 
 _DEFAULT_ROOT = Path(__file__).resolve().parents[1]
 
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
+
 # 可在真实 vLLM 进程内安全注册的算子（实测）。
 # 排除项与原因:
 #   empty / detach_ / result_type —— 设计上不可 A1 拦截（见各 op 的 register.py）。
@@ -154,6 +157,7 @@ def _maybe_counter(op: str):
         _aten_label = {
             "sdpa_math": "aten::_scaled_dot_product_attention_math",
             "embedding": "aten::embedding",
+            "sigmoid": "aten::sigmoid",
         }.get(op, op)
         _t0 = _time.time()
         cpath.write_text(_json.dumps({
@@ -287,6 +291,55 @@ def register_all(dispatch_key: str = "PrivateUse1",
     if "sdpa_math" in registered:
         _install_sdpa_consumer()
     return registered
+
+
+def install_sigmoid_consumer() -> bool:
+    """让真实 vLLM EngineCore sampler 显式消费 ``aten::sigmoid``。
+
+    vLLM 的常规模型路径通常使用 SiLU/softmax，不天然调用独立 sigmoid。
+    当 ``A1_SIGMOID_CONSUMER=sampler_logits`` 时，在 worker 内对归一化
+    logits 施加单调 sigmoid，再交给原 sampler。基线与注入组使用同一
+    consumer；greedy argmax 排序不变，sigmoid 输出实际参与 token 选择。
+    """
+    if os.environ.get("A1_SIGMOID_CONSUMER") != "sampler_logits":
+        return False
+    import functools
+    import json as _json
+    import time as _time
+
+    import torch
+    from vllm.v1.sample.sampler import Sampler
+
+    if getattr(Sampler, "_flagos_sigmoid_consumer", False):
+        return True
+    original = Sampler.forward
+
+    @functools.wraps(original)
+    def forward(self, logits, *args, **kwargs):
+        # Per-row scaling keeps values in [-1, 1], avoiding fp16 saturation
+        # ties while preserving the original argmax order.
+        scale = logits.detach().abs().amax(dim=-1, keepdim=True).clamp_min(1.0)
+        gated = torch.sigmoid(logits / scale)
+        evidence_path = os.environ.get("A1_SIGMOID_EVIDENCE_FILE")
+        if evidence_path and os.environ.get("FLAGOS_A1_ATEN_INJECT") == "1":
+            try:
+                with open(evidence_path, "a", encoding="utf-8") as handle:
+                    handle.write(_json.dumps({
+                        "type": "consume",
+                        "consumer": "vllm.v1.sample.Sampler.forward",
+                        "pid": os.getpid(),
+                        "shape": list(logits.shape),
+                        "dtype": str(logits.dtype),
+                        "device": str(logits.device),
+                        "timestamp": round(_time.time(), 6),
+                    }) + "\n")
+            except OSError:
+                pass
+        return original(self, gated, *args, **kwargs)
+
+    Sampler.forward = forward
+    Sampler._flagos_sigmoid_consumer = True
+    return True
 
 
 def _tolist(x) -> list[int]:

@@ -23,6 +23,9 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).parent
 INJECTION = ROOT / "injection"
 
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
+
 # 算子 → 计数文件环境变量（与 ops/<op>/register.py 一致）
 COUNT_ENV = {
     "type_as": "A1_TYPE_AS_COUNT_FILE",
@@ -36,6 +39,7 @@ COUNT_ENV = {
     "_local_scalar_dense": "A1_LSD_COUNT_FILE",
     "embedding": "A1_EMBEDDING_COUNT_FILE",
     "sdpa_math": "A1_SDPA_MATH_COUNT_FILE",
+    "sigmoid": "A1_SIGMOID_COUNT_FILE",
 }
 
 
@@ -83,14 +87,14 @@ def _run(model: str, out_json: str, *, inject: bool, count_dir: str,
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{INJECTION}{os.pathsep}{ROOT}"
     env["VLLM_LOGGING_LEVEL"] = "WARNING"
+    for k, v in (extra_env or {}).items():
+        env[k] = v
     if inject:
         env["FLAGOS_A1_ATEN_INJECT"] = "1"
         env["FLAGOS_TEMPLATES_ROOT"] = str(ROOT)
         env["A1_DISPATCH_KEY"] = dispatch_key
         for op, var in COUNT_ENV.items():
             env[var] = str(Path(count_dir) / op)
-        for k, v in (extra_env or {}).items():
-            env[k] = v
     cmd = [sys.executable, str(HERE / "_aten_runner.py"), str(out_json), model]
     subprocess.run(cmd, check=True, env=env, cwd=str(ROOT))
     return json.loads(Path(out_json).read_text())
@@ -104,10 +108,44 @@ def _agg_counts(count_dir: str) -> dict:
         if dot and tail.isdigit():      # 计数文件带 pid 后缀 → 还原算子名
             op = stem
         try:
-            agg[op] = agg.get(op, 0) + sum(json.load(open(p)).values())
-        except (OSError, ValueError):
+            payload = json.load(open(p, encoding="utf-8"))
+            value = payload.get(op) if isinstance(payload, dict) else None
+            if isinstance(value, int) and not isinstance(value, bool):
+                agg[op] = agg.get(op, 0) + value
+        except (OSError, ValueError, TypeError):
             continue
     return agg
+
+
+def _count_processes(count_dir: str) -> list[dict]:
+    details = []
+    for p in glob.glob(str(Path(count_dir) / "*")):
+        name = os.path.basename(p)
+        stem, dot, tail = name.rpartition(".")
+        if not (dot and tail.isdigit()):
+            continue
+        try:
+            payload = json.load(open(p, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        numeric = [v for v in payload.values()
+                   if isinstance(v, int) and not isinstance(v, bool)]
+        details.append({"op": stem, "pid": int(tail),
+                        "hits": sum(numeric), "file": name})
+    return sorted(details, key=lambda item: (item["op"], item["pid"]))
+
+
+def _jsonl_records(path: str) -> list[dict]:
+    records = []
+    try:
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            try:
+                records.append(json.loads(line))
+            except ValueError:
+                continue
+    except OSError:
+        pass
+    return records
 
 
 def run_real_vllm(profile) -> dict:
@@ -118,11 +156,24 @@ def run_real_vllm(profile) -> dict:
         count_dir = os.path.join(d, "counts")
         os.makedirs(count_dir, exist_ok=True)
         extra_env = {}
+        common_env = {
+            # 与正式 profile 的物理卡选择和多进程执行方式保持一致；
+            # runner 仍用 128 token / 0.2 显存比例的最小 C2 负载。
+            "CUDA_VISIBLE_DEVICES": profile.visible_devices,
+            "A1_VLLM_TP": str(profile.framework.get(
+                "tensor_parallel_size", 1)),
+            "A1_VLLM_EXECUTOR": str(profile.framework.get(
+                "distributed_executor_backend", "mp")),
+        }
+        ops = [o.strip() for o in
+               os.environ.get("FLAGOS_A1_OPS", "").split(",") if o.strip()]
+        if "sigmoid" in ops:
+            common_env["A1_SIGMOID_CONSUMER"] = "sampler_logits"
+            common_env["A1_SIGMOID_EVIDENCE_FILE"] = os.path.join(
+                count_dir, "sigmoid_consumer.jsonl")
         if profile.name.startswith("p800"):
             # P800 上 sdpa_math 走 vendor O/LSE + exact-P 实现（与 op 层交付一致）
             extra_env["A1_SDPA_MATH_IMPL"] = "p800"
-            ops = [o.strip() for o in
-                   os.environ.get("FLAGOS_A1_OPS", "").split(",") if o.strip()]
             if "sdpa_math" in ops:
                 # 真实引擎等价消费者: prefill 注意力 → A1 private math；
                 # 证据 = 命中计数 + 概率图统计 JSONL + 梯度 probe。
@@ -131,10 +182,16 @@ def run_real_vllm(profile) -> dict:
                     count_dir, "sdpa_evidence.jsonl")
                 extra_env["A1_SDPA_GRADPROBE"] = "1"
         base = _run(model, out_base, inject=False, count_dir=count_dir,
-                    dispatch_key=profile.dispatch_key)
+                    dispatch_key=profile.dispatch_key,
+                    extra_env=common_env)
+        inject_env = dict(common_env)
+        inject_env.update(extra_env)
         inj = _run(model, out_inj, inject=True, count_dir=count_dir,
-                    dispatch_key=profile.dispatch_key, extra_env=extra_env)
+                    dispatch_key=profile.dispatch_key, extra_env=inject_env)
         counts = _agg_counts(count_dir)
+        count_processes = _count_processes(count_dir)
+        sigmoid_consumer = _jsonl_records(
+            os.path.join(count_dir, "sigmoid_consumer.jsonl"))
         sdpa = _agg_sdpa_evidence(count_dir, inj)
 
     match = base["output_token_ids"] == inj["output_token_ids"]
@@ -145,8 +202,14 @@ def run_real_vllm(profile) -> dict:
         "profile": profile.name,
         "model": model,
         "output_match": match,
+        "baseline_output_token_ids": base["output_token_ids"],
+        "injected_output_token_ids": inj["output_token_ids"],
         "counts": counts,
+        "count_processes": count_processes,
         "total_calls": total,
+        "runner_pids": {"baseline": base.get("runner_pid"),
+                        "injected": inj.get("runner_pid")},
+        "sigmoid_consumer": sigmoid_consumer,
         "sdpa": sdpa,
         "latency_s": {"base": base.get("latency_s"),
                       "inj": inj.get("latency_s")},

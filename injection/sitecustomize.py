@@ -50,6 +50,30 @@ if os.environ.get("FLAGOS_A1_ATEN_INJECT") == "1":
     except Exception:
         pass
 
+# wt-2026-11-20-fix
+# wt <liyanze1560495@hotmail.com>
+# sigmoid C2 等价消费者：基线与注入组都在真实 EngineCore worker 的
+# sampler logits 路径消费 sigmoid；只有注入组注册自研实现并记录命中。
+if os.environ.get("A1_SIGMOID_CONSUMER") == "sampler_logits":
+    try:
+        import sys as _sys
+
+        # P800 在 vLLM 首次导入前先绑定 XMLIR 的 CUDA 兼容后端，避免平台
+        # 探测在 sitecustomize 阶段缓存为普通 CUDA/CPU。
+        try:
+            import torch_xmlir  # noqa: F401
+        except Exception:
+            pass
+
+        _root = os.environ.get("FLAGOS_TEMPLATES_ROOT", "")
+        if _root and _root not in _sys.path:
+            _sys.path.insert(0, _root)
+        import a1_aten_ops as _a1_aten_ops
+
+        _a1_aten_ops.install_sigmoid_consumer()
+    except Exception:
+        pass
+
 # FlagOS C2 引擎侧 attention 后端补丁（sdpa_math × vLLM-Ascend）。
 # FLAGOS_SDPA_MATH_ATTN=1 时，把 NPUPlatform.get_attn_backend_cls 补丁为
 # 返回 FlagOSMathAttentionBackend——真实前向走 aten math 后端（A1 拦截目标），
