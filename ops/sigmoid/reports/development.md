@@ -30,6 +30,8 @@
 
 A1 在 profile 指定的 CUDA dispatch key 上注册。P800 后端使用 FlagGems `pointwise_dynamic` 和 `CodeGenConfig`；通用 Triton 后端保留尾块 mask 和大张量 block 65536。两者均在 `torch_device_fn.device` 上下文运行且不使用 autotune。不支持的 dtype/layout 使用 `CompositeExplicitAutograd` redispatch，避免注册递归。
 
+2026-11-22 针对连续 `numel=255` 增加固定 256 lane 的专用 Triton kernel：所有 load/store 均无 mask，第 256 lane 的输入下标钳制到 254，结果存入 256 项底层存储后裁剪。该路径替代了会触发 255 元素设备 copy 的 padding 方案。
+
 | 层级 | 状态 | 说明 |
 |---|---|---|
 | torch | 完成 | ATen 组合基线 |
@@ -57,12 +59,13 @@ A1 在 profile 指定的 CUDA dispatch key 上注册。P800 后端使用 FlagGem
 |---|---|---|---|
 | 1 | 当前 12 个组合均未超过原生 | 不适合默认替换所有 sigmoid | 本次如实记录；后续路由或 kernel 优化 |
 | 2 | 只在 P800 实机验证 | 不能外推其他五个平台 | 本次范围仅 P800，其他平台独立复测 |
-| 3 | 只覆盖 forward/C1 | 不含 backward 和真实模型引擎 | 明确列为范围外 |
+| 3 | 当前只完成历史 forward/C1 基线 | backward 范围外；真实 vLLM C2 当前待复测 | C2 脚本已具备，运行时恢复后采集 |
 | 4 | 非连续输入会连续化 | 不保留原 stride | 数值与 shape 已验证 |
+| 5 | 当前服务器普通 `1×14336` Triton 也会超时 | 无法完成修改后硬件全量复测 | 静态/CPU/代表点先完成；等待平台运行时恢复 |
 
 ## 7. 结论与后续
 
-P800 forward 的功能、精度、注册、C1 和性能基线满足提交评审条件。后续优先验证按 `numel/dtype` 的安全原生路由，或降低 P800 pointwise 启动成本；第二个平台出现时再增加 `PLATFORM.md`/`MERGE.md` 和独立证据。
+2026-11-09 历史基线满足 C1 与性能评审条件；2026-11-22 当前代码的静态、CPU 和 255 代表点验证已完成，但修改后三层、Triton 黄金、C2 和性能矩阵待运行时恢复。后续优先完成这些最终复测，再评估按 `numel/dtype` 的路由或启动成本优化。
 
 ## 复现命令
 

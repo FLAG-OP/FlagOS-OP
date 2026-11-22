@@ -156,10 +156,14 @@ def run_real_vllm(profile) -> dict:
         count_dir = os.path.join(d, "counts")
         os.makedirs(count_dir, exist_ok=True)
         extra_env = {}
+        selected_devices = os.environ.get(
+            "CUDA_VISIBLE_DEVICES", profile.visible_devices)
         common_env = {
             # 与正式 profile 的物理卡选择和多进程执行方式保持一致；
             # runner 仍用 128 token / 0.2 显存比例的最小 C2 负载。
-            "CUDA_VISIBLE_DEVICES": profile.visible_devices,
+            "CUDA_VISIBLE_DEVICES": selected_devices,
+            "XPU_VISIBLE_DEVICES": os.environ.get(
+                "XPU_VISIBLE_DEVICES", selected_devices),
             "A1_VLLM_TP": str(profile.framework.get(
                 "tensor_parallel_size", 1)),
             "A1_VLLM_EXECUTOR": str(profile.framework.get(

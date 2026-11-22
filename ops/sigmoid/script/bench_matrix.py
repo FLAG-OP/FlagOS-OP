@@ -86,9 +86,11 @@ def main() -> int:
 
     from common.device import load_profile
     profile = load_profile(args.profile)
-    # 子进程按官方 profile 暴露物理卡；父进程本身不分配设备。
-    os.environ["CUDA_VISIBLE_DEVICES"] = profile.visible_devices
-    os.environ["XPU_VISIBLE_DEVICES"] = profile.visible_devices
+    # 默认按官方 profile 暴露物理卡；允许部署环境显式选择同型号健康卡。
+    # 例如新服务器物理 XPU 2 的小张量 XMLIR 路径会停住，本次使用 0,1。
+    os.environ.setdefault("CUDA_VISIBLE_DEVICES", profile.visible_devices)
+    os.environ.setdefault(
+        "XPU_VISIBLE_DEVICES", os.environ["CUDA_VISIBLE_DEVICES"])
     records = []
     total = len(CASES) * len(DTYPES) * len(IMPLS)
     completed = 0
@@ -130,7 +132,8 @@ def main() -> int:
             f"--iters {args.iters} --out {args.out or '<path>'}"
         ),
         "device": profile.torch_device,
-        "visible_devices": profile.visible_devices,
+        "visible_devices": os.environ["CUDA_VISIBLE_DEVICES"],
+        "profile_visible_devices": profile.visible_devices,
         "environment": {
             "python": sys.version.split()[0],
             "torch": _version("torch"),

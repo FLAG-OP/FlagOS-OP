@@ -4,6 +4,10 @@
 
 > wt-2026-11-09-sigmoid-p800 · wt <liyanze1560495@hotmail.com>
 
+> 2026-11-22 复测：新增连续 `numel=255` 的无 mask 专用路径。静态、
+> CPU 与代表点硬件检查已通过；当前 P800 运行时对普通大尺寸任务也会
+> 超时，修改后的三层、Triton 黄金、C2 和性能最终复测待环境恢复。
+
 ## 支持范围
 
 | 维度 | 已验证范围 |
@@ -12,8 +16,8 @@
 | dtype | 自研：float16、bfloat16、float32；原生回退：int32、int64、bool |
 | shape | 0D～4D、空张量、边界尺寸、长尾和 Transformer 激活 |
 | layout | contiguous、转置、步长切片、expand |
-| 集成 | A1 注册；C1 mini Transformer 激活消费 |
-| 范围外 | sigmoid_、sigmoid.out、sigmoid_backward、硬件级 XTC、C2 真实模型 |
+| 集成 | A1 注册；C1 mini Transformer；真实 vLLM C2 脚本已具备、当前复测待运行时恢复 |
+| 范围外 | sigmoid_、sigmoid.out、sigmoid_backward、硬件级 XTC |
 
 非 strided 或不在自研范围的 dtype 通过 ATen redispatch 保持原生行为。完整范围见 [reports/scope.md](reports/scope.md)。
 
@@ -45,16 +49,17 @@ python ops/sigmoid/script/bench_dispatch.py --device p800-liyanz-local
 
 ## 当前结论
 
-- kernel 75 例、golden 93/93、A1 9 次命中、C1 三种 dtype 均通过。
-- 正式 5.0 性能矩阵 36/36 完成；当前自研 12 个组合均慢于原生，最佳为 `2048×2048 bf16` 的 `1.158×`。
+- 2026-11-09 历史基线：kernel 75 例、golden 93/93、A1 9 次命中、C1 三种 dtype 均通过。
+- 2026-11-09 历史性能矩阵 36/36 完成；自研 12 个组合均慢于原生，最佳为 `2048×2048 bf16` 的 `1.158×`。
 - A1 注册相对直调增加 `7.908 μs`（16.5%）。
-- 该版本完成的是功能、精度、应用范围和性能基线建设，不宣称已经获得普遍加速。
+- 2026-11-22 当前代码：环境锁 9/9、基础单测 182、包化替代扫描 17/17、CPU 黄金 reference/torch 各 93/93；255 专用路径 3 dtype × 2 shape 代表点通过。
+- 当前代码不宣称已完成硬件全量验收，也不宣称已经获得普遍加速。
 
 ## 交付自查
 
 - [x] reference、三级状态、A1 注册和包化入口齐备。
-- [x] 三层测试、黄金数据和 dtype/shape/layout/special 矩阵通过。
-- [x] 自研、FlagGems、原生三方性能矩阵与 dispatch 开销完成。
+- [ ] 修改后的三层、Triton 黄金和 dtype/shape/layout/special 矩阵待 P800 运行时恢复后复测（历史基线已通过）。
+- [ ] 修改后的三方性能矩阵待复测（历史 36/36 与 dispatch 结果保留）。
 - [x] catalog、生成索引和中央性能注册表已更新。
-- [x] 开发、测试、精度、性能和应用范围报告已填写。
-- 不适用：本次只交付 P800 单平台，因此不创建多平台 `MERGE.md`；硬件级、backward 和 C2 明确属于范围外。
+- [x] 开发、测试、精度、性能和应用范围报告已填写，并区分历史基线与当前复测状态。
+- 不适用：本次只交付 P800 单平台，因此不创建多平台 `MERGE.md`；硬件级和 backward 属于范围外。真实 vLLM C2 属于当前验收项，尚待运行时恢复后复测。

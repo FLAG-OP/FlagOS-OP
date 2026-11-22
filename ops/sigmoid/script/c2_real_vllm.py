@@ -191,7 +191,9 @@ def main() -> int:
             "device_profile": str(device_profile.relative_to(ROOT)),
             "device_profile_sha256": _sha256(device_profile),
             "torch_device": profile.torch_device,
-            "visible_devices": profile.visible_devices,
+            "visible_devices": os.environ.get(
+                "CUDA_VISIBLE_DEVICES", profile.visible_devices),
+            "profile_visible_devices": profile.visible_devices,
             "tensor_parallel_size": profile.framework.get(
                 "tensor_parallel_size"),
             "distributed_executor_backend": profile.framework.get(
