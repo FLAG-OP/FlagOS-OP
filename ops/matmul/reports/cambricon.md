@@ -85,7 +85,7 @@ framework 输出和三个梯度相对误差为
 | 自研/原生几何平均 | 前向约 `5.14–5.31x`，反向约 `2.45–2.49x` |
 | 计时前最大精度误差 | `5.0e-3` |
 | BF16 A1 分发开销 | native `0.050356 ms`，direct `0.245296 ms`，A1 `0.278312 ms` |
-| 基线 | `perf/baselines/mlu590.json` |
+| 基线 | `reports/cambricon_evidence/perf/baselines/mlu590.json` |
 
 完整原始记录见
 `reports/cambricon_evidence/results/perf/runs/mlu590/`。基线建立后的
@@ -100,8 +100,9 @@ framework 输出和三个梯度相对误差为
    将 `cambricon` profile 的 `PrivateUse1` 统一提升到该 key。
 3. 当前测试容器版本与 `mlu590` 环境锁不一致，正式合并前仍需在锁定栈
    复跑。
-4. 当前自研 Triton 在小 shape 上明显慢于 MLU 原生实现。原因是调用和
-   Triton/MLU 启动开销突出，尚未做 profiler 分解，本阶段不进行性能优化。
+4. 当前自研 Triton 在小 shape 上明显慢于 MLU 原生实现。profiler 尚未
+   分解 Python、注册、编译缓存、启动或 kernel 本体开销，因此只记录差距，
+   不预先断言原因，本阶段不进行性能优化。
 
 ## 7. 结论
 

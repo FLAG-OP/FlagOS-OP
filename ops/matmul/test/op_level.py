@@ -104,12 +104,32 @@ def run(profile, backend="triton", with_flaggems=False):
         assert (left.grad is not None) == grad_left
         assert (right.grad is not None) == grad_right
 
+    # MLU resolves grad mode through AutogradPrivateUse1, while inference_mode
+    # excludes autograd keys and must resolve through PrivateUse1.
+    mode_hits = {}
+    for mode in ("grad", "no_grad", "inference_mode"):
+        before = counter.get("forward", 0)
+        if mode == "grad":
+            left = a.detach().requires_grad_(True)
+            right = b.detach().requires_grad_(True)
+            mode_out = torch.matmul(left, right)
+        elif mode == "no_grad":
+            with torch.no_grad():
+                mode_out = torch.matmul(a, b)
+        else:
+            with torch.inference_mode():
+                mode_out = torch.matmul(a, b)
+        mode_hits[mode] = counter.get("forward", 0) - before
+        assert mode_hits[mode] == 1, (profile.name, mode, mode_hits)
+        assert _error(mode_out, native) <= 5e-2, (profile.name, mode)
+
     assert lib is not None
     print(f"A1 matmul ({backend}, {key}, flaggems={with_flaggems}): "
           f"{counter['forward']} interceptions; "
-          f"worst native-relative error={worst:.3e}")
+          f"worst native-relative error={worst:.3e}; "
+          f"mode hits={mode_hits}")
     return {"ok": True, "intercepted": counter["forward"],
-            "max_native_rel_err": worst}
+            "max_native_rel_err": worst, "mode_hits": mode_hits}
 
 
 if __name__ == "__main__":

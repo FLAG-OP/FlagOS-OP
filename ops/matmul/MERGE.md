@@ -45,9 +45,16 @@ dA/dB 形状正确
 
 - `torch.matmul`；
 - `torch.ops.aten.matmul.default`；
+- requires-grad 模式命中；
+- `torch.no_grad()` 模式命中；
+- `torch.inference_mode()` 模式命中；
 - CPU 调用不被拦截；
 - 前向计数增加；
 - 左右输入一阶梯度。
+
+推理模式不进入 autograd key，因此同一实现还需在 `PrivateUse1` 注册
+仅前向入口。两路必须分别计数，不能用训练模式命中代替推理命中；若选择
+原生回退，也要在平台报告中明确写出并记录原因。
 
 ## 6. 跑三层测试
 
@@ -61,12 +68,15 @@ python3 ops/matmul/example.py mlu590
 ## 7. 采集寒武纪独立性能
 
 ```bash
-python3 scripts/perf_run.py --device mlu590 --pattern ops.matmul
-python3 scripts/perf_compare.py --device mlu590
+python3 scripts/perf_run.py --device mlu590 --pattern ops.matmul.
+python3 scripts/perf_compare.py \
+  --device mlu590 \
+  --baseline ops/matmul/reports/cambricon_evidence/perf/baselines/mlu590.json
 ```
 
 寒武纪的基线必须单独建立。不得把 P800 的耗时、门禁或加速比复制到
-寒武纪报告。
+寒武纪报告。日常比较使用归档基线，不要每轮执行 `--update-baseline`；
+只有明确接受新的实现或环境基准时才重采。
 
 ## 8. 更新证据和目录
 

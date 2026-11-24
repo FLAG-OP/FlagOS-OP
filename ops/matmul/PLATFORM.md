@@ -39,6 +39,7 @@
 | 设备 | `mlu:0` |
 | runtime | `torch_mlu` |
 | A1 dispatch key | `AutogradPrivateUse1` |
+| 推理备用 key | `PrivateUse1`，仅前向；实际计数待锁定环境复验 |
 | kernel | 复用自研 `tl.dot` 主体 |
 | 前向 | PASS |
 | 左输入梯度 | PASS |
@@ -52,7 +53,8 @@
 
 1. `torch_device_fn.device(a.device)` 是否能包住 MLU 上的 kernel 启动；
 2. `tl.dot` 的 dtype 组合和 tile 配置是否合法；
-3. 仅注册 `PrivateUse1` 是否漏掉反向；
+3. 仅注册 `PrivateUse1` 是否漏掉反向，以及
+   `AutogradPrivateUse1` 是否避开 `inference_mode`；
 4. `torch.matmul`、显式 `aten::matmul` 和 CPU 隔离是否都正确；
 5. `mlu:0` 是否为当前可见设备，且没有其他任务占用。
 

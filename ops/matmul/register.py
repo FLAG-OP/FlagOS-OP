@@ -55,14 +55,29 @@ def register_a1(dispatch_key: str, counter: dict | None = None,
     implementation = (getattr(module, f"matmul_{backend}"),
                       getattr(module, f"matmul_backward_{backend}"))
 
-    def impl(self, other):
+    def record_hit(self, other):
         if counter is not None:
             counter["forward"] = counter.get("forward", 0) + 1
         if hit_log and (hit_marker is None or os.path.exists(hit_marker)):
             with open(hit_log, "a", encoding="utf-8") as log:
                 log.write(f"{os.getpid()} {tuple(self.shape)} {tuple(other.shape)}\n")
+
+    def impl(self, other):
+        record_hit(self, other)
         return _MatmulA1Function.apply(self, other, implementation)
 
     lib = torch.library.Library("aten", "IMPL")
     lib.impl("matmul", impl, dispatch_key)
+    if dispatch_key == "AutogradPrivateUse1":
+        # inference_mode excludes autograd keys. Register the same kernel under
+        # the backend key so inference does not silently fall back to vendor
+        # matmul while retaining the custom backward under grad mode.
+        forward_only_lib = torch.library.Library("aten", "IMPL")
+
+        def forward_only(self, other):
+            record_hit(self, other)
+            return implementation[0](self, other)
+
+        forward_only_lib.impl("matmul", forward_only, "PrivateUse1")
+        return [lib, forward_only_lib]
     return lib

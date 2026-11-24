@@ -177,9 +177,9 @@ XPU 2 A1 分发开销已补测。测量采用二维 `(63,127) @ (127,65)`、CPU
 | bfloat16 | 前向 | 0.235–0.307 | 0.041–0.099 | 5.14x |
 | bfloat16 | 反向 | 0.480–0.700 | 0.174–0.306 | 2.45x |
 
-比值大于 1 表示自研入口更慢。当前 12 个 shape 都以调用延迟为主，
-Triton/MLU 启动成本突出；尚未用 profiler 拆分 Python、注册、
-编译缓存和设备启动开销，因此不对性能差距作超出数据的归因。
+比值大于 1 表示自研入口更慢。当前 12 个 shape 均记录到明显差距；
+尚未用 profiler 拆分 Python、注册、编译缓存、启动或 kernel 本体开销，
+因此不对差距作超出数据的归因。
 
 BF16 `63×127 @ 127×65` 的 A1 分发对照：
 
@@ -190,8 +190,22 @@ BF16 `63×127 @ 127×65` 的 A1 分发对照：
 | A1 | 0.278312 |
 
 A1 比直调多 `0.033016 ms`，当前实现不满足性能优化目标，只完成
-功能、精度和初始性能记录。寒武纪基线位于 `perf/baselines/mlu590.json`，
-原始记录位于 `reports/cambricon_evidence/`。
+功能、精度和初始性能记录。寒武纪归档基线位于
+`reports/cambricon_evidence/perf/baselines/mlu590.json`，原始记录位于
+`reports/cambricon_evidence/`。
+
+完成初始化后的独立复跑方式：
+
+```bash
+python3 scripts/perf_run.py --device mlu590 --pattern ops.matmul.
+python3 scripts/perf_compare.py \
+  --device mlu590 \
+  --baseline ops/matmul/reports/cambricon_evidence/perf/baselines/mlu590.json \
+  --out ops/matmul/reports/cambricon_evidence/performance_compare.md
+```
+
+不要在日常复跑中使用 `--update-baseline`。当前归档的
+`perf_compare.log` 是同轮记录回读，不是上述独立复跑结果。
 
 ## 6. 复现
 
@@ -207,18 +221,20 @@ python ops/matmul/script/bench_dispatch.py --device p800-kunlunxin --dtype bfloa
 ```
 
 日常回归不要加 `--update-baseline`；只有明确接受新的实现或环境基准，且
-确认全部目标用例成功时才更新。其他国产平台尚未实测，不能沿用 P800 基线。
+确认全部目标用例成功时才更新。寒武纪独立基线见第 5 节；昇腾、壁仞尚未
+实测，不能沿用 P800 或 MLU590 基线。
 
 ## 7. 结论与遗留
 
 | 项目 | 结论 |
 |---|---|
-| 功能性能入口 | 144 条基线和 144 条独立复测均完成，计时前精度检查全部通过 |
-| 自研 Triton | 72 条门禁记录均 OK；本阶段不进行性能优化 |
-| 原生 PyTorch/XMLIR | 4 FAIL / 4 WARN；追加复核显示共享设备上的延迟波动，不能直接归因于 matmul 代码 |
+| 昆仑芯性能入口 | 144 条基线和 144 条独立复测均完成，计时前精度检查全部通过 |
+| 昆仑芯自研 Triton | 72 条门禁记录均 OK；本阶段不进行性能优化 |
+| 昆仑芯原生 PyTorch/XMLIR | 4 FAIL / 4 WARN；追加复核显示共享设备上的延迟波动，不能直接归因于 matmul 代码 |
+| 寒武纪 MLU590 | 144/144 初始记录完成；独立复跑、锁定环境和 profiler 待完成 |
 | FlagGems | 锁定版本缺少完整 matmul 入口，`bmm` 自动调参失败；原因已记录，不构造缺失数字 |
-| A1 分发 | 三种 dtype 已完成独立进程测量，结果见本报告第 3 节 |
-| 其他平台 | 寒武纪已另建 `mlu590` 基线；昇腾、壁仞需各自环境独立采集 |
+| 昆仑芯 A1 分发 | 三种 dtype 已完成独立进程测量，结果见本报告第 3 节 |
+| 昇腾 / 壁仞 | 尚未实测，需各自环境独立采集，不能沿用 P800 或 MLU590 基线 |
 
 性能数据用于回归追踪，不代表自研实现已经超过原生；当前第一阶段的功能和
 正确性结论见 [测试报告](test-report.md) 与 [精度报告](accuracy.md)。
