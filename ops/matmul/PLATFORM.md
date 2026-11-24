@@ -1,8 +1,8 @@
 # 平台绑定清单（Platform Binding）— matmul
 
 > 当前只保留有运行证据的平台结论。昆仑芯 P800 已有功能与精度证据；
-> 寒武纪 MLU590 已完成兼容性环境的功能、精度和初始性能复验，锁定
-> 环境复验仍待完成。
+> 寒武纪 MLU590 已完成兼容性环境的功能、精度和初始性能复验；壁仞
+> Biren166M 已完成 torch-level A1 最小闭环。
 
 ## 1. 平台无关复用项
 
@@ -62,7 +62,19 @@
 torch_mlu 1.32.2、Triton 3.4.0+mlu2.0.3、FlagGems 5.3.5 源码。
 该版本低于 `mlu590` 环境锁，不能把兼容性结果写成锁定环境正式通过。
 
-## 4. 新平台准入
+## 4. 壁仞 Biren166M
+
+- 设备类型：`supa`；
+- A1 key：`AutogradPrivateUse1`；
+- torch-level 7 种 shape × FP32/BF16 × 三种执行模式全部通过；
+- FP16 被当前 BR10x matmul 实现拒绝；
+- Triton 3.6 无 Biren active driver；
+- FlagGems 5.3.5 无法自动识别该设备；
+- 当前是 MINIMAL 平台证据，不进入完整 `ops/catalog.yaml` 平台声明。
+
+完整结果见 [reports/biren.md](reports/biren.md)。
+
+## 5. 新平台准入
 
 按 [MERGE.md](MERGE.md) 执行。必须同时提供：
 

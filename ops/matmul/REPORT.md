@@ -5,7 +5,7 @@
 | 算子 | `aten::matmul` |
 | 实现路线 | **A1**：`AutogradCUDA` 接管 `torch.matmul` |
 | 开发级别 | **Triton 级**（自研 `tl.dot`）；硬件级本期置空 |
-| 目标平台 | Kunlunxin P800（正式物理 XPU 2）；Cambricon MLU590（兼容性复验） |
+| 目标平台 | Kunlunxin P800；Cambricon MLU590（兼容性）；Biren166M（torch-level 最小闭环） |
 | 开发者 | 陶焱烽；寒武纪移植与复验：赵俊堯、张哲、张子煜、赵炳凯 |
 | 环境 | 个人容器 `tyanfeng-flagos-p800-lock`；Torch 2.9.0+cu129；Triton 3.0.0+03c4c9be |
 | 报告日期 / 状态 | 2026-11-11 / PARTIAL：昆仑芯已有功能与 C1 证据；寒武纪 MLU590 兼容性环境功能与精度通过，已建立 144 条性能基线；锁定环境和独立性能复跑仍待完成 |
@@ -90,6 +90,22 @@ Triton 3.4.0+mlu2.0.3 与 FlagGems 5.3.5 源码；版本低于
 完整记录见 [cambricon.md](reports/cambricon.md) 和
 [cambricon_evidence](reports/cambricon_evidence/)。
 
+### 壁仞 Biren166M 最小矩阵（2026-11-24）
+
+设备类型为 `supa`，当前使用 torch-level A1；Triton 3.6 没有 Biren
+active driver。
+
+| 验证项 | 结果 |
+|---|---|
+| 原生 2-D matmul | FP32/BF16 2/2 |
+| 直调 torch-level | 7 shape × 2 dtype = 14/14 |
+| A1 grad / no_grad / inference_mode | 各 14/14 命中 |
+| 最坏相对误差 | 7.519e-3 |
+| CPU 隔离 | PASS |
+| FP16 | 当前 BR10x matmul 不支持 |
+
+完整边界见 [biren.md](reports/biren.md)。
+
 ## 4. 关键问题与修复
 
 BF16 `K=1` 错误来自昆仑芯 `TritonSDNNCombineBefore` 融合：K 被专门化后，
@@ -133,3 +149,4 @@ Triton 在小 shape 上前向约为原生 `5.14–5.31x` 耗时，反向约为
 | XPU 2 性能记录 | [reports/performance_xpu2_v1/](reports/performance_xpu2_v1/) |
 | 寒武纪复验报告 | [reports/cambricon.md](reports/cambricon.md) |
 | 寒武纪原始证据 | [reports/cambricon_evidence/](reports/cambricon_evidence/) |
+| 壁仞最小闭环 | [reports/biren.md](reports/biren.md) |

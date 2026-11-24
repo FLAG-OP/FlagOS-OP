@@ -1,0 +1,32 @@
+# Device Profile: Biren BR166 / SUPA
+name: biren
+vendor: biren
+
+auto_detect:
+  module: torch_br
+
+device:
+  torch_device: "supa:0"
+  visible_devices: "0"
+  dispatch_key: AutogradPrivateUse1
+
+framework:
+  tensor_parallel_size: 1
+  distributed_executor_backend: mp
+  max_model_len: 4096
+  max_num_seqs: 50
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  enable_prefix_caching: false
+  load_format: safetensors
+  seed: 20261124
+  model_path: /path/to/model
+  quirks:
+    keep_default_prefer: false
+    require_two_visible_devices: false
+    no_vllm_runtime: true
+
+vendor_delegate: null
+reference_fallback: reference.torch
+vendor_kernels: []

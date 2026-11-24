@@ -1,0 +1,8 @@
+[W1124 12:10:15.063125457 GeneratorForPrivateuseone.cpp:17] Warning: REGISTER_GENERATOR_PRIVATEUSE1 is deprecated.       Please derive PrivateUse1HooksInterface to implememt getNewGenerator instead. (function _GeneratorRegister)
+/usr/local/lib/python3.10/dist-packages/torch_br/__init__.py:152: UserWarning: edgeitems of torch print options has been change to 4 for BR166. If you want to change it, please call torch.set_printoptions.Please NOTE that odd edgeitems can cause error when you print supa tensor on BR166 device.
+  warnings.warn(
+[W1124 12:10:17.290369956 Matmul.cpp:287] Warning: br_matmul_with_output will be deprecated, Please use br_fused_matmul_transpose with out instead. (function operator())
+biren native: 2/2 PASS
+biren direct: 14/14 PASS (FP16 unsupported by BR10x)
+biren A1: mode_hits={'grad': 14, 'no_grad': 14, 'inference_mode': 14} worst=7.519e-03 CPU isolation=PASS
+{'ok': True, 'mode_hits': {'grad': 14, 'no_grad': 14, 'inference_mode': 14}, 'max_native_rel_err': 0.007518796992481203}

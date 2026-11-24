@@ -123,3 +123,17 @@ Triton 3.4.0+mlu2.0.3，FlagGems 5.3.5 使用源码路径
 FlagGems 5.3.5 将 `DeviceDetector` 移至
 `flag_gems.runtime.backend.device_finder`，实现已增加新旧路径兼容导入。
 详细日志和性能状态见 [cambricon.md](cambricon.md)。
+
+## 9. 壁仞 Biren166M 最小闭环
+
+2026-11-24 在 `birensupa-pytorch` 容器以 torch-level A1 验证：
+
+- 原生矩阵乘：FP32/BF16 2/2；
+- 直调实现：7 种 shape × 2 dtype = 14/14；
+- grad、no_grad、inference_mode：各 14 次命中；
+- CPU 隔离通过，最坏误差 `7.519e-3`；
+- FP16 被当前 BR10x matmul 拒绝；
+- Triton 无 Biren driver，FlagGems 无法自动识别该设备。
+
+当前为 MINIMAL，不声明三层或完整平台验收。详见
+[biren.md](biren.md)。

@@ -1,0 +1,12 @@
+[W1124 12:09:18.727658093 GeneratorForPrivateuseone.cpp:17] Warning: REGISTER_GENERATOR_PRIVATEUSE1 is deprecated.       Please derive PrivateUse1HooksInterface to implememt getNewGenerator instead. (function _GeneratorRegister)
+/usr/local/lib/python3.10/dist-packages/torch_br/__init__.py:152: UserWarning: edgeitems of torch print options has been change to 4 for BR166. If you want to change it, please call torch.set_printoptions.Please NOTE that odd edgeitems can cause error when you print supa tensor on BR166 device.
+  warnings.warn(
+torch 2.8.0+cpu
+torch_br 1.11.0.20800+br1xx
+devices 1 Biren166M
+_DeviceProperties(name='Biren166M', total_memory=65024MB, max_compute_units=32, die_count=2)
+GPU 0, Bus Id: 00000000:03:00.0 - GPUHW[3] Biren166M  (UUID: GPU - RX000304063), Physical Slot: 203
+BRSMI Version     : 1.12.0
+BRML Version      : 1.12.0
+DRIVER Version    : 1.12.0
+SUPA Version      : 1.12

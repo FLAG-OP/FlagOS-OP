@@ -37,6 +37,11 @@ def matmul_backward(a: torch.Tensor, b: torch.Tensor,
     left = a.unsqueeze(0) if a_vector else a
     right = b.unsqueeze(-1) if b_vector else b
     grad = grad_output
+    # sum() and broadcast reductions can hand us zero-stride expanded
+    # gradients. Biren's JIT matmul path rejects this layout, and contiguous
+    # materialization preserves the same values for every backend.
+    if not grad.is_contiguous():
+        grad = grad.contiguous()
     if b_vector:
         grad = grad.unsqueeze(-1)
     if a_vector:
