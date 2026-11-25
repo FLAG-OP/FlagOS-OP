@@ -2,10 +2,10 @@
 
 | 项 | 值 |
 |---|---|
-| 算子 / 路线 | `aten::matmul` / A1 `AutogradCUDA` |
-| 目标设备 | Kunlunxin P800（物理 XPU 2）；Cambricon MLU590（兼容性复验） |
+| 算子 / 路线 | `aten::matmul` / A1；P800 `AutogradCUDA`，MLU/Biren `AutogradPrivateUse1` |
+| 目标设备 | Kunlunxin P800（物理 XPU 2）；Cambricon MLU590（兼容性复验）；Biren166M（torch-level） |
 | 环境 | `tyanfeng-flagos-p800-lock`；Torch 2.9.0+cu129；Triton 3.0.0+03c4c9be |
-| 报告状态 | PASS（昆仑芯与寒武纪兼容性环境已测精度范围）；锁定寒武纪环境仍待复核 |
+| 报告状态 | PASS（昆仑芯、寒武纪兼容性环境和壁仞支持 dtype）；寒武纪锁定环境、壁仞 Triton/FlagGems 仍待复核 |
 
 ## 1. 用例与判卷
 
@@ -34,7 +34,7 @@ CPU 黄金由 `reference.py` 调用 CPU PyTorch 生成，用作设备实现的�
 
 进一步用 [`probes/k1_lowering.py`](../probes/k1_lowering.py) 控制前一条 kernel：FP32 全 1 的 K=32 matmul 后，BF16 K=1 全零输入得到 31、全 1 输入得到 32。逐 pass IR 显示 `TritonSDNNCombineBefore` 在 BF16→FP32 融合时删掉 tile 清零，而 MMA 仍计算 K=32；结果取决于 SRAM 残留。原始路径 72 次中 18 次失败，禁止 K 专门化后 72 次全通过。
 
-生产 dot 已加 `do_not_specialize=["K"]` 并撤掉自动外积回退；fast mode 0 新缓存下重跑黄金各 144/144、三级和 FlagGems 共存均通过，新加 kernel 残留回归 36/36。完整证据、设置和复现命令见 [K=1 根因报告](k1_root_cause.md)。寒武纪见下文兼容性复验，昇腾和壁仞仍待验证。
+生产 dot 已加 `do_not_specialize=["K"]` 并撤掉自动外积回退；fast mode 0 新缓存下重跑黄金各 144/144、三级和 FlagGems 共存均通过，新加 kernel 残留回归 36/36。完整证据、设置和复现命令见 [K=1 根因报告](k1_root_cause.md)。寒武纪见下文兼容性复验，壁仞见第 6 节；昇腾仍待验证。
 
 ## 3. 关键精度决策
 
@@ -48,7 +48,7 @@ CPU 黄金由 `reference.py` 调用 CPU PyTorch 生成，用作设备实现的�
 
 ## 4. 对照边界
 
-锁定版 FlagGems `bmm` 在自动调参阶段报错，无法形成有效精度/性能对照。寒武纪的独立复验见第 5 节；昇腾和壁仞尚未验证。
+锁定版 FlagGems `bmm` 在自动调参阶段报错，无法形成有效精度/性能对照。寒武纪的独立复验见第 5 节，壁仞的 torch-level 复验见第 6 节；昇腾尚未验证。
 
 复现：`script/gen_golden.py`、`script/check_accuracy.py --impl triton --device p800-kunlunxin`、`--impl a1-triton`；执行前设置本轮设备映射。环境和命令见 [开发报告](development.md)。
 
@@ -76,11 +76,22 @@ kernel 的 144 组、哨兵、零 stride 反向及 K=1/2 残留回归 36/36 通�
 `mlu590` 环境锁不一致，因此结论限定为兼容性范围，不能替代锁定栈的
 正式平台验收。完整环境与日志入口见 [cambricon.md](cambricon.md)。
 
-## 6. 壁仞 Biren166M 最小精度
+## 6. 壁仞 Biren166M 支持 dtype 完整精度
 
-torch-level A1 覆盖 7 种 shape 和 FP32/BF16，共 14 例；前向与左右
-输入梯度均满足 `5e-2` 相对容差，最坏误差 `7.519e-3`。当前 BR10x
-matmul 不支持 FP16，因此没有把 FP16 写入通过项。
+2026-11-24 在 `tyanfeng-matmul-supa` 容器复验 PyTorch `2.8.0+cpu`、
+torch_br `1.11.0.20800+br1xx` 和 `supa:0` 上的 torch-level 路径。测试
+沿用同一 CPU 黄金，覆盖 16 种 shape × FP32/BF16 × 3 seed，共 96 组；
+每组同时检查前向、左输入梯度和右输入梯度。
 
-这是最小兼容性结果，不等同于 144 组完整黄金。详见
-[biren.md](biren.md)。
+| 入口 | 通过 | A1 命中 | 最坏相对误差 |
+|---|---:|---:|---:|
+| torch-level 直调 | 96/96 | 不适用 | `6.67e-3` |
+| A1 torch-level | 96/96 | 96 | `6.67e-3` |
+
+覆盖二维/一维/批量/广播、非连续输入、零 K、空 M/N/batch、零输入、
+大数、tiny 和 `K=1`。BR10x matmul 不支持 FP16，FP16 子进程被 SDK
+以 `STATUS_NOT_SUPPORTED` 终止；因此通过范围是当前硬件支持的
+FP32/BF16 96/96，而不是 144/144。
+
+这不是 Triton 精度证明：当前 `birensupa-pytorch` 镜像未安装 Triton。
+完整环境、三层测试和边界见 [biren.md](biren.md)。

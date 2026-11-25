@@ -3,9 +3,10 @@
 ## [Unreleased]
 
 ### Added
-- matmul 增加壁仞 Biren166M 最小闭环：`supa` 设备、torch-level A1、
-  FP32/BF16、7 种矩阵形态与三种执行模式；记录 FP16、Triton driver 和
-  FlagGems 的平台边界
+- matmul 增加壁仞 Biren166M 支持 dtype 复验：`supa` 设备、
+  FP32/BF16 96 组直调/A1 黄金、torch-level op/framework，以及
+  FP16、原生向量、Triton 和 FlagGems 边界记录；另建立 48 条
+  torch-level 初始性能基线
 - matmul 增加寒武纪 MLU590 兼容性复验入口：兼容 FlagGems 5.3.5 的
   `DeviceDetector` 路径，规范化 `AutogradPrivateUse1` 注册，并补充
   kernel/A1 黄金 144/144、三层测试、应用消费者、144 条初始性能记录及

@@ -19,20 +19,28 @@ def _error(actual, expected):
     return diff.max().item() / max(expected_cpu.abs().max().item(), 1e-6)
 
 
-def run(profile, backend="triton", with_flaggems=False):
+def run(profile, backend="triton", with_flaggems=False, dtypes=None):
     import torch
 
-    from kernel.triton_level import matmul_triton
+    from common.device import load_runtime
     from kernel.torch_level import matmul_torch
     from register import dispatch_key_for_profile, register_a1
 
+    load_runtime(profile)
     device = profile.torch_device
+    if backend == "triton":
+        from kernel.triton_level import matmul_triton
     cases = [((63, 127), (127, 65)),
              ((2, 33, 65), (2, 65, 47)),
              ((2, 1, 33, 65), (1, 3, 65, 47)),
              ((67,), (67,))]
+    if profile.vendor == "biren":
+        # Biren's native torch.matmul only accepts matrix operands. Vector and
+        # broadcast coverage is in the full torch-level/A1 golden matrix.
+        cases = cases[:1]
     inputs = []
-    for dtype in (torch.float32, torch.float16, torch.bfloat16):
+    selected_dtypes = dtypes or (torch.float32, torch.float16, torch.bfloat16)
+    for dtype in selected_dtypes:
         for i, (left_shape, right_shape) in enumerate(cases):
             generator = torch.Generator().manual_seed(20260929 + i)
             a = torch.randn(left_shape, generator=generator).to(dtype).to(device)
@@ -133,11 +141,17 @@ def run(profile, backend="triton", with_flaggems=False):
 
 
 if __name__ == "__main__":
+    import torch
+
     from common.device import load_profile
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("profile", nargs="?", default="p800-kunlunxin")
     ap.add_argument("--backend", choices=("triton", "torch"), default="triton")
     ap.add_argument("--with-flaggems", action="store_true")
+    ap.add_argument("--dtype", action="append",
+                    choices=("float32", "float16", "bfloat16"))
     args = ap.parse_args()
     print(run(load_profile(args.profile), backend=args.backend,
-              with_flaggems=args.with_flaggems))
+              with_flaggems=args.with_flaggems,
+              dtypes=tuple(getattr(torch, name)
+                           for name in args.dtype) if args.dtype else None))

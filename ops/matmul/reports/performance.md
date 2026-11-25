@@ -1,6 +1,7 @@
 # 性能报告: matmul
 
-> 第 1–4 节为昆仑芯 P800 历史性能；寒武纪 MLU590 的独立基线见第 5 节。
+> 第 1–4 节为昆仑芯 P800 历史性能；寒武纪 MLU590 的独立基线见第 5 节；
+> 壁仞 Biren166M 的初始 torch-level 基线见第 6 节。
 > 两个平台的环境、数字和门禁不可互相替代。
 
 ## 1. 配置
@@ -207,7 +208,52 @@ python3 scripts/perf_compare.py \
 不要在日常复跑中使用 `--update-baseline`。当前归档的
 `perf_compare.log` 是同轮记录回读，不是上述独立复跑结果。
 
-## 6. 复现
+## 6. 壁仞 Biren166M 初始性能记录
+
+2026-11-24 在共享物理设备 Biren166M、逻辑 `supa:0` 上建立 torch-level
+初始基线。当前 `birensupa-pytorch` 运行时未安装 Triton，且原生批量反向
+在部分 broadcast shape 上不稳定，因此本表只登记可执行且计时前精度检查
+通过的 `torch` 入口，不把缺失的 Triton/native 对照补成数字。
+
+测试沿用 12 个非空 shape × FP32/BF16 × 前向/反向，共 48 条。每条独立
+子进程，warmup 20、iters 100，逐次标量读回；计时前精度检查的最大误差
+为 `7.0e-3`。
+
+| dtype | 方向 | 范围 ms | 中位数 ms | 最大检查误差 |
+|---|---|---:|---:|---:|
+| float32 | 前向 | 0.298–2.690 | 0.365 | 0 |
+| float32 | 反向 | 0.715–5.471 | 0.800 | 0 |
+| bfloat16 | 前向 | 0.283–2.420 | 0.350 | `2.0e-3` |
+| bfloat16 | 反向 | 0.683–5.006 | 0.772 | `7.0e-3` |
+
+48 条均为 PASS，0 跳过。把本轮记录与刚写入的基线回读比较，结果为
+`OK 48 / WARN 0 / FAIL 0`；这只是同轮一致性检查，不是第二次独立复跑。
+设备为共享卡，记录用于后续回归，不构成稳定性能门禁或优化结论。
+
+BF16 `63×127 @ 127×65` 的路径对照：
+
+| 路径 | 中位数 ms | p20–p80 ms |
+|---|---:|---:|
+| native | 0.266696 | 0.265900–0.267940 |
+| direct torch-level | 0.380200 | 0.377960–0.385590 |
+| A1 | 0.395256 | 0.392101–0.400141 |
+
+A1 比直调多 `0.015056 ms`。初始基线位于
+`reports/biren_evidence/perf/baselines/biren.json`，48 条原始 JSON、
+运行日志和分发测量位于 `reports/biren_evidence/`。
+
+初始化后的复跑方式：
+
+```bash
+python3 scripts/perf_run.py --device biren --pattern ops.matmul.
+python3 scripts/perf_compare.py \
+  --device biren \
+  --baseline ops/matmul/reports/biren_evidence/perf/baselines/biren.json
+```
+
+日常复跑不要加 `--update-baseline`。
+
+## 7. 复现
 
 在个人容器项目根目录执行，先确认物理 XPU 2 可用：
 
@@ -221,10 +267,10 @@ python ops/matmul/script/bench_dispatch.py --device p800-kunlunxin --dtype bfloa
 ```
 
 日常回归不要加 `--update-baseline`；只有明确接受新的实现或环境基准，且
-确认全部目标用例成功时才更新。寒武纪独立基线见第 5 节；昇腾、壁仞尚未
-实测，不能沿用 P800 或 MLU590 基线。
+确认全部目标用例成功时才更新。寒武纪和壁仞基线分别见第 5、6 节；
+昇腾尚未实测，不能沿用 P800、MLU590 或 Biren166M 基线。
 
-## 7. 结论与遗留
+## 8. 结论与遗留
 
 | 项目 | 结论 |
 |---|---|
@@ -232,9 +278,10 @@ python ops/matmul/script/bench_dispatch.py --device p800-kunlunxin --dtype bfloa
 | 昆仑芯自研 Triton | 72 条门禁记录均 OK；本阶段不进行性能优化 |
 | 昆仑芯原生 PyTorch/XMLIR | 4 FAIL / 4 WARN；追加复核显示共享设备上的延迟波动，不能直接归因于 matmul 代码 |
 | 寒武纪 MLU590 | 144/144 初始记录完成；独立复跑、锁定环境和 profiler 待完成 |
+| 壁仞 Biren166M | torch-level 48/48 初始记录；FP32/BF16 前后向通过；Triton/native 对照和独立复跑待完成 |
 | FlagGems | 锁定版本缺少完整 matmul 入口，`bmm` 自动调参失败；原因已记录，不构造缺失数字 |
 | 昆仑芯 A1 分发 | 三种 dtype 已完成独立进程测量，结果见本报告第 3 节 |
-| 昇腾 / 壁仞 | 尚未实测，需各自环境独立采集，不能沿用 P800 或 MLU590 基线 |
+| 昇腾 | 尚未实测，需独立环境采集，不能沿用其他平台基线 |
 
 性能数据用于回归追踪，不代表自研实现已经超过原生；当前第一阶段的功能和
 正确性结论见 [测试报告](test-report.md) 与 [精度报告](accuracy.md)。

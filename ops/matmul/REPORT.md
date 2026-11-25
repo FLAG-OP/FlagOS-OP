@@ -3,12 +3,12 @@
 | 项 | 值 |
 |---|---|
 | 算子 | `aten::matmul` |
-| 实现路线 | **A1**：`AutogradCUDA` 接管 `torch.matmul` |
+| 实现路线 | **A1**：P800 `AutogradCUDA`；MLU/Biren `AutogradPrivateUse1` |
 | 开发级别 | **Triton 级**（自研 `tl.dot`）；硬件级本期置空 |
-| 目标平台 | Kunlunxin P800；Cambricon MLU590（兼容性）；Biren166M（torch-level 最小闭环） |
+| 目标平台 | Kunlunxin P800；Cambricon MLU590（兼容性）；Biren166M（torch-level 支持 dtype 完整精度） |
 | 开发者 | 陶焱烽；寒武纪移植与复验：赵俊堯、张哲、张子煜、赵炳凯 |
 | 环境 | 个人容器 `tyanfeng-flagos-p800-lock`；Torch 2.9.0+cu129；Triton 3.0.0+03c4c9be |
-| 报告日期 / 状态 | 2026-11-11 / PARTIAL：昆仑芯已有功能与 C1 证据；寒武纪 MLU590 兼容性环境功能与精度通过，已建立 144 条性能基线；锁定环境和独立性能复跑仍待完成 |
+| 报告日期 / 状态 | 2026-11-24 / PARTIAL：昆仑芯已有功能与 C1 证据；寒武纪 MLU590 兼容性环境功能与精度通过；壁仞 FP32/BF16 96 组黄金、torch-level 三层和 48 条初始性能记录通过；Triton、FlagGems 和完整平台验收仍未闭合 |
 
 本阶段按第一周期要求交付功能版本、正确性证据和初始性能记录。应用层以
 小型 framework 消费者为准，真实模型接入和 tiny vLLM 不属于本阶段范围；
@@ -35,15 +35,18 @@
 
 ## 2. 语义与范围
 
-支持 FP32、FP16、BF16 的向量点积、矩阵乘、批量矩阵乘、批次广播、非连续
-输入、零 K、空输出、零输入、大数和 `K=1`；前向及左右输入一阶梯度分别验证，
-广播梯度归约回原输入形状。高阶梯度不在本期范围。
+昆仑芯和寒武纪支持 FP32、FP16、BF16；壁仞 BR10x 当前只支持 FP32/BF16。
+覆盖向量点积、矩阵乘、批量矩阵乘、批次广播、非连续输入、零 K、空输出、
+零输入、大数和 `K=1`；前向及左右输入一阶梯度分别验证，广播梯度归约回
+原输入形状。高阶梯度不在本期范围。
 
 参考输入规格见 [`goldendata/inputs_spec.yaml`](goldendata/inputs_spec.yaml)。
 CPU reference 采用 FP32 内部计算，GEMM 非零结果按相对误差 `5e-2` 判卷，
 零参考按 dtype 绝对容差判卷。
 
-## 3. 昆仑芯验证矩阵
+## 3. 多平台验证矩阵
+
+### 3.1 昆仑芯 P800
 
 | 层级 | 入口 | 结果 |
 |---|---|---|
@@ -58,9 +61,9 @@ CPU reference 采用 FP32 内部计算，GEMM 非零结果按相对误差 `5e-2`
 
 应用层不使用真实模型；物理 XPU 1 曾在 matmul 前的最小标量读回阶段超时，
 不列为已验证设备。寒武纪已完成兼容性环境复验，锁定环境仍待复核；
-昇腾和壁仞尚未进行 matmul 验证。
+壁仞已完成 torch-level 支持 dtype 复验；昇腾尚未进行 matmul 验证。
 
-### 应用消费者证据（历史验证：PASS）
+### 3.2 昆仑芯应用消费者证据（历史验证：PASS）
 
 | 字段 | 值 |
 |---|---|
@@ -72,7 +75,7 @@ CPU reference 采用 FP32 内部计算，GEMM 非零结果按相对误差 `5e-2`
 | commit / 源码身份 | 历史结果采集时工作树未提交；对应代码已收录于 `f697348`，实测源码以 [SHA256 记录](reports/performance_xpu2_v1/provenance.json) 为准，不声称当时直接测试了该 commit |
 | 可支持结论 | 此消费者输出、梯度及两次 A1 命中通过；不代表 C2 真实引擎验证 |
 
-### 寒武纪 MLU590 兼容性矩阵（2026-11-11）
+### 3.3 寒武纪 MLU590 兼容性矩阵（2026-11-11）
 
 共享容器 `mlu-baseline` 使用 PyTorch 2.10.0、torch_mlu 1.32.2、
 Triton 3.4.0+mlu2.0.3 与 FlagGems 5.3.5 源码；版本低于
@@ -90,21 +93,25 @@ Triton 3.4.0+mlu2.0.3 与 FlagGems 5.3.5 源码；版本低于
 完整记录见 [cambricon.md](reports/cambricon.md) 和
 [cambricon_evidence](reports/cambricon_evidence/)。
 
-### 壁仞 Biren166M 最小矩阵（2026-11-24）
+### 3.4 壁仞 Biren166M 支持 dtype 矩阵（2026-11-24）
 
-设备类型为 `supa`，当前使用 torch-level A1；Triton 3.6 没有 Biren
-active driver。
+设备类型为 `supa`，当前使用 torch-level A1。测试环境为 PyTorch
+`2.8.0+cpu`、torch_br `1.11.0.20800+br1xx`；当前运行时未安装
+Triton 和 FlagGems。
 
 | 验证项 | 结果 |
 |---|---|
-| 原生 2-D matmul | FP32/BF16 2/2 |
-| 直调 torch-level | 7 shape × 2 dtype = 14/14 |
-| A1 grad / no_grad / inference_mode | 各 14/14 命中 |
-| 最坏相对误差 | 7.519e-3 |
-| CPU 隔离 | PASS |
-| FP16 | 当前 BR10x matmul 不支持 |
+| torch-level 黄金 | 16 shape × FP32/BF16 × 3 seed = 96/96 |
+| A1 黄金 | 96/96，命中 96 次 |
+| A1 op | 8 次命中；grad/no_grad/inference_mode 各 1 次；CPU 隔离 PASS |
+| framework | 两次 matmul 命中；CPU 对照输出及三个梯度最大误差 `9.45e-5` |
+| smoke | 7 shape × 2 dtype；直调 14/14，三种模式各 14/14 |
+| 初始性能 | 12 shape × 2 dtype × 前后向 = 48/48，0 跳过 |
+| 最坏相对误差 | `6.67e-3` |
+| FP16 | BR10x 不支持，独立子进程被 SDK 终止 |
 
-完整边界见 [biren.md](reports/biren.md)。
+这是当前支持的 FP32/BF16 96/96，不是三 dtype 144/144，也不是 Triton
+kernel 或 FlagGems 通过。完整边界见 [biren.md](reports/biren.md)。
 
 ## 4. 关键问题与修复
 
@@ -149,4 +156,4 @@ Triton 在小 shape 上前向约为原生 `5.14–5.31x` 耗时，反向约为
 | XPU 2 性能记录 | [reports/performance_xpu2_v1/](reports/performance_xpu2_v1/) |
 | 寒武纪复验报告 | [reports/cambricon.md](reports/cambricon.md) |
 | 寒武纪原始证据 | [reports/cambricon_evidence/](reports/cambricon_evidence/) |
-| 壁仞最小闭环 | [reports/biren.md](reports/biren.md) |
+| 壁仞支持 dtype 精度与三层 | [reports/biren.md](reports/biren.md) |

@@ -1,0 +1,38 @@
+{
+  "device": "biren",
+  "backend": "torch",
+  "shape": [
+    63,
+    127,
+    65
+  ],
+  "dtype": "bfloat16",
+  "warmup": 20,
+  "iters": 100,
+  "completion_guard": "reshape(-1)[0].item() per call",
+  "isolation": "one process per implementation",
+  "rows": [
+    {
+      "mode": "native",
+      "median_ms": 0.266696,
+      "p20_ms": 0.2659,
+      "p80_ms": 0.26794,
+      "relative_error": 0.0
+    },
+    {
+      "mode": "direct",
+      "median_ms": 0.3802,
+      "p20_ms": 0.37796,
+      "p80_ms": 0.38559,
+      "relative_error": 0.0
+    },
+    {
+      "mode": "a1",
+      "median_ms": 0.395256,
+      "p20_ms": 0.392101,
+      "p80_ms": 0.400141,
+      "relative_error": 0.0
+    }
+  ],
+  "a1_minus_direct_ms": 0.015056
+}

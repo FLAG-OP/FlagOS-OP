@@ -1,0 +1,7 @@
+[W1124 13:02:52.063262819 GeneratorForPrivateuseone.cpp:17] Warning: REGISTER_GENERATOR_PRIVATEUSE1 is deprecated.       Please derive PrivateUse1HooksInterface to implememt getNewGenerator instead. (function _GeneratorRegister)
+/usr/local/lib/python3.10/dist-packages/torch_br/__init__.py:152: UserWarning: edgeitems of torch print options has been change to 4 for BR166. If you want to change it, please call torch.set_printoptions.Please NOTE that odd edgeitems can cause error when you print supa tensor on BR166 device.
+  warnings.warn(
+/usr/local/lib/python3.10/dist-packages/torch/autograd/function.py:576: UserWarning: br_matmul_with_output will be deprecated, Please use br_fused_matmul_transpose with out instead. (Triggered internally at /home/jenkins/agent/workspace/BR_PACKAGE/buildSystem/dailyBuild/full-stack/br_pytorch/torch_br/csrc/aten/operators/pt_frontend_op/Matmul.cpp:287.)
+  return super().apply(*args, **kwargs)  # type: ignore[misc]
+A1 matmul (torch, AutogradPrivateUse1, flaggems=False): 8 interceptions; worst native-relative error=0.000e+00; mode hits={'grad': 1, 'no_grad': 1, 'inference_mode': 1}
+{'ok': True, 'intercepted': 8, 'max_native_rel_err': 0.0, 'mode_hits': {'grad': 1, 'no_grad': 1, 'inference_mode': 1}}

@@ -20,8 +20,10 @@ sys.path.insert(0, str(ROOT))
 def _device(value):
     if value == "cpu" or ":" in value:
         return value
-    from common.device import load_profile
-    return load_profile(value).torch_device
+    from common.device import load_profile, load_runtime
+    profile = load_profile(value)
+    load_runtime(profile)
+    return profile.torch_device
 
 
 def main() -> int:
@@ -32,7 +34,7 @@ def main() -> int:
     ap.add_argument("--dtype", default="bfloat16",
                     choices=("float32", "float16", "bfloat16"))
     ap.add_argument("--impl", default="all",
-                    choices=("all", "triton", "native", "flaggems"))
+                    choices=("all", "triton", "torch", "native", "flaggems"))
     ap.add_argument("--direction", choices=("forward", "backward"), default="forward")
     ap.add_argument("--case", help="named nonempty golden case; overrides --shape")
     ap.add_argument("--json-out", type=Path)

@@ -2,7 +2,7 @@
 
 > 当前只保留有运行证据的平台结论。昆仑芯 P800 已有功能与精度证据；
 > 寒武纪 MLU590 已完成兼容性环境的功能、精度和初始性能复验；壁仞
-> Biren166M 已完成 torch-level A1 最小闭环。
+> Biren166M 已完成 FP32/BF16 支持 dtype 的精度矩阵和 torch-level 三层。
 
 ## 1. 平台无关复用项
 
@@ -64,13 +64,22 @@ torch_mlu 1.32.2、Triton 3.4.0+mlu2.0.3、FlagGems 5.3.5 源码。
 
 ## 4. 壁仞 Biren166M
 
+状态：**torch-level PARTIAL；不声明 Triton、FlagGems 或完整平台通过**
+
 - 设备类型：`supa`；
 - A1 key：`AutogradPrivateUse1`；
-- torch-level 7 种 shape × FP32/BF16 × 三种执行模式全部通过；
+- profile 运行时模块：`torch_br` + `br_generator`；
+- 16 种 shape × FP32/BF16 × 3 seed：直调 96/96、A1 96/96，
+  A1 命中 96 次，最坏相对误差 `6.67e-3`；
+- op：8 次命中，grad/no_grad/inference_mode 各 1 次，CPU 隔离通过；
+- framework：两次 matmul 命中，CPU 对照最大误差 `9.45e-5`；
+- smoke：7 shape × 2 dtype，三种执行模式各 14/14 命中；
+- 初始性能：torch 入口 48/48、0 跳过；同轮门禁回读 OK，未做独立复跑；
 - FP16 被当前 BR10x matmul 实现拒绝；
-- Triton 3.6 无 Biren active driver；
-- FlagGems 5.3.5 无法自动识别该设备；
-- 当前是 MINIMAL 平台证据，不进入完整 `ops/catalog.yaml` 平台声明。
+- 当前镜像未安装 Triton 和 FlagGems；
+- 原生 1-D 向量和部分批量反向不可用，torch-level 形状策略覆盖前者，
+  后者只作为厂商边界记录；
+- 支持 dtype 精度闭环完成，但仍不进入完整 `ops/catalog.yaml` 平台声明。
 
 完整结果见 [reports/biren.md](reports/biren.md)。
 

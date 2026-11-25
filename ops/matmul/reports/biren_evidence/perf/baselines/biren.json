@@ -1,0 +1,929 @@
+{
+  "schema": 1,
+  "device": "biren",
+  "created_at": "2026-11-24T04:47:42.162056+00:00",
+  "updated_at": "2026-11-24T04:55:47.779309+00:00",
+  "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+  "git_dirty": true,
+  "env_fingerprint": {
+    "torch": "2.8.0+cpu",
+    "triton": null,
+    "flag_gems": null,
+    "vllm_fl": null,
+    "vllm": null
+  },
+  "cases": {
+    "ops.matmul.batch_broadcast.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 5.005817,
+        "GFLOPS": 0.483,
+        "max_check_error": 0.007
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:50:20.235011+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.batch_broadcast.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 2.41952,
+        "GFLOPS": 0.5,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:50:07.676979+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.batch_broadcast.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 5.471022,
+        "GFLOPS": 0.442,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:49:57.082128+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.batch_broadcast.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 2.690294,
+        "GFLOPS": 0.45,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:49:45.131453+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.batch_tail.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 1.823062,
+        "GFLOPS": 0.442,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:49:34.953564+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.batch_tail.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.853037,
+        "GFLOPS": 0.473,
+        "max_check_error": 0.001
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:49:24.647395+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.batch_tail.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 1.887508,
+        "GFLOPS": 0.427,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:49:14.980632+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.batch_tail.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.89706,
+        "GFLOPS": 0.45,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:49:04.551304+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.dot.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.730024,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:51:01.141310+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.dot.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.282562,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:50:50.404641+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.dot.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.728854,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:50:40.773316+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.dot.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.298174,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:50:30.835579+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.large_input.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.772219,
+        "GFLOPS": 0.116,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:54:24.207991+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.large_input.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.348148,
+        "GFLOPS": 0.128,
+        "max_check_error": 0.001
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:54:14.729730+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.large_input.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.803199,
+        "GFLOPS": 0.111,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:54:04.739367+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.large_input.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.423746,
+        "GFLOPS": 0.105,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:53:54.723678+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_regular.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.789681,
+        "GFLOPS": 31.868,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:48:54.511864+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_regular.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.352335,
+        "GFLOPS": 35.713,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:48:43.883676+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_regular.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.781578,
+        "GFLOPS": 32.199,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:48:33.674212+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_regular.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.351828,
+        "GFLOPS": 35.764,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:48:23.199727+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tail.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.776697,
+        "GFLOPS": 2.678,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:48:12.612651+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tail.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.350321,
+        "GFLOPS": 2.969,
+        "max_check_error": 0.001
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:48:02.190163+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tail.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.808831,
+        "GFLOPS": 2.572,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:47:52.241291+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tail.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.360086,
+        "GFLOPS": 2.889,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:47:42.162056+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tiny.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.746629,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:55:04.972327+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tiny.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.343005,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:54:55.026829+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tiny.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.799858,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:54:44.446593+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_tiny.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.360741,
+        "GFLOPS": 0.0,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:54:34.141179+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_vector.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.746896,
+        "GFLOPS": 0.013,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:51:42.516398+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_vector.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.388789,
+        "GFLOPS": 0.012,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:51:32.027074+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_vector.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.817223,
+        "GFLOPS": 0.012,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:51:21.602403+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.matrix_vector.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.364731,
+        "GFLOPS": 0.013,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:51:11.534369+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.noncontiguous.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.732984,
+        "GFLOPS": 0.381,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:53:03.913490+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.noncontiguous.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.385641,
+        "GFLOPS": 0.362,
+        "max_check_error": 0.001
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:52:53.356865+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.noncontiguous.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.756165,
+        "GFLOPS": 0.369,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:52:43.349554+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.noncontiguous.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.399256,
+        "GFLOPS": 0.349,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:52:32.965717+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.rank_one.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.682874,
+        "GFLOPS": 0.014,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:55:45.755977+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.rank_one.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.346027,
+        "GFLOPS": 0.014,
+        "max_check_error": 0.001
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:55:35.780692+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.rank_one.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.715301,
+        "GFLOPS": 0.013,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:55:25.819262+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.rank_one.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.362892,
+        "GFLOPS": 0.013,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:55:15.107726+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.vector_matrix.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.739557,
+        "GFLOPS": 0.01,
+        "max_check_error": 0.002
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:52:23.499493+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.vector_matrix.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.349351,
+        "GFLOPS": 0.011,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:52:12.844864+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.vector_matrix.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.759211,
+        "GFLOPS": 0.01,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:52:03.098002+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.vector_matrix.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.369441,
+        "GFLOPS": 0.01,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:51:53.170747+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.zero_input.bfloat16.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.772162,
+        "GFLOPS": 0.006,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:53:44.902630+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.zero_input.bfloat16.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.344657,
+        "GFLOPS": 0.006,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:53:35.091715+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.zero_input.float32.backward.torch": {
+      "metrics": {
+        "latency_ms": 0.795608,
+        "GFLOPS": 0.005,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:53:24.701946+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    },
+    "ops.matmul.zero_input.float32.forward.torch": {
+      "metrics": {
+        "latency_ms": 0.361768,
+        "GFLOPS": 0.006,
+        "max_check_error": 0.0
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-24T04:53:14.334340+00:00",
+      "git_commit": "d93d6d65e8eeef0b46f4455e46a26a9f43e74563",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.8.0+cpu",
+        "triton": null,
+        "flag_gems": null,
+        "vllm_fl": null,
+        "vllm": null
+      }
+    }
+  }
+}

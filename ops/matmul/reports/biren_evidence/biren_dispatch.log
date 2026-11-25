@@ -1,0 +1,5 @@
+native  median=0.266696 ms p20=0.265900 p80=0.267940
+direct  median=0.380200 ms p20=0.377960 p80=0.385590
+a1      median=0.395256 ms p20=0.392101 p80=0.400141
+A1 minus direct: 0.015056 ms
+saved /workspace/logs/biren_dispatch.json

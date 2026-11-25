@@ -19,9 +19,10 @@ sys.path.insert(0, str(ROOT))
 def _run_mode(args):
     import torch
 
-    from common.device import load_profile
+    from common.device import load_profile, load_runtime
 
     profile = load_profile(args.device)
+    load_runtime(profile)
     m, k, n = args.shape
     dtype = getattr(torch, args.dtype)
     generator = torch.Generator(device="cpu").manual_seed(20260930)
@@ -35,13 +36,17 @@ def _run_mode(args):
     if args._mode == "native":
         fn = torch.matmul
     elif args._mode == "direct":
-        from kernel.triton_level import matmul_triton
-
-        fn = matmul_triton
+        if args.backend == "triton":
+            from kernel.triton_level import matmul_triton
+            fn = matmul_triton
+        else:
+            from kernel.torch_level import matmul_torch
+            fn = matmul_torch
     else:
         from register import dispatch_key_for_profile, register_a1
 
-        lib = register_a1(dispatch_key_for_profile(profile), counter=counter)
+        lib = register_a1(dispatch_key_for_profile(profile), counter=counter,
+                          backend=args.backend)
         fn = torch.matmul
 
     output = fn(a, b).float()
@@ -82,6 +87,7 @@ def main() -> int:
                     metavar=("M", "K", "N"))
     ap.add_argument("--dtype", choices=("float32", "float16", "bfloat16"),
                     default="bfloat16")
+    ap.add_argument("--backend", choices=("triton", "torch"), default="triton")
     ap.add_argument("--warmup", type=int, default=20)
     ap.add_argument("--iters", type=int, default=100)
     ap.add_argument("--json-out", type=Path)
@@ -100,6 +106,7 @@ def main() -> int:
         command = [sys.executable, str(Path(__file__).resolve()),
                    "--device", args.device, "--dtype", args.dtype,
                    "--shape", *(str(dim) for dim in args.shape),
+                   "--backend", args.backend,
                    "--warmup", str(args.warmup), "--iters", str(args.iters),
                    "--_mode", mode]
         child = subprocess.run(command, text=True, capture_output=True, cwd=ROOT)
@@ -114,6 +121,7 @@ def main() -> int:
     by_mode = {row["mode"]: row for row in rows}
     result = {
         "device": args.device,
+        "backend": args.backend,
         "shape": args.shape,
         "dtype": args.dtype,
         "warmup": args.warmup,

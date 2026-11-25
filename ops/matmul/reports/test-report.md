@@ -3,12 +3,12 @@
 | 项 | 值 |
 |---|---|
 | 算子名称 | `aten::matmul` |
-| 实现路线 / 开发级别 | A1 `AutogradCUDA` / Triton 自研 dot |
-| 目标设备 | Kunlunxin P800，物理 XPU 2 |
-| 测试日期 | 2026-10-14～2026-10-15；合并后功能复测 2026-10-23 |
+| 实现路线 / 开发级别 | A1；P800 自研 Triton dot；MLU/Biren `AutogradPrivateUse1` |
+| 目标设备 | Kunlunxin P800；Cambricon MLU590（兼容性）；Biren166M（torch-level） |
+| 测试日期 | 2026-10-14～2026-10-15；合并后复测 2026-10-23；多平台复验 2026-11-11～2026-11-24 |
 | 环境 | 个人锁定容器；Python 3.10.18、Torch 2.9.0+cu129、Triton 3.0.0+03c4c9be |
 | 设备 | P800 物理 XPU 2：`CUDA_VISIBLE_DEVICES=1,2`，逻辑 `cuda:1` |
-| 结论 | PARTIAL：昆仑芯历史黄金、三级与 FlagGems 共存通过；寒武纪兼容性环境三层与 144/144 黄金通过；两侧锁定环境和性能门禁边界分别保留 |
+| 结论 | PARTIAL：昆仑芯历史黄金、三级与 FlagGems 共存通过；寒武纪兼容性环境三层与 144/144 黄金通过；壁仞 torch-level FP32/BF16 96/96 及三层通过；Triton/FlagGems 和完整平台边界保留 |
 
 2026-10-14 当前范围：应用层只需小型 framework，真实模型接入和 tiny
 vLLM 不作为本阶段验收项。模型探索已归档，不再安排复测。
@@ -124,16 +124,25 @@ FlagGems 5.3.5 将 `DeviceDetector` 移至
 `flag_gems.runtime.backend.device_finder`，实现已增加新旧路径兼容导入。
 详细日志和性能状态见 [cambricon.md](cambricon.md)。
 
-## 9. 壁仞 Biren166M 最小闭环
+## 9. 壁仞 Biren166M 支持 dtype 三层测试
 
-2026-11-24 在 `birensupa-pytorch` 容器以 torch-level A1 验证：
+2026-11-24 在 `birensupa-pytorch` 容器、`supa:0` 上以 torch-level
+路径验证。低层精度使用 16 种 shape × FP32/BF16 × 3 seed，共 96 组。
 
-- 原生矩阵乘：FP32/BF16 2/2；
-- 直调实现：7 种 shape × 2 dtype = 14/14；
-- grad、no_grad、inference_mode：各 14 次命中；
-- CPU 隔离通过，最坏误差 `7.519e-3`；
-- FP16 被当前 BR10x matmul 拒绝；
-- Triton 无 Biren driver，FlagGems 无法自动识别该设备。
+| 层 | 结果 |
+|---|---|
+| torch-level 直调 | 96/96；最坏前向/双梯度相对误差 `6.67e-3` |
+| A1 黄金 | 96/96；A1 命中 96 次 |
+| A1 op | 8 次 `AutogradPrivateUse1` 命中；grad/no_grad/inference_mode 各 1 次；CPU 隔离通过 |
+| framework | CPU 对照的两次 matmul 消费者；输出和三个梯度最大误差 `9.45e-5`，A1 命中 2 次 |
+| smoke 矩阵 | 7 shape × FP32/BF16；直调 14/14，三种模式各 14 次命中 |
 
-当前为 MINIMAL，不声明三层或完整平台验收。详见
-[biren.md](biren.md)。
+平台边界：
+
+- FP16 子进程以 `SIGABRT` 退出，SDK 明示 BR10x matmul 只支持
+  BF16/FP32/S8/U8；
+- 原生 `torch.matmul` 不接受 1-D 向量；算子通过形状整理覆盖该语义；
+- 当前镜像未安装 Triton 和 FlagGems，不能形成两者在本平台的通过结论。
+
+该结果完成了当前支持 dtype 的精度矩阵和 torch-level 三层验证，但不是
+Triton kernel、FlagGems 或真实引擎验收。详见 [biren.md](biren.md)。

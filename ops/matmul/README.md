@@ -10,9 +10,10 @@
 144/144、A1 黄金 144/144、三层测试和 144 条初始性能记录。由于容器
 版本低于环境锁，锁定栈复验和第二次独立性能复跑仍未完成。
 
-2026-11-24 增加壁仞 Biren166M 的 torch-level A1 最小闭环：FP32/BF16、
-7 种矩阵形态和 grad/no_grad/inference_mode 均通过。当前 Triton 无
-Biren driver，FP16 不受 BR10x matmul 支持，因此该平台仍为 MINIMAL。
+2026-11-24 将壁仞 Biren166M 补齐到当前支持 dtype 的 torch-level 三层：
+16 种 shape × FP32/BF16 × 3 seed，直调与 A1 均 96/96，A1 黄金命中
+96 次；op 和 framework 实际命中通过。FP16 不受 BR10x 支持，当前镜像
+也未安装 Triton/FlagGems，因此仍不声明完整平台验收。
 
 按 `templates/operator/` 开发。需求是 FP32/FP16/BF16 的向量、矩阵、批量及广播 matmul，前向和左右输入一阶反向分别验证。昆仑芯 P800 锁定镜像个人容器已在正式物理 XPU 2 完成黄金和三级功能测试，并建立 144 条性能基线；独立复测也已补齐到 144 条，门禁保留 4 FAIL / 4 WARN（均为原生路径）。2026-10-14 确认本阶段应用层以小型 framework 为准，真实模型及 tiny vLLM 不在本阶段范围。
 
@@ -21,13 +22,13 @@ Biren driver，FP16 不受 BR10x matmul 支持，因此该平台仍为 MINIMAL�
 | 项 | 值 |
 |---|---|
 | 接口 | `torch.matmul` / `aten::matmul` |
-| 接入 | A1 `AutogradCUDA`；实际命中计数 |
+| 接入 | A1；P800 为 `AutogradCUDA`，MLU/Biren 为 `AutogradPrivateUse1`；实际命中计数 |
 | 生产计算 | 自研 Triton `tl.dot`，32×32 输出 tile；保留动态 K 修复 P800 BF16 `K=1` 编译问题，默认统一走 dot |
 | 反向 | 两次自研 matmul + 广播维归约 |
 | 正确性 | CPU 参考生成 144 组；直调 Triton、A1 在物理 XPU 2 均对黄金 144/144；三级测试全绿 |
 | 性能记录 | XPU 2：12 非空形状 × 3 dtype × 前后向 × 自研/原生，基线和独立复测均 144 条；门禁 4 FAIL / 4 WARN 均为原生路径，当前不进行性能优化 |
 | 寒武纪 | kernel/A1 各 144/144；A1 命中 15 次、framework 命中 2 次；144 条初始性能基线；当前自研慢于 MLU 原生 |
-| 壁仞 | torch-level A1 最小闭环；2 dtype × 7 shape × 3 模式各 14/14 命中 |
+| 壁仞 | torch-level FP32/BF16 直调/A1 各 96/96；A1 命中 96 次；op 8 次、framework 2 次命中；48 条初始性能 0 跳过 |
 
 ## 实现要点
 

@@ -1,0 +1,70 @@
+  [perf-registry] matrix.a1: 加载失败跳过 (No module named 'triton')
+  [perf-registry] matrix.a2: 加载失败跳过 (No module named 'triton')
+  [perf-registry] example.a2-op: 加载失败跳过 (No module named 'triton')
+  [perf-registry] example.bmm-fullstack: 加载失败跳过 (No module named 'triton')
+  [perf-registry] example.softmax-fullstack: 加载失败跳过 (No module named 'flag_gems')
+  [perf-registry] example.backward-example: 加载失败跳过 (No module named 'triton')
+  [perf-registry] ops.sdpa_math: 加载失败跳过 (No module named 'triton')
+  [perf-registry] ops.type_as: 加载失败跳过 (No module named 'triton')
+  [perf-registry] ops.clone: 加载失败跳过 (No module named 'triton')
+  [perf-registry] ops.contiguous: 加载失败跳过 (No module named 'triton')
+  [perf-registry] ops.copy_: 加载失败跳过 (No module named 'triton')
+  [perf-registry] ops.dropout: 加载失败跳过 (No module named 'triton')
+[perf-run] 设备: biren [vendor=biren dev=supa:0 visible=0 key=AutogradPrivateUse1]
+[perf-run] 用例: 48 个（过滤: pattern=ops.matmul.）
+
+  case_id                                              latency_ms  附加指标
+  ----------------------------------------------------------------------------
+  ops.matmul.matrix_tail.float32.forward.torch              0.360  {'GFLOPS': 2.889, 'max_check_error': 0.0}
+  ops.matmul.matrix_tail.float32.backward.torch             0.809  {'GFLOPS': 2.572, 'max_check_error': 0.0}
+  ops.matmul.matrix_tail.bfloat16.forward.torch             0.350  {'GFLOPS': 2.969, 'max_check_error': 0.001}
+  ops.matmul.matrix_tail.bfloat16.backward.torch            0.777  {'GFLOPS': 2.678, 'max_check_error': 0.002}
+  ops.matmul.matrix_regular.float32.forward.torch           0.352  {'GFLOPS': 35.764, 'max_check_error': 0.0}
+  ops.matmul.matrix_regular.float32.backward.torch          0.782  {'GFLOPS': 32.199, 'max_check_error': 0.0}
+  ops.matmul.matrix_regular.bfloat16.forward.torch          0.352  {'GFLOPS': 35.713, 'max_check_error': 0.002}
+  ops.matmul.matrix_regular.bfloat16.backward.torch         0.790  {'GFLOPS': 31.868, 'max_check_error': 0.002}
+  ops.matmul.batch_tail.float32.forward.torch               0.897  {'GFLOPS': 0.45, 'max_check_error': 0.0}
+  ops.matmul.batch_tail.float32.backward.torch              1.888  {'GFLOPS': 0.427, 'max_check_error': 0.0}
+  ops.matmul.batch_tail.bfloat16.forward.torch              0.853  {'GFLOPS': 0.473, 'max_check_error': 0.001}
+  ops.matmul.batch_tail.bfloat16.backward.torch             1.823  {'GFLOPS': 0.442, 'max_check_error': 0.002}
+  ops.matmul.batch_broadcast.float32.forward.torch          2.690  {'GFLOPS': 0.45, 'max_check_error': 0.0}
+  ops.matmul.batch_broadcast.float32.backward.torch         5.471  {'GFLOPS': 0.442, 'max_check_error': 0.0}
+  ops.matmul.batch_broadcast.bfloat16.forward.torch         2.420  {'GFLOPS': 0.5, 'max_check_error': 0.002}
+  ops.matmul.batch_broadcast.bfloat16.backward.torch        5.006  {'GFLOPS': 0.483, 'max_check_error': 0.007}
+  ops.matmul.dot.float32.forward.torch                      0.298  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.dot.float32.backward.torch                     0.729  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.dot.bfloat16.forward.torch                     0.283  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.dot.bfloat16.backward.torch                    0.730  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.matrix_vector.float32.forward.torch            0.365  {'GFLOPS': 0.013, 'max_check_error': 0.0}
+  ops.matmul.matrix_vector.float32.backward.torch           0.817  {'GFLOPS': 0.012, 'max_check_error': 0.0}
+  ops.matmul.matrix_vector.bfloat16.forward.torch           0.389  {'GFLOPS': 0.012, 'max_check_error': 0.0}
+  ops.matmul.matrix_vector.bfloat16.backward.torch          0.747  {'GFLOPS': 0.013, 'max_check_error': 0.002}
+  ops.matmul.vector_matrix.float32.forward.torch            0.369  {'GFLOPS': 0.01, 'max_check_error': 0.0}
+  ops.matmul.vector_matrix.float32.backward.torch           0.759  {'GFLOPS': 0.01, 'max_check_error': 0.0}
+  ops.matmul.vector_matrix.bfloat16.forward.torch           0.349  {'GFLOPS': 0.011, 'max_check_error': 0.0}
+  ops.matmul.vector_matrix.bfloat16.backward.torch          0.740  {'GFLOPS': 0.01, 'max_check_error': 0.002}
+  ops.matmul.noncontiguous.float32.forward.torch            0.399  {'GFLOPS': 0.349, 'max_check_error': 0.0}
+  ops.matmul.noncontiguous.float32.backward.torch           0.756  {'GFLOPS': 0.369, 'max_check_error': 0.0}
+  ops.matmul.noncontiguous.bfloat16.forward.torch           0.386  {'GFLOPS': 0.362, 'max_check_error': 0.001}
+  ops.matmul.noncontiguous.bfloat16.backward.torch          0.733  {'GFLOPS': 0.381, 'max_check_error': 0.002}
+  ops.matmul.zero_input.float32.forward.torch               0.362  {'GFLOPS': 0.006, 'max_check_error': 0.0}
+  ops.matmul.zero_input.float32.backward.torch              0.796  {'GFLOPS': 0.005, 'max_check_error': 0.0}
+  ops.matmul.zero_input.bfloat16.forward.torch              0.345  {'GFLOPS': 0.006, 'max_check_error': 0.0}
+  ops.matmul.zero_input.bfloat16.backward.torch             0.772  {'GFLOPS': 0.006, 'max_check_error': 0.0}
+  ops.matmul.large_input.float32.forward.torch              0.424  {'GFLOPS': 0.105, 'max_check_error': 0.0}
+  ops.matmul.large_input.float32.backward.torch             0.803  {'GFLOPS': 0.111, 'max_check_error': 0.0}
+  ops.matmul.large_input.bfloat16.forward.torch             0.348  {'GFLOPS': 0.128, 'max_check_error': 0.001}
+  ops.matmul.large_input.bfloat16.backward.torch            0.772  {'GFLOPS': 0.116, 'max_check_error': 0.002}
+  ops.matmul.matrix_tiny.float32.forward.torch              0.361  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.matrix_tiny.float32.backward.torch             0.800  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.matrix_tiny.bfloat16.forward.torch             0.343  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.matrix_tiny.bfloat16.backward.torch            0.747  {'GFLOPS': 0.0, 'max_check_error': 0.0}
+  ops.matmul.rank_one.float32.forward.torch                 0.363  {'GFLOPS': 0.013, 'max_check_error': 0.0}
+  ops.matmul.rank_one.float32.backward.torch                0.715  {'GFLOPS': 0.013, 'max_check_error': 0.0}
+  ops.matmul.rank_one.bfloat16.forward.torch                0.346  {'GFLOPS': 0.014, 'max_check_error': 0.001}
+  ops.matmul.rank_one.bfloat16.backward.torch               0.683  {'GFLOPS': 0.014, 'max_check_error': 0.0}
+
+[perf-run] 完成: 48 记录 / 0 跳过 → results/perf/runs/biren/
+[perf-run] 对比: python3 scripts/perf_compare.py --device biren
+[perf-run] 基线已更新: /workspace/FlagOS-OP/perf/baselines/biren.json
+[perf-run] 提交基线时请在提交信息说明原因（算子语义变更/环境升级等）

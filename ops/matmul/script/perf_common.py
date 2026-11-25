@@ -7,6 +7,7 @@ from pathlib import Path
 import torch
 import yaml
 
+from common.device import load_runtime
 from ops.matmul.kernel._shape import matrix_inputs
 from ops.matmul.reference import matmul_backward_reference, matmul_reference
 from ops.matmul.script.gen_golden import make_case
@@ -16,13 +17,19 @@ SPEC_PATH = Path(__file__).resolve().parents[1] / "goldendata/inputs_spec.yaml"
 NO_GEMM = {"zero_k", "empty_m", "empty_n", "empty_batch"}
 
 
-def workloads():
+def workloads(profile=None):
     """One fixed seed (the first golden seed) per nonempty shape and dtype."""
     spec = yaml.safe_load(SPEC_PATH.read_text())
+    supported = set(
+        profile.raw.get("operator_dtypes", spec["dtypes"])
+        if profile is not None else spec["dtypes"]
+    )
     for ci, case in enumerate(spec["cases"]):
         if case["name"] in NO_GEMM:
             continue
         for di, dtype in enumerate(spec["dtypes"]):
+            if dtype not in supported:
+                continue
             seed = spec["seed_base"] + (ci * len(spec["dtypes"]) + di) * spec["seeds_per_case"]
             yield case, dtype, seed
 
@@ -39,8 +46,6 @@ def _error(actual, expected):
 
 def prepare(case, dtype_name, seed, impl, direction, device):
     """Prepare/check outside timing; backward measures dA+dB without forward."""
-    from ops.matmul.kernel.triton_level import matmul_backward_triton, matmul_triton
-
     dtype = getattr(torch, dtype_name)
     ca, cb, cg = make_case(case, dtype, seed)
     a, b, grad = (t.to(device) for t in (ca, cb, cg))
@@ -49,7 +54,11 @@ def prepare(case, dtype_name, seed, impl, direction, device):
     if direction == "forward":
         expected = (matmul_reference(ca, cb),)
         if impl == "triton":
+            from ops.matmul.kernel.triton_level import matmul_triton
             compute = lambda: (matmul_triton(a, b),)
+        elif impl == "torch":
+            from ops.matmul.kernel.torch_level import matmul_torch
+            compute = lambda: (matmul_torch(a, b),)
         elif impl == "native":
             compute = lambda: (torch.matmul(a, b),)
         elif impl == "flaggems":
@@ -67,7 +76,11 @@ def prepare(case, dtype_name, seed, impl, direction, device):
         expected = matmul_backward_reference(ca, cb, cg)
         flops *= 2  # Two logical GEMMs; excludes broadcast-reduction FLOPs.
         if impl == "triton":
+            from ops.matmul.kernel.triton_level import matmul_backward_triton
             compute = lambda: matmul_backward_triton(a, b, grad)
+        elif impl == "torch":
+            from ops.matmul.kernel.torch_level import matmul_backward_torch
+            compute = lambda: matmul_backward_torch(a, b, grad)
         elif impl == "native":
             a.requires_grad_(True)
             b.requires_grad_(True)
@@ -98,13 +111,17 @@ def perf_cases(profile):
     from common.perf import PerfCase
 
     result = []
-    for case, dtype, seed in workloads():
+    implementations = profile.raw.get(
+        "perf_implementations", ("triton", "native")
+    )
+    for case, dtype, seed in workloads(profile):
         for direction in ("forward", "backward"):
-            for impl in ("triton", "native"):
+            for impl in implementations:
                 state = {}
 
                 def make(p, case=case, dtype=dtype, seed=seed,
                          impl=impl, direction=direction, state=state):
+                    load_runtime(p)
                     fn, info = prepare(case, dtype, seed, impl, direction, p.torch_device)
                     state.update(info)
                     return fn

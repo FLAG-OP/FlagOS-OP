@@ -5,9 +5,9 @@
 | 算子名称 | `aten::matmul` |
 | 实现路线 | **A1**：PyTorch/ATen 算子替换 |
 | 开发级别 | **Triton 级**（自研 dot）；硬件级置空 |
-| 目标设备 | Kunlunxin P800，物理 XPU 2 |
-| 开发者 | 陶焱烽 |
-| 日期 / 状态 | 2026-10-23 / PARTIAL：昆仑芯功能版本已完成，性能门禁尚未闭合 |
+| 目标设备 | Kunlunxin P800；Cambricon MLU590（兼容性）；Biren166M（torch-level） |
+| 开发者 | 陶焱烽；多平台复验：赵俊堯、张哲、张子煜、赵炳凯 |
+| 日期 / 状态 | 2026-11-24 / PARTIAL：多平台支持 dtype 功能已验证，Triton/FlagGems 和完整平台边界保留 |
 
 ## 1. 环境配置
 
@@ -74,6 +74,10 @@ torch.matmul(a, b) -> torch.Tensor
 `kernel/torch_level.py` 仅用于独立检查语义，不能记为自研 kernel。
 本期没有厂商语言实现。
 
+壁仞 `supa` 使用相同形状规则和厂商二维 matmul 原语，由 torch-level
+一阶反向包装补齐空张量、广播及零 K 边界；当前运行时没有 Triton 和
+FlagGems，因此壁仞结果不计作自研 Triton kernel 通过。
+
 ### 3.3 A1 注册与分发
 
 [`register.py`](../register.py) 注册 `aten::matmul` 的 `AutogradCUDA`
@@ -110,7 +114,8 @@ CPU 回归，P800 验证范围与源码身份见 [PR 自查记录](pr-readiness.
 kernel 最坏前向/反向相对误差分别为 `7.463e-3` / `7.752e-3`。
 [`test-report.md`](test-report.md) 和 [`accuracy.md`](accuracy.md) 保留测试入口
 及判卷结果。寒武纪 MLU590 已由赵俊堯、张哲、张子煜、赵炳凯完成
-兼容性环境复验，锁定环境仍待复核；昇腾、壁仞尚未实测。
+兼容性环境复验，锁定环境仍待复核；壁仞完成 FP32/BF16 96/96 直调与
+A1 黄金及 torch-level 三层；昇腾尚未实测。
 
 ## 5. 性能
 
@@ -131,6 +136,8 @@ XPU 2 首轮 144/144 成功并建立基线，原有其他算子 25 条未变。�
 `performance_xpu2_v1/anomaly_repeats.md`，暂不足以建立稳定回归结论。
 XPU2 三种 dtype 的 A1 分发开销和新版反向性能入口已补测。
 完整门禁不能判为通过。FlagGems `bmm` 历史自动调参失败，没有有效对照。
+壁仞另建立 48 条 torch-level 初始性能记录，0 跳过；同轮回读为 OK，
+但尚未进行第二次独立复跑。
 
 ## 6. 已知问题与后续
 
@@ -141,6 +148,7 @@ XPU2 三种 dtype 的 A1 分发开销和新版反向性能入口已补测。
 | FlagGems `bmm` 自动调参异常 | 不把不可用对照写成通过 |
 | BF16 `K=1` dot 大误差 | 已定位 SDNN combine-before 丢失清零；动态 K 修复通过，已撤掉自动回退；vendor 编译器源码补丁待上游处理 |
 | tiny vLLM 历史环境错误 | 曾在点算子及 EngineCore 初始化阶段失败；本阶段只需小型 framework，停止该方向验证 |
+| 壁仞 BR10x | FP16 不支持；原生向量和部分批量反向不可用；未安装 Triton/FlagGems |
 | 其他三家国产硬件 | 各自环境、A1、精度、性能待验证 |
 | 物理 XPU 1 的 PyTorch 标量读回超时 | 历史探索中故障在 matmul 前；三级入口先做限时设备探针 |
 
@@ -148,6 +156,8 @@ XPU2 三种 dtype 的 A1 分发开销和新版反向性能入口已补测。
 
 昆仑芯正式物理 XPU 2 上，matmul 的 kernel、A1 op 和小型 framework 三层
 均已通过；黄金、自研/A1 命中、K=1 修复和 SRAM 残留回归均有独立记录。
+壁仞 Biren166M 已完成支持 dtype 的 torch-level 黄金、三层和初始性能，
+但不声明 Triton、FlagGems 或完整平台验收。
 FlagGems matmul 对照因锁定版本接口/自动调参不可用而留档，不能把它记为
 通过。性能门禁的 4 FAIL / 4 WARN 全部出现在原生路径，本阶段不做性能优化。
 

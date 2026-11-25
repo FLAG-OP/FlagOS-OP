@@ -1,0 +1,13 @@
+[W1124 12:59:25.887028073 GeneratorForPrivateuseone.cpp:17] Warning: REGISTER_GENERATOR_PRIVATEUSE1 is deprecated.       Please derive PrivateUse1HooksInterface to implememt getNewGenerator instead. (function _GeneratorRegister)
+/usr/local/lib/python3.10/dist-packages/torch_br/__init__.py:152: UserWarning: edgeitems of torch print options has been change to 4 for BR166. If you want to change it, please call torch.set_printoptions.Please NOTE that odd edgeitems can cause error when you print supa tensor on BR166 device.
+  warnings.warn(
+torch=2.8.0+cpu
+torch_br=1.11.0.20800+br1xx
+device=supa:0 type=supa
+native_2d={'float32': 'supported', 'bfloat16': 'supported'}
+native_2d float16 child_exit=-6
+  [0m[1;31m[ERROR  ][0m[SUDNN] 2026-11-24T12:59:30.842759 (12950, 12950) Error: STATUS_NOT_SUPPORTED; Reason: For br10x, matmul input0 only support bf16 or fp32 or s8 or u8 now!, br11x support fp16 additionally! input_tensor datatype: fp16
+native_vector_dot=RuntimeError: mat1 and mat2 shape must be at least 2D. (As a temporary fix, you can try cpu kernel by env var `BRTB_ENABLE_SUPA_FALLBACK=1`)
+triton=not installed
+flaggems=not installed
+{'float32': 'supported', 'bfloat16': 'supported', 'native_vector_dot': 'RuntimeError: mat1 and mat2 shape must be at least 2D. (As a temporary fix, you can try cpu kernel by env var `BRTB_ENABLE_SUPA_FALLBACK=1`)', 'triton': 'not installed', 'flaggems': 'not installed'}

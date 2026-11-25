@@ -1,9 +1,12 @@
 # Device Profile: Biren BR166 / SUPA
 name: biren
 vendor: biren
+operator_dtypes: [float32, bfloat16]
+perf_implementations: [torch]
 
 auto_detect:
   module: torch_br
+  runtime_modules: [br_generator]
 
 device:
   torch_device: "supa:0"

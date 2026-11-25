@@ -20,8 +20,10 @@ sys.path.insert(0, str(ROOT))
 def _device(value):
     if value == "cpu" or ":" in value:
         return value
-    from common.device import load_profile
-    return load_profile(value).torch_device
+    from common.device import load_profile, load_runtime
+    profile = load_profile(value)
+    load_runtime(profile)
+    return profile.torch_device
 
 
 def _relative_error(actual, expected):
@@ -66,6 +68,9 @@ def main() -> int:
                     help="explicitly exclude a named golden case")
     ap.add_argument("--include-case", action="append", default=[],
                     help="run only named golden cases (repeatable)")
+    ap.add_argument("--dtype", action="append",
+                    choices=("float32", "float16", "bfloat16"),
+                    help="run only selected golden dtypes (repeatable)")
     args = ap.parse_args()
     device = _device(args.device)
     counter = None
@@ -98,6 +103,8 @@ def main() -> int:
         if hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
             raise ValueError(f"golden checksum mismatch: {path}")
         data = torch.load(path, map_location="cpu", weights_only=True)
+        if args.dtype and data["dtype"] not in args.dtype:
+            continue
         if (args.include_case and data["case"] not in args.include_case) or (
                 data["case"] in args.exclude_case):
             continue

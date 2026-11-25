@@ -1,6 +1,7 @@
 # 设备 Profile 加载与自动探测
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import os
 from dataclasses import dataclass, field
@@ -102,6 +103,15 @@ def load_profile(name: str) -> DeviceProfile:
         golden_engine=raw.get("golden_engine", "vllm"),
         raw=raw,
     )
+
+
+def load_runtime(profile: DeviceProfile) -> None:
+    """Import the vendor modules needed to expose a profile's device type."""
+    auto = profile.raw.get("auto_detect", {})
+    names = [auto.get("module"), *auto.get("runtime_modules", [])]
+    for name in dict.fromkeys(names):
+        if name:
+            importlib.import_module(name)
 
 
 def detect_profile() -> DeviceProfile:
