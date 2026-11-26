@@ -22,7 +22,7 @@
 #   未区分的等级。
 
 schema: 1
-updated: 2026-11-04
+updated: 2026-11-26
 
 target_scope:
   vendor_family_count: 6
@@ -336,6 +336,25 @@ operators:
           - profile: p800-kunlunxin
             level: C1
             basis: framework_level 基线/注入双跑，应用式前向消费 copy_ 并对拍
+
+  - name: scatter_
+    directory: scatter_
+    group: layout-copy
+    purpose: 无归约 Tensor/Scalar 原地索引写入，支持非连续 stride。
+    route: A1 · Triton
+    key_result: P800 gems5 黄金 41/41、边界 11/11；性能低于原生。
+    evidence: C2
+    evidence_basis: 真实 vLLM 随机权重 Qwen3 生成；top-k/top-p 采样消费 scatter_.src 8 次，基线/注入 16 个输出 token 完全一致。范围限 P800 gems5 TP=1 eager 单进程。
+    evidence_paths: [ops/scatter_/REPORT.md, ops/scatter_/reports/test-p800.json, ops/scatter_/reports/vllm-c2.json, ops/scatter_/reports/vllm-baseline.json, ops/scatter_/reports/vllm-injected.json]
+    platforms:
+      kunlunxin:
+        profiles: [p800-kunlunxin-gems5]
+        evidence:
+          - profile: p800-kunlunxin-gems5
+            level: C2
+            basis: 真实 vLLM LLM.generate 的 top-k/top-p 路径命中 scatter_.src 8 次；固定随机权重 Qwen3，16 个输出 token 精确一致。value 重载仍为 C1 mini consumer。
+            report: ops/scatter_/reports/vllm-c2.json
+            consumer: vllm.LLM.generate
 
   - name: dropout
     directory: dropout

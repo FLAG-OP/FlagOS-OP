@@ -1,0 +1,49 @@
+{
+  "mode": "baseline",
+  "model": "/models/scatter-qwen3-tiny",
+  "profile": "p800-kunlunxin-gems5",
+  "model_sha256": {
+    "config.json": "d4fab34c811ae37efa2226041b6662b4ad3a6457618d0414c6c114f8edbe202c",
+    "generation_config.json": "90a693be3b4d0a8e517b718d4379cf46321fdf0d8ecdbcf8b12955e395952330",
+    "model.safetensors": "a147bbac372797c7841b1381f6adaa968424e91ac1f9b391b1ed399aaf300625"
+  },
+  "model_kind": "deterministic random-weight Qwen3, not pretrained",
+  "consumer": "vllm.LLM.generate",
+  "vllm": "0.20.2",
+  "output_token_ids": [
+    [
+      999,
+      406,
+      188,
+      782,
+      739,
+      232,
+      76,
+      232
+    ],
+    [
+      612,
+      588,
+      606,
+      560,
+      560,
+      560,
+      560,
+      560
+    ]
+  ],
+  "generation_scatter_calls": 0,
+  "first_call_stack": null,
+  "sampling": {
+    "temperature": 0.8,
+    "top_k": 32,
+    "top_p": 0.9,
+    "seed": 1234,
+    "max_tokens": 8
+  },
+  "engine": {
+    "enforce_eager": true,
+    "multiprocessing": false,
+    "tensor_parallel_size": 1
+  }
+}

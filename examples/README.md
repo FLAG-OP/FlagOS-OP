@@ -25,6 +25,7 @@ script/ · REPORT + 交付报告四件套；本算子硬件级置空并说明）
 | bmm-fullstack / b-fullstack | kernel+test 全线（单文件编排） | 全链路叙事版 |
 | backward-example | kernel/（反向）| autograd 专项 |
 | hw-kernel-example | kernel/hardware_level | 硬件级专项（厂商原语+SDK 模板） |
+| [scatter_](../ops/scatter_/) | kernel + register + 三层 + 黄金 | P800 原地索引写入，C1 mini consumer，XMLIR 尾块兼容性样例 |
 
 <a id="map"></a>
 ## 样例定位图
@@ -63,6 +64,10 @@ flowchart TB
     BMM["bmm-fullstack ⭐<br/>A1 · Triton 级 · GEMM"]:::fs
     BFS["b-fullstack ⭐<br/>B · torch 级 · fused"]:::fs
     SMX["softmax-fullstack ⭐<br/>A1 · Triton 级 · reduction"]:::fs
+    SCT["ops/scatter_<br/>A1 · Triton · P800 C1"]:::fs
+    SCT -.-> A1K
+    SCT -.-> A1O
+    SCT -.-> A1F
     BWD["backward-example<br/>A2 · Triton 级 · autograd"]:::fs
 
     BMM -. "算子库层→框架层→应用层" .-> A1K

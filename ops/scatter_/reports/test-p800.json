@@ -1,0 +1,18 @@
+{
+  "profile": "p800-kunlunxin-gems5",
+  "torch_device": "cuda:0",
+  "kernel": {
+    "ok": true,
+    "cases": 41,
+    "edge_cases": 11
+  },
+  "op": {
+    "ok": true,
+    "hits": 41
+  },
+  "framework": {
+    "ok": true,
+    "hits": 1,
+    "consumer": "token-selection-mini"
+  }
+}

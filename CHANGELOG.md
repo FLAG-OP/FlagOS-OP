@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- **aten.scatter_ Triton/A1（P800 gems5）**：src/value 无归约原地写入，
+  黄金 41/41、边界 11/11、A1 命中 41 次、token-selection mini consumer C1。
+  附 XMLIR 尾块/断言兼容处理及性能记录；当前慢于原生，非性能替换建议。
+  后续补齐真实 vLLM C2：随机权重 Qwen3，src 在采样阶段命中 8 次，
+  两请求共 16 token 与原生基线完全一致；value 保持 C1。
 - **逐 profile 证据记录公共模块（issue #41 整改，PR #46）**：新增
   `scripts/evidence_schema.py`，把「等级 / 实验判定 verdict / 维护者审阅
   状态 review」三轴语义与路径解析、`redecide` 派生更正核验集中在一处，

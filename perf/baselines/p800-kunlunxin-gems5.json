@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "device": "p800-kunlunxin-gems5",
+  "created_at": "2026-11-26T02:40:10.426907+00:00",
+  "updated_at": "2026-11-26T02:44:14.947875+00:00",
+  "git_commit": "ac942a2f45df8bd807dea3cf33adf8145fdca1b3",
+  "git_dirty": true,
+  "env_fingerprint": {
+    "torch": "2.9.0+cu129",
+    "triton": "3.0.0",
+    "flag_gems": "5.0.0",
+    "vllm_fl": null,
+    "vllm": "0.20.2"
+  },
+  "cases": {
+    "ops.scatter_.torch.128x4096": {
+      "metrics": {
+        "latency_ms": 0.04854
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-26T02:40:10.602953+00:00",
+      "git_commit": "ac942a2f45df8bd807dea3cf33adf8145fdca1b3",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.9.0+cu129",
+        "triton": "3.0.0",
+        "flag_gems": "5.0.0",
+        "vllm_fl": null,
+        "vllm": "0.20.2"
+      }
+    },
+    "ops.scatter_.torch.7x1031": {
+      "metrics": {
+        "latency_ms": 0.017
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-26T02:40:10.447328+00:00",
+      "git_commit": "ac942a2f45df8bd807dea3cf33adf8145fdca1b3",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.9.0+cu129",
+        "triton": "3.0.0",
+        "flag_gems": "5.0.0",
+        "vllm_fl": null,
+        "vllm": "0.20.2"
+      }
+    },
+    "ops.scatter_.triton.128x4096": {
+      "metrics": {
+        "latency_ms": 0.959844
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-26T02:40:10.577376+00:00",
+      "git_commit": "ac942a2f45df8bd807dea3cf33adf8145fdca1b3",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.9.0+cu129",
+        "triton": "3.0.0",
+        "flag_gems": "5.0.0",
+        "vllm_fl": null,
+        "vllm": "0.20.2"
+      }
+    },
+    "ops.scatter_.triton.7x1031": {
+      "metrics": {
+        "latency_ms": 0.273763
+      },
+      "warmup": 20,
+      "iters": 100,
+      "updated_at": "2026-11-26T02:40:10.426907+00:00",
+      "git_commit": "ac942a2f45df8bd807dea3cf33adf8145fdca1b3",
+      "git_dirty": true,
+      "env_fingerprint": {
+        "torch": "2.9.0+cu129",
+        "triton": "3.0.0",
+        "flag_gems": "5.0.0",
+        "vllm_fl": null,
+        "vllm": "0.20.2"
+      }
+    }
+  }
+}

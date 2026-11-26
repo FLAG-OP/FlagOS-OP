@@ -26,6 +26,7 @@ PROVIDERS = [
     ("ops.clone", ROOT / "ops/clone/example.py"),
     ("ops.contiguous", ROOT / "ops/contiguous/example.py"),
     ("ops.copy_", ROOT / "ops/copy_/example.py"),
+    ("ops.scatter_", ROOT / "ops/scatter_/example.py"),
     ("ops.dropout", ROOT / "ops/dropout/example.py"),
     ("ops.empty", ROOT / "ops/empty/example.py"),
     ("ops.empty_like", ROOT / "ops/empty_like/example.py"),
