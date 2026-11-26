@@ -1,0 +1,9 @@
+schema: 1
+seed: 20261125
+generator: ops.scatter_.test.cases.cases
+dtypes: [float16, bfloat16, float32, int32, int64, bool]
+shapes: [[1031], [7, 19], [5, 7, 13]]
+overloads: [src, value]
+special: [zeros, scalar, empty, duplicate-value, noncontiguous, storage-offset, partial-index, negative-dim]
+comparison: exact
+# Duplicate tensor-source winners are unspecified; not golden-compared.

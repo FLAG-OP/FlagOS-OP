@@ -1,0 +1,70 @@
+{
+  "mode": "injected",
+  "model": "/workspace/scratch/scatter-qwen3-tiny",
+  "profile": "ascend910",
+  "model_sha256": {
+    "config.json": "1bac179675a5a8cc30d281a58c35f97725870abf89a44704e8d94cf8b15918c4",
+    "generation_config.json": "b8fb4e2d31aac73e1f54485b2b8795b39dacc74aad76796775a2b414af4cee5a",
+    "model.safetensors": "1b2e0bec4c5fe5cddb5e1ab9936737a4f636d23f6bd3e20eb31c51c0fd9b1f3d"
+  },
+  "model_kind": "deterministic random-weight Qwen3, not pretrained",
+  "consumer": "vllm.LLM.generate",
+  "vllm": "0.20.2",
+  "output_token_ids": [
+    [
+      1005,
+      227,
+      166,
+      743,
+      453,
+      445,
+      858,
+      232
+    ],
+    [
+      968,
+      226,
+      561,
+      865,
+      537,
+      536,
+      537,
+      716
+    ]
+  ],
+  "generation_scatter_calls": 8,
+  "first_call_stack": [
+    "  File \"/vllm-workspace/vllm/vllm/v1/engine/core.py\", line 489, in step_with_batch_queue\n    future = self.model_executor.sample_tokens(\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/executor/uniproc_executor.py\", line 120, in sample_tokens\n    return self.collective_rpc(\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/executor/uniproc_executor.py\", line 84, in collective_rpc\n    result = run_method(self.driver_worker, method, args, kwargs)\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/serial_utils.py\", line 510, in run_method\n    return func(*args, **kwargs)\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/vllm_fl/dispatch/io_common.py\", line 159, in wrapper\n    return fn(*args, **kwargs)\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/vllm_fl/worker/worker.py\", line 797, in sample_tokens\n    return self.model_runner.sample_tokens(grammar_output)\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/vllm_fl/dispatch/io_common.py\", line 159, in wrapper\n    return fn(*args, **kwargs)\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/vllm_fl/worker/model_runner.py\", line 4244, in sample_tokens\n    sampler_output = self._sample(logits, spec_decode_metadata)\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/vllm_fl/worker/model_runner.py\", line 3400, in _sample\n    return self.sampler(\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1776, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1787, in _call_impl\n    return forward_call(*args, **kwargs)\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/sample/sampler.py\", line 97, in forward\n    sampled, processed_logprobs = self.sample(logits, sampling_metadata)\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/sample/sampler.py\", line 272, in sample\n    random_sampled, processed_logprobs = self.topk_topp_sampler(\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1776, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n",
+    "  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1787, in _call_impl\n    return forward_call(*args, **kwargs)\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/sample/ops/topk_topp_sampler.py\", line 106, in forward_native\n    logits = apply_top_k_top_p(logits, k, p)\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/sample/ops/topk_topp_sampler.py\", line 255, in apply_top_k_top_p\n    return apply_top_k_top_p_pytorch(logits, k, p)\n",
+    "  File \"/vllm-workspace/vllm/vllm/v1/sample/ops/topk_topp_sampler.py\", line 299, in apply_top_k_top_p_pytorch\n    return logits.scatter_(dim=-1, index=logits_idx, src=logits_sort)\n",
+    "  File \"/workspace/flagos_op/FlagOS-OP/ops/scatter_/register.py\", line 31, in apply\n    counter[\"n\"] = counter.get(\"n\", 0) + 1\n",
+    "  File \"/workspace/flagos_op/FlagOS-OP/ops/scatter_/test/vllm_runner.py\", line 58, in __setitem__\n    self.first_stack = traceback.format_stack(limit=20)\n"
+  ],
+  "sampling": {
+    "temperature": 0.8,
+    "top_k": 32,
+    "top_p": 0.9,
+    "seed": 1234,
+    "max_tokens": 8
+  },
+  "engine": {
+    "enforce_eager": true,
+    "multiprocessing": false,
+    "tensor_parallel_size": 1
+  }
+}

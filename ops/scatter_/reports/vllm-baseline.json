@@ -1,0 +1,49 @@
+{
+  "mode": "baseline",
+  "model": "/workspace/scratch/scatter-qwen3-tiny",
+  "profile": "ascend910",
+  "model_sha256": {
+    "config.json": "1bac179675a5a8cc30d281a58c35f97725870abf89a44704e8d94cf8b15918c4",
+    "generation_config.json": "b8fb4e2d31aac73e1f54485b2b8795b39dacc74aad76796775a2b414af4cee5a",
+    "model.safetensors": "1b2e0bec4c5fe5cddb5e1ab9936737a4f636d23f6bd3e20eb31c51c0fd9b1f3d"
+  },
+  "model_kind": "deterministic random-weight Qwen3, not pretrained",
+  "consumer": "vllm.LLM.generate",
+  "vllm": "0.20.2",
+  "output_token_ids": [
+    [
+      1005,
+      227,
+      166,
+      743,
+      453,
+      445,
+      858,
+      232
+    ],
+    [
+      968,
+      226,
+      561,
+      865,
+      537,
+      536,
+      537,
+      716
+    ]
+  ],
+  "generation_scatter_calls": 0,
+  "first_call_stack": null,
+  "sampling": {
+    "temperature": 0.8,
+    "top_k": 32,
+    "top_p": 0.9,
+    "seed": 1234,
+    "max_tokens": 8
+  },
+  "engine": {
+    "enforce_eager": true,
+    "multiprocessing": false,
+    "tensor_parallel_size": 1
+  }
+}
