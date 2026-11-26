@@ -1,0 +1,10 @@
+op: spmm
+seed_base: 20261125
+density: 0.3
+
+cases:
+  basic:
+    # 台账对照尺寸 N=64/512（昇腾 kernel 测试尺寸, 跨平台对照）+ 常规形态
+    dtypes: [float32, float16, bfloat16]
+    shapes: [[64, 32, 64], [64, 32, 512], [512, 128, 64], [33, 16, 3]]
+    seeds_per_case: 2

@@ -29,7 +29,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 ## 平台覆盖口径
 
-目标范围是 **6 个厂商平台家族**。当前登记 **23 个算子**：**3 个核心多平台算子**、**20 个基础 ATen 算子**。
+目标范围是 **6 个厂商平台家族**。当前登记 **24 个算子**：**3 个核心多平台算子**、**21 个基础 ATen 算子**。
 这是一个增量交付子集，不是完整平台矩阵。`planned` 只表示目标范围，
 不表示支持完成；只有进入算子条目并带有测试与报告的平台才计为已交付。
 
@@ -38,7 +38,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 | 华为昇腾（`ascend`） | 部分交付 | 3 | `ascend910` · `ascend910-c2-vllm` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
 | 昆仑芯（`kunlunxin`） | 部分交付 | 16 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
-| 平头哥（`thead`） | 部分交付 | 10 | `thead-ppu` · `thead-ppu-c2` |
+| 平头哥（`thead`） | 部分交付 | 11 | `thead-ppu` · `thead-ppu-c2` |
 | 燧原 GCU（`enflame`） | 规划中 | 0 | 计划覆盖：GCU300 / GCU400 / GCU410 |
 | 壁仞（`biren`） | 规划中 | 0 | 待首个交付算子确定 |
 
@@ -112,6 +112,14 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 | [softmax](softmax/) | aten::softmax 公开 API（台账 1,598 次/109 模型）。 | A1 · native 委托 | C1（thead-ppu） | 公开 API err=0.0；重载集 int/Dimname/int_out（无 int_dtype）绑定结论。 |
 | [_softmax](_softmax/) | aten::_softmax 私有原语（与 softmax 配对; h2f 边界取证）。 | A1 · native 委托 | C1（thead-ppu） | err=0.0；h2f 仅 Half（平台边界）, 其余 dtype fp32 域回退。 |
 | [gelu](gelu/) | aten::gelu（none/tanh 双模式 + backward; FlagFix | A1 · Triton | C1（thead-ppu） | 自研 Triton 1.088x 原生（2.05 TB/s）；解析反向 err<1e-5；恒等消费 8 次。 |
+
+### 稀疏计算
+
+台账「稀疏组」（issue #57, P1-1124）: CSR SpMM（aten::_sparse_mm）， Torch-FL + FlagScale Gowalla 训练链路消费。
+
+| 算子 | 作用 | 交付路线 | 证据 | 关键结论 |
+|---|---|---|---|---|
+| [spmm](spmm/) | CSR SpMM（aten::_sparse_mm; torch.sparse.mm 入口; issue | A1 · index_add 组合 | C1（thead-ppu） | 原生 cusparse 缺口实锤（冷进程失败/fp16 缺口/C++ abort）→ index_add 组合自建；fp64 独立判卷 7.6e-3；GCN 消费 8 次。 |
 
 ## 平台注册契约
 
