@@ -29,7 +29,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 ## 平台覆盖口径
 
-目标范围是 **6 个厂商平台家族**。当前登记 **16 个算子**：**3 个核心多平台算子**、**13 个基础 ATen 算子**。
+目标范围是 **6 个厂商平台家族**。当前登记 **23 个算子**：**3 个核心多平台算子**、**20 个基础 ATen 算子**。
 这是一个增量交付子集，不是完整平台矩阵。`planned` 只表示目标范围，
 不表示支持完成；只有进入算子条目并带有测试与报告的平台才计为已交付。
 
@@ -38,7 +38,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 | 华为昇腾（`ascend`） | 部分交付 | 3 | `ascend910` · `ascend910-c2-vllm` |
 | 寒武纪（`cambricon`） | 部分交付 | 15 | `cambricon` · `mlu590` |
 | 昆仑芯（`kunlunxin`） | 部分交付 | 16 | `p800-kunlunxin` · `p800-kunlunxin-gems5` |
-| 平头哥（`thead`） | 部分交付 | 3 | `thead-ppu` · `thead-ppu-c2` |
+| 平头哥（`thead`） | 部分交付 | 10 | `thead-ppu` · `thead-ppu-c2` |
 | 燧原 GCU（`enflame`） | 规划中 | 0 | 计划覆盖：GCU300 / GCU400 / GCU410 |
 | 壁仞（`biren`） | 规划中 | 0 | 待首个交付算子确定 |
 
@@ -98,6 +98,20 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 |---|---|---|---|---|
 | [item](item/) | 把单元素 tensor 转换为 Python 标量。 | A1 · torch | C1（cambricon · p800-kunlunxin） | 黄金 36/36。 |
 | [_local_scalar_dense](_local_scalar_dense/) | 覆盖 item 底层的稠密标量私有原语。 | A1 · torch | C1（cambricon · p800-kunlunxin） | 黄金 36/36。 |
+
+### 稠密计算
+
+台账「稠密计算与基础算子」组（issue #55, P0-1124）: linear / layer_norm 家族 / matmul / softmax 家族 / gelu，平头哥真武 810E 适配与端到端交付。
+
+| 算子 | 作用 | 交付路线 | 证据 | 关键结论 |
+|---|---|---|---|---|
+| [linear](linear/) | aten::linear（affine 变换, 台账调用 74,944 次/427 模型）。 | A1 · native 委托 | C1（thead-ppu） | PPU 原生复用 err 0.0/1.5e-5；TFLOPS 133（4096³ fp16）。 |
+| [layer_norm](layer_norm/) | aten::layer_norm 公开 API（台账 13,668 次/325 模型）。 | A1 · native 委托 | C1（thead-ppu） | PPU 原生复用 fp16 err=0.0；1.75 TB/s。 |
+| [native_layer_norm](native_layer_norm/) | aten::native_layer_norm 原语（台账 13,593 次; 与 layer_norm 配对验证）。 | A1 · native 委托 | C1（thead-ppu） | 3 返回值对拍；mean/rstd keepdim 形状平台分化如实登记。 |
+| [matmul](matmul/) | aten::matmul（台账 41,595 次/285 模型; 公共骨架, PPU 首交付）。 | A1 · native 委托 | C1（thead-ppu） | 8 形态×3 dtype 5e-2 rel 内；132 TFLOPS；分形态反向 grad diff=0。 |
+| [softmax](softmax/) | aten::softmax 公开 API（台账 1,598 次/109 模型）。 | A1 · native 委托 | C1（thead-ppu） | 公开 API err=0.0；重载集 int/Dimname/int_out（无 int_dtype）绑定结论。 |
+| [_softmax](_softmax/) | aten::_softmax 私有原语（与 softmax 配对; h2f 边界取证）。 | A1 · native 委托 | C1（thead-ppu） | err=0.0；h2f 仅 Half（平台边界）, 其余 dtype fp32 域回退。 |
+| [gelu](gelu/) | aten::gelu（none/tanh 双模式 + backward; FlagFix | A1 · Triton | C1（thead-ppu） | 自研 Triton 1.088x 原生（2.05 TB/s）；解析反向 err<1e-5；恒等消费 8 次。 |
 
 ## 平台注册契约
 

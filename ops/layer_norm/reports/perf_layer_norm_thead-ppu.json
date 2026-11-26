@@ -1,0 +1,98 @@
+{
+  "op": "layer_norm",
+  "device": "cuda:6",
+  "device_name": "PPU-ZW810E",
+  "method": "warmup20+iters100+synchronize",
+  "rows": [
+    {
+      "case": "{'tokens': 4096, 'hidden': 4096}",
+      "dtype": "float16",
+      "native_impl_ms": 0.039,
+      "native_impl_GBps": 1720.48,
+      "native_direct_ms": 0.0388,
+      "native_direct_GBps": 1731.22,
+      "reference_ms": 0.5762,
+      "reference_GBps": 116.46
+    },
+    {
+      "case": "{'tokens': 4096, 'hidden': 4096}",
+      "dtype": "bfloat16",
+      "native_impl_ms": 0.039,
+      "native_impl_GBps": 1721.73,
+      "native_direct_ms": 0.0388,
+      "native_direct_GBps": 1727.61,
+      "reference_ms": 0.5878,
+      "reference_GBps": 114.17
+    },
+    {
+      "case": "{'tokens': 4096, 'hidden': 4096}",
+      "dtype": "float32",
+      "native_impl_ms": 0.0757,
+      "native_impl_GBps": 1774.08,
+      "native_direct_ms": 0.0754,
+      "native_direct_GBps": 1780.22,
+      "reference_ms": 0.439,
+      "reference_GBps": 305.75
+    },
+    {
+      "case": "{'tokens': 8192, 'hidden': 4096}",
+      "dtype": "float16",
+      "native_impl_ms": 0.1026,
+      "native_impl_GBps": 1308.66,
+      "native_direct_ms": 0.1027,
+      "native_direct_GBps": 1307.51,
+      "reference_ms": 1.1432,
+      "reference_GBps": 117.41
+    },
+    {
+      "case": "{'tokens': 8192, 'hidden': 4096}",
+      "dtype": "bfloat16",
+      "native_impl_ms": 0.1027,
+      "native_impl_GBps": 1306.98,
+      "native_direct_ms": 0.1023,
+      "native_direct_GBps": 1311.43,
+      "reference_ms": 1.1694,
+      "reference_GBps": 114.78
+    },
+    {
+      "case": "{'tokens': 8192, 'hidden': 4096}",
+      "dtype": "float32",
+      "native_impl_ms": 0.143,
+      "native_impl_GBps": 1876.59,
+      "native_direct_ms": 0.143,
+      "native_direct_GBps": 1877.08,
+      "reference_ms": 0.8528,
+      "reference_GBps": 314.77
+    },
+    {
+      "case": "{'tokens': 4096, 'hidden': 5120}",
+      "dtype": "float16",
+      "native_impl_ms": 0.064,
+      "native_impl_GBps": 1309.97,
+      "native_direct_ms": 0.0639,
+      "native_direct_GBps": 1312.75,
+      "reference_ms": 0.7155,
+      "reference_GBps": 117.25
+    },
+    {
+      "case": "{'tokens': 4096, 'hidden': 5120}",
+      "dtype": "bfloat16",
+      "native_impl_ms": 0.0638,
+      "native_impl_GBps": 1314.43,
+      "native_direct_ms": 0.0638,
+      "native_direct_GBps": 1315.85,
+      "reference_ms": 0.7294,
+      "reference_GBps": 115.01
+    },
+    {
+      "case": "{'tokens': 4096, 'hidden': 5120}",
+      "dtype": "float32",
+      "native_impl_ms": 0.0991,
+      "native_impl_GBps": 1693.67,
+      "native_direct_ms": 0.0988,
+      "native_direct_GBps": 1698.12,
+      "reference_ms": 0.5411,
+      "reference_GBps": 310.06
+    }
+  ]
+}

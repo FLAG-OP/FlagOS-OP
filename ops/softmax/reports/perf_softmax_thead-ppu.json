@@ -1,0 +1,53 @@
+{
+  "op": "softmax",
+  "device": "cuda:6",
+  "device_name": "PPU-ZW810E",
+  "method": "warmup20+iters100+synchronize",
+  "rows": [
+    {
+      "case": [
+        8,
+        32,
+        2048,
+        2048
+      ],
+      "dtype": "float16",
+      "native_impl_ms": 4.1583,
+      "native_impl_GBps": 1032.87,
+      "native_direct_ms": 4.1583,
+      "native_direct_GBps": 1032.85,
+      "reference_ms": 12.5667,
+      "reference_GBps": 341.77
+    },
+    {
+      "case": [
+        8,
+        32,
+        2048,
+        2048
+      ],
+      "dtype": "bfloat16",
+      "native_impl_ms": 4.1656,
+      "native_impl_GBps": 1031.06,
+      "native_direct_ms": 4.1654,
+      "native_direct_GBps": 1031.1,
+      "reference_ms": 13.5116,
+      "reference_GBps": 317.87
+    },
+    {
+      "case": [
+        8,
+        32,
+        2048,
+        2048
+      ],
+      "dtype": "float32",
+      "native_impl_ms": 4.5131,
+      "native_impl_GBps": 1903.35,
+      "native_direct_ms": 4.7894,
+      "native_direct_GBps": 1793.53,
+      "reference_ms": 4.6444,
+      "reference_GBps": 1849.51
+    }
+  ]
+}

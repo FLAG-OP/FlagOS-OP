@@ -1,0 +1,10 @@
+op: matmul
+seed_base: 20261125
+scale: 0.5
+
+cases:
+  basic:
+    dtypes: [float32, float16, bfloat16]
+    self_shapes: [[64, 128], [64, 5000], [5120, 128], [4, 64, 128], [4, 1, 64, 128]]
+    other_shape_last2: [128, 96]   # 其他输入按广播规则由 shape 推导
+    seeds_per_case: 2

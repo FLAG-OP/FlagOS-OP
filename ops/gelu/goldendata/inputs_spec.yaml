@@ -1,0 +1,32 @@
+# gelu 黄金输入规格（声明式, scripts/gen_inputs.py 同构口径）
+#
+# 判卷口径（issue #55 交付要求 3 + docs/acceptance.md）:
+#   - 误差类型: pointwise 有界输出 → 绝对误差
+#   - 容差分档: fp32=1e-5 abs / bf16|fp16=1e-2 abs（唯一权威表）
+#   - 必测矩阵: shape ≥3 组含非 BLOCK 整倍数（3072/5000/5120/4097/1023）、
+#     三 dtype、每组合 ≥3 种子、特殊值（负尾部/近零/非有限/boundary）
+op: gelu
+seed_base: 20261125
+modes: ["none", "tanh"]
+
+cases:
+  basic:
+    dtypes: [float32, float16, bfloat16]
+    shapes: [[64, 1024], [8, 5000], [128, 5120], [7, 4097], [3, 1023]]
+    scale: 2.0            # 输入幅度 ×2, 覆盖饱和区入口
+    seeds_per_case: 3
+  boundary:
+    dtypes: [float32, float16, bfloat16]
+    shapes: [[1, 3072]]
+    scale: 1.0
+    seeds_per_case: 1
+    special_values:       # 逐元素常量集, 每行一组
+      - [-20.0, -5.0, -1.0e-6, 0.0, 1.0e-6, 5.0, 20.0, 10000.0]
+      - [-10000.0, 8.0, -8.0, 0.044715, -0.044715, 3.0, -3.0, 1.0]
+    non_finite: [inf, -inf, nan]   # 非有限值位级 parity 单列（见 gen_golden.py）
+  backward:
+    dtypes: [float32, float16, bfloat16]
+    shapes: [[64, 3072], [8, 5000]]
+    scale: 2.0
+    grad_scale: 1.0
+    seeds_per_case: 3

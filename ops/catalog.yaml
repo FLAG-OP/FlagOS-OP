@@ -22,7 +22,7 @@
 #   未区分的等级。
 
 schema: 1
-updated: 2026-11-04
+updated: 2026-11-26
 
 target_scope:
   vendor_family_count: 6
@@ -88,6 +88,14 @@ operator_groups:
     kind: foundation
     rank: 5
     description: 覆盖单元素 tensor 转 Python 标量的路径，包括公开 item API 底层的私有 ATen 原语。
+  dense-compute:
+    title: 稠密计算
+    kind: foundation
+    rank: 6
+    description: >-
+      台账「稠密计算与基础算子」组（issue #55, P0-1124）: linear /
+      layer_norm 家族 / matmul / softmax 家族 / gelu，平头哥真武 810E
+      适配与端到端交付。
 
 operators:
   - name: sdpa
@@ -535,6 +543,113 @@ operators:
           - profile: p800-kunlunxin
             level: C1
             basis: framework_level 基线/注入双跑，应用式前向消费 _local_scalar_dense 并对拍
+
+
+  - name: linear
+    directory: linear
+    route: A1 · native 委托
+    group: dense-compute
+    purpose: aten::linear（affine 变换, 台账调用 74,944 次/427 模型）。
+    key_result: PPU 原生复用 err 0.0/1.5e-5；TFLOPS 133（4096³ fp16）。
+    evidence: C1
+    platforms:
+      thead:
+        profiles: [thead-ppu]
+        implementation: native 委托（AutogradCUDA + CUDA redispatch）
+        evidence:
+          - profile: thead-ppu
+            level: C1
+            basis: kernel/op/framework 三层测试全绿 + framework_level mini consumer 基线/注入双跑（真机 PPU-ZW810E 卡6, 2026-11-25/26, 探针 probes/thead_dense_p0_probe.json）
+  - name: layer_norm
+    directory: layer_norm
+    route: A1 · native 委托
+    group: dense-compute
+    purpose: aten::layer_norm 公开 API（台账 13,668 次/325 模型）。
+    key_result: PPU 原生复用 fp16 err=0.0；1.75 TB/s。
+    evidence: C1
+    platforms:
+      thead:
+        profiles: [thead-ppu]
+        implementation: native 委托（AutogradCUDA + 自带反向）
+        evidence:
+          - profile: thead-ppu
+            level: C1
+            basis: kernel/op/framework 三层测试全绿 + framework_level mini consumer 基线/注入双跑（真机 PPU-ZW810E 卡6, 2026-11-25/26, 探针 probes/thead_dense_p0_probe.json）
+  - name: native_layer_norm
+    directory: native_layer_norm
+    route: A1 · native 委托
+    group: dense-compute
+    purpose: aten::native_layer_norm 原语（台账 13,593 次; 与 layer_norm 配对验证）。
+    key_result: 3 返回值对拍；mean/rstd keepdim 形状平台分化如实登记。
+    evidence: C1
+    platforms:
+      thead:
+        profiles: [thead-ppu]
+        implementation: native 委托（native_layer_norm_backward 反向）
+        evidence:
+          - profile: thead-ppu
+            level: C1
+            basis: kernel/op/framework 三层测试全绿 + framework_level mini consumer 基线/注入双跑（真机 PPU-ZW810E 卡6, 2026-11-25/26, 探针 probes/thead_dense_p0_probe.json）
+  - name: matmul
+    directory: matmul
+    route: A1 · native 委托
+    group: dense-compute
+    purpose: aten::matmul（台账 41,595 次/285 模型; 公共骨架, PPU 首交付）。
+    key_result: 8 形态×3 dtype 5e-2 rel 内；132 TFLOPS；分形态反向 grad diff=0。
+    evidence: C1
+    platforms:
+      thead:
+        profiles: [thead-ppu]
+        implementation: native 委托（分形态组合反向）
+        evidence:
+          - profile: thead-ppu
+            level: C1
+            basis: kernel/op/framework 三层测试全绿 + framework_level mini consumer 基线/注入双跑（真机 PPU-ZW810E 卡6, 2026-11-25/26, 探针 probes/thead_dense_p0_probe.json）
+  - name: softmax
+    directory: softmax
+    route: A1 · native 委托
+    group: dense-compute
+    purpose: aten::softmax 公开 API（台账 1,598 次/109 模型）。
+    key_result: 公开 API err=0.0；重载集 int/Dimname/int_out（无 int_dtype）绑定结论。
+    evidence: C1
+    platforms:
+      thead:
+        profiles: [thead-ppu]
+        implementation: native 委托（softmax.int 重载 + 解析反向）
+        evidence:
+          - profile: thead-ppu
+            level: C1
+            basis: kernel/op/framework 三层测试全绿 + framework_level mini consumer 基线/注入双跑（真机 PPU-ZW810E 卡6, 2026-11-25/26, 探针 probes/thead_dense_p0_probe.json）
+  - name: _softmax
+    directory: _softmax
+    route: A1 · native 委托
+    group: dense-compute
+    purpose: aten::_softmax 私有原语（与 softmax 配对; h2f 边界取证）。
+    key_result: err=0.0；h2f 仅 Half（平台边界）, 其余 dtype fp32 域回退。
+    evidence: C1
+    platforms:
+      thead:
+        profiles: [thead-ppu]
+        implementation: native 委托（原语 + 解析反向）
+        evidence:
+          - profile: thead-ppu
+            level: C1
+            basis: kernel/op/framework 三层测试全绿 + framework_level mini consumer 基线/注入双跑（真机 PPU-ZW810E 卡6, 2026-11-25/26, 探针 probes/thead_dense_p0_probe.json）
+  - name: gelu
+    directory: gelu
+    route: A1 · Triton
+    group: dense-compute
+    purpose: aten::gelu（none/tanh 双模式 + backward; FlagFix #5867 迁移记录）。
+    key_result: 自研 Triton 1.088x 原生（2.05 TB/s）；解析反向 err<1e-5；恒等消费 8 次。
+    evidence: C1
+    platforms:
+      thead:
+        profiles: [thead-ppu]
+        implementation: Triton 自研（#11/#15 防护 + geluFIX 写法规约）
+        evidence:
+          - profile: thead-ppu
+            level: C1
+            basis: kernel/op/framework 三层测试全绿 + framework_level mini consumer 基线/注入双跑（真机 PPU-ZW810E 卡6, 2026-11-25/26, 探针 probes/thead_dense_p0_probe.json）
 
 registration_contracts:
   cambricon-foundation:
