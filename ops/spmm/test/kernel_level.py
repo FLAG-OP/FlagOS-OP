@@ -132,6 +132,24 @@ def run(profile):
     assert _relerr(d_vals, r_vals.to(dev)) < 1e-4, "d_vals"
     assert _relerr(dB, rB.to(dev)) < 1e-4, "dB"
 
+    # 3b) fp16 反向中间积溢出: 2*60000 + 2*(-60000) 必须在 fp32 域归约
+    a_fp16 = torch.sparse_csr_tensor(
+        torch.tensor([0, 1], device=dev),
+        torch.tensor([0], device=dev),
+        torch.tensor([1.0], dtype=torch.float16, device=dev),
+        (1, 2), device=dev)
+    b_fp16 = torch.tensor(
+        [[60000.0, -60000.0], [0.0, 0.0]],
+        dtype=torch.float16, device=dev)
+    g_fp16 = torch.tensor([[2.0, 2.0]], dtype=torch.float16, device=dev)
+    d_vals, dB = spmm_backward_ppu(a_fp16, b_fp16, g_fp16)
+    r_vals, rB = spmm_backward_reference(
+        a_fp16.cpu(), b_fp16.cpu(), g_fp16.cpu())
+    assert torch.isfinite(d_vals).all(), "fp16 d_vals overflowed to NaN"
+    assert torch.isfinite(dB).all(), "fp16 dB overflowed to NaN"
+    assert _relerr(d_vals, r_vals.to(dev)) < 1e-4, "fp16 d_vals"
+    assert _relerr(dB, rB.to(dev)) < 1e-4, "fp16 dB"
+
     # 4) 哨兵: 确定性 + 输入敏感
     #    注: index_add_ 的原子累加顺序不确定（同 row 多非零并发加）——
     #    fp32 累加域次序噪声 ~1e-7, 经 fp16 输出量化放大为 1 ulp

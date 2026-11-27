@@ -5,7 +5,10 @@
 # consumer 用 2 层传播复现该消费位（真机内存内缩样 4k 节点）。
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 OP_DIR = Path(__file__).resolve().parents[1]
@@ -46,17 +49,7 @@ def _build_model(dev, dim=32):
     return TwoLayerGCN()
 
 
-def _propagate(model, adj, x, steps):
-    import torch
-
-    with torch.no_grad():
-        cur = x
-        for _ in range(steps):
-            cur = model(adj, cur)
-    return cur
-
-
-def run(profile):
+def _run_mode(profile, mode):
     import torch
 
     from register import register_a1
@@ -67,41 +60,94 @@ def run(profile):
     x = torch.randn(4096, 32, generator=generator).to(dev)
 
     model = _build_model(dev)
+    registered = False
+    calls = 0
+    if mode == "injected":
+        lib = register_a1(profile.dispatch_key, counter=_CALLS)
+        assert lib is not None
+        registered = True
+        calls = _CALLS["n"]
 
-    # baseline
     with torch.no_grad():
-        base_out = model(adj, x)
-    base_cont = _propagate(model, adj, x, 2)
+        output = model(adj, x).detach().cpu()
 
-    # injected
-    _CALLS["n"] = 0
-    lib = register_a1(profile.dispatch_key, counter=_CALLS)
-    with torch.no_grad():
-        inj_out = model(adj, x)
-    inj_cont = _propagate(model, adj, x, 2)
-
-    diff = (inj_out.float() - base_out.float()).abs().max().item()
-    # 实现替换型算子（cusparse → index_add 组合）: 累加序不同 →
-    # 容差断言不追位级（docs/testing.md 断言策略: 自定义数值实现档）
-    assert diff < 1e-5, f"GCN 输出 diff={diff}"
-    cont_diff = (inj_cont.float() - base_cont.float()).abs().max().item()
-    assert cont_diff < 1e-4, f"迭代传播 diff={cont_diff}"
-    # 2 层 × (1 前向 + 2 传播步) = ≥6 次 SpMM
-    assert _CALLS["n"] >= 6, f"A1 计数 {_CALLS['n']} < 6（SpMM 未被真实消费）"
-
-    # 训练语义: 反向不破坏（loss 对 W1 的梯度有限）
+    model = _build_model(dev)
     out = model(adj, x)
     loss = out.float().pow(2).mean()
     loss.backward()
-    assert torch.isfinite(model.w1).all()
+    grads = [model.w1.grad, model.w2.grad]
+    grad_finite = [bool(g is not None and torch.isfinite(g).all()) for g in grads]
+    assert all(grad_finite), f"{mode} gradients are missing or non-finite"
 
-    return {"ok": True,
-            "consumer": "2-layer GCN feature propagation (fp32, 4k nodes)",
-            "out_diff": diff,
-            "propagation_match": True,
-            "spmm_calls": _CALLS["n"]}
+    output_path = Path(tempfile.gettempdir()) / (
+        f"spmm-{mode}-{id(profile)}-output.pt")
+    grads_path = Path(tempfile.gettempdir()) / (
+        f"spmm-{mode}-{id(profile)}-grads.pt")
+    torch.save(output, output_path)
+    torch.save(grads, grads_path)
+    return {
+        "mode": mode,
+        "registered": registered,
+        "calls": calls,
+        "output_path": str(output_path),
+        "grads_path": str(grads_path),
+    }
+
+
+def _run_worker(profile, mode):
+    command = [sys.executable, str(Path(__file__).resolve()),
+               profile.name, mode]
+    result = subprocess.run(
+        command, check=True, capture_output=True, text=True)
+    return json.loads(result.stdout.splitlines()[-1])
+
+
+def run(profile):
+    import torch
+
+    try:
+        baseline = _run_worker(profile, "baseline")
+        injected = _run_worker(profile, "injected")
+        assert baseline["registered"] is False and baseline["calls"] == 0, \
+            "baseline process must not contain the A1 registration"
+        assert injected["registered"] is True and injected["calls"] >= 6, \
+            f"injected SpMM calls={injected['calls']} < 6"
+
+        base_out = torch.load(baseline["output_path"])
+        inj_out = torch.load(injected["output_path"])
+        base_grads = torch.load(baseline["grads_path"])
+        inj_grads = torch.load(injected["grads_path"])
+        diff = (inj_out.float() - base_out.float()).abs().max().item()
+        # 实现替换型算子（cusparse → index_add 组合）: 累加序不同 →
+        # 容差断言不追位级（docs/testing.md 断言策略）
+        assert diff < 1e-5, f"GCN output diff={diff}"
+        grad_diffs = [(inj - base).abs().max().item()
+                      for inj, base in zip(inj_grads, base_grads)]
+        assert max(grad_diffs) < 1e-4, f"training gradient diff={grad_diffs}"
+        assert all(torch.isfinite(grad).all()
+                   for grad in base_grads + inj_grads), \
+            "training gradients must be finite"
+
+        return {"ok": True,
+                "consumer": "2-layer GCN feature propagation (fp32, 4k nodes)",
+                "out_diff": diff,
+                "grad_diff": grad_diffs,
+                "baseline_calls": baseline["calls"],
+                "injected_calls": injected["calls"],
+                "spmm_calls": injected["calls"]}
+    finally:
+        for worker in (baseline if "baseline" in locals() else None,
+                       injected if "injected" in locals() else None):
+            if worker is None:
+                continue
+            for key in ("output_path", "grads_path"):
+                Path(worker[key]).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
     from _profile import load_profile
-    print(run(load_profile(sys.argv[1] if len(sys.argv) > 1 else "thead-ppu")))
+    profile_name = sys.argv[1] if len(sys.argv) > 1 else "thead-ppu"
+    if len(sys.argv) > 2 and sys.argv[2] in ("baseline", "injected"):
+        print(json.dumps(_run_mode(load_profile(profile_name), sys.argv[2])))
+    else:
+        print(run(load_profile(profile_name)))

@@ -68,10 +68,25 @@ def _validate(csr: torch.Tensor, dense: torch.Tensor) -> None:
             raise RuntimeError(
                 f"spmm 是 PLATFORM={PLATFORM!r} 绑定实现，"
                 f"{name} 在 {t.device!r}（非 PPU 栈）")
+    if csr.dtype not in SUPPORTED_DTYPES:
+        raise RuntimeError(
+            f"spmm thead backend 不支持 csr.dtype={csr.dtype}；"
+            f"支持: {[str(d) for d in SUPPORTED_DTYPES]}")
     if dense.dtype not in SUPPORTED_DTYPES:
         raise RuntimeError(
             f"spmm thead backend 不支持 dense.dtype={dense.dtype}；"
             f"支持: {[str(d) for d in SUPPORTED_DTYPES]}")
+    if csr.values().dtype != csr.dtype or dense.layout != torch.strided:
+        raise RuntimeError(
+            "spmm thead backend requires CSR values matching csr.dtype "
+            "and a strided dense tensor")
+    if crow_indices_dtype(csr) not in (torch.int32, torch.int64):
+        raise RuntimeError(
+            f"spmm thead backend 不支持 CSR 索引 dtype="
+            f"{crow_indices_dtype(csr)}")
+    if csr.device != dense.device:
+        raise RuntimeError(
+            f"spmm device mismatch: csr={csr.device}, dense={dense.device}")
     if csr.shape[1] != dense.shape[0]:
         raise ValueError(
             f"spmm shape mismatch: csr ({csr.shape[0]},{csr.shape[1]}) @ "
@@ -114,10 +129,14 @@ def spmm_backward_ppu(csr: torch.Tensor, dense: torch.Tensor,
     口径同 spmm_ppu）。"""
     _validate(csr, dense)
     rows, col, val = _csr_rows(csr)
-    d_vals = (grad_out.index_select(0, rows)
-              * dense.index_select(0, col)).sum(-1)
+    d_vals = (grad_out.float().index_select(0, rows)
+              * dense.float().index_select(0, col)).sum(-1)
     dB = torch.zeros(dense.shape, dtype=torch.float32, device=dense.device)
     dB.index_add_(0, col,
                   val.float().unsqueeze(1)
                   * grad_out.float().index_select(0, rows))
     return d_vals.to(val.dtype), dB.to(dense.dtype)
+
+
+def crow_indices_dtype(csr: torch.Tensor) -> torch.dtype:
+    return csr.crow_indices().dtype
