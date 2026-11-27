@@ -1,0 +1,47 @@
+{
+  "op": "spmm",
+  "device": "cuda:6",
+  "device_name": "PPU-ZW810E",
+  "method": "warmup20+iters100+synchronize",
+  "rows": [
+    {
+      "M": 8192,
+      "K": 64,
+      "N": 64,
+      "density": 0.01,
+      "nnz": 5349,
+      "index_add_ms": 0.1195,
+      "index_add_GFLOPS": 5.73,
+      "native_ms": 0.014,
+      "native_GFLOPS": 49.03,
+      "reference_fp64_ms": 0.1261,
+      "reference_fp64_GFLOPS": 5.43
+    },
+    {
+      "M": 16384,
+      "K": 64,
+      "N": 512,
+      "density": 0.005,
+      "nnz": 5122,
+      "index_add_ms": 0.1189,
+      "index_add_GFLOPS": 44.13,
+      "native_ms": 0.0538,
+      "native_GFLOPS": 97.43,
+      "reference_fp64_ms": 0.2299,
+      "reference_fp64_GFLOPS": 22.81
+    },
+    {
+      "M": 4096,
+      "K": 128,
+      "N": 64,
+      "density": 0.02,
+      "nnz": 10537,
+      "index_add_ms": 0.1178,
+      "index_add_GFLOPS": 11.45,
+      "native_ms": 0.0141,
+      "native_GFLOPS": 95.53,
+      "reference_fp64_ms": 0.1264,
+      "reference_fp64_GFLOPS": 10.67
+    }
+  ]
+}
