@@ -176,14 +176,38 @@ def probe_efficient_attention(dev):
         out["error"] = repr(e)[:300]
         return out
     B, H, S, D = 2, 4, 64, 32
+    seed = 20261126
+    torch.manual_seed(seed)
     q = torch.randn(B, H, S, D, dtype=torch.float16, device=dev)
     k = torch.randn(B, H, S, D, dtype=torch.float16, device=dev)
     v = torch.randn(B, H, S, D, dtype=torch.float16, device=dev)
     # schema: (q, k, v, bias, cu_seqlens_q, cu_seqlens_k, max_seqlen_q,
     #          max_seqlen_k, dropout_p, custom_mask_type,
     #          compute_log_sumexp=False, *, scale, seqlen_k, window_size)
-    # bias 形状逐候选取证（首轮 (B,H,S,S) 报 wrong shape (head dimension)）:
-    #   None / (1,1,S,S) / (B,1,S,S) / (B,H,S,S)
+    out["layout"] = {
+        "math": "BHSD", "low_level": "BSHD", "seed": seed,
+        "note": "Q/K/V transpose before the low-level call; output is "
+                "transposed back after the low-level contract"}
+
+    def run_low_level(q_bhsd, k_bhsd, v_bhsd, bias=None,
+                      compute_log_sumexp=True, scale=None):
+        q_bshd = q_bhsd.transpose(1, 2).contiguous()
+        k_bshd = k_bhsd.transpose(1, 2).contiguous()
+        v_bshd = v_bhsd.transpose(1, 2).contiguous()
+        result = torch.ops.aten._efficient_attention_forward(
+            q_bshd, k_bshd, v_bshd, bias, None, None, S, S,
+            0.0, 0, compute_log_sumexp, scale=scale)
+        return result[0].transpose(1, 2).contiguous(), result[1], result
+
+    def reference_lse(q_bhsd, k_bhsd, bias=None, scale=None):
+        scale_value = scale if scale is not None else D ** -0.5
+        scores = torch.einsum("bhid,bhjd->bhij",
+                              q_bhsd.cpu().double(), k_bhsd.cpu().double())
+        scores = scores * scale_value
+        if bias is not None:
+            scores = scores + bias.cpu().double()
+        return torch.logsumexp(scores, dim=-1).float().to(dev)
+
     ref = torch.nn.functional.scaled_dot_product_attention(
         q.cpu().float(), k.cpu().float(), v.cpu().float()).to(dev)
     for tag, bias in [
@@ -195,30 +219,27 @@ def probe_efficient_attention(dev):
         try:
             # scale=None → 沿用 F.sdpa 默认 1/sqrt(D)（首轮 scale=1.0 与
             # 参考口径不一致造成 3.678 假误差, 已修正）
-            res = torch.ops.aten._efficient_attention_forward(
-                q, k, v, bias, None, None, None, None, 0.0, 0, True)
+            res = run_low_level(q, k, v, bias)
             o, lse = res[0], res[1]
+            raw = res[2]
             entry = {"ok": True, "n_returns": len(res),
                      "out_shape": list(o.shape),
+                     "raw_out_layout_shape": list(raw[0].shape),
                      "lse_shape": list(lse.shape),
                      "philox_seed_dtype": str(res[2].dtype),
-                     "max_seqlen": [str(res[4]), str(res[5])]}
-            # 布局/缩放判别: 输出按 BHSD 直接比 + 转置比 × scale 两口径
-            o_f = o.float()
+                     "philox_offset_dtype": str(res[3].dtype),
+                     "philox_shapes": [list(res[2].shape),
+                                       list(res[3].shape)],
+                     "max_seqlen": [int(res[4]), int(res[5])]}
             entry["err_bhsd_default"] = maxerr(o, ref)
-            entry["err_bhsd_scale1"] = maxerr(
-                o, torch.nn.functional.scaled_dot_product_attention(
-                    q.cpu().float(), k.cpu().float(), v.cpu().float(),
-                    scale=1.0).to(dev))
-            # BSHD-in-BHSD 假设: kernel 按 BSHD 写内存但张量形状是 BHSD →
-            # 内存重解释 reshape(B,S,H,D).transpose(1,2) 后应与参考一致
-            if o.dim() == 4 and o.shape == tuple(ref.shape):
-                entry["err_bshd_reinterp"] = maxerr(
-                    o.reshape(B, S, H, D).transpose(1, 2), ref)
-                entry["lse_as_bsh_pad"] = [
-                    list(lse.reshape(B, S, -1).transpose(1, 2).shape),
-                    float(lse.reshape(B, S, -1).transpose(1, 2)[..., :H]
-                          .float().abs().max())]
+            if lse.dim() == 3 and lse.shape[1] == S and lse.shape[2] >= H:
+                lse_valid = lse[:, :, :H].transpose(1, 2)
+                entry["lse_valid_shape"] = list(lse_valid.shape)
+                entry["lse_valid_err"] = maxerr(
+                    lse_valid, reference_lse(q, k, bias))
+            entry["max_seqlen_expected"] = [S, S]
+            entry["max_seqlen_match"] = (
+                int(res[4]) == S and int(res[5]) == S)
             out[tag] = entry
         except Exception as e:
             out[tag] = {"ok": False, "error": repr(e)[:250]}
@@ -237,6 +258,7 @@ def probe_efficient_attention(dev):
             dt_v = kw.pop("dt", torch.float16)
             D_v = kw.pop("D", D)
             S_v = kw.pop("S", S)
+            torch.manual_seed(seed + S_v * 100 + D_v)
             qv = torch.randn(B, H, S_v, D_v, dtype=dt_v, device=dev)
             kv = torch.randn(B, H, S_v, D_v, dtype=dt_v, device=dev)
             vv = torch.randn(B, H, S_v, D_v, dtype=dt_v, device=dev)
@@ -244,14 +266,15 @@ def probe_efficient_attention(dev):
             r_v = torch.nn.functional.scaled_dot_product_attention(
                 qv.cpu().float(), kv.cpu().float(), vv.cpu().float(),
                 scale=scale_v).to(dev)
-            res_v = torch.ops.aten._efficient_attention_forward(
-                qv, kv, vv, None, None, None, None, None, 0.0, 0,
-                **({"compute_log_sumexp": False} if not kw.pop("cls", True)
-                   else {}), scale=scale_v)
+            o_v, lse_v, raw_v = run_low_level(
+                qv, kv, vv, None,
+                compute_log_sumexp=not kw.pop("cls", True), scale=scale_v)
             variants[vtag] = {
-                "ok": True, "out_shape": list(res_v[0].shape),
-                "err_bhsd_default": maxerr(res_v[0], r_v),
-                "lse_shape": list(res_v[1].shape)}
+                "ok": True, "out_shape": list(o_v.shape),
+                "raw_out_layout_shape": list(raw_v[0].shape),
+                "err_bhsd_default": maxerr(o_v, r_v),
+                "max_seqlen": [int(raw_v[4]), int(raw_v[5])],
+                "lse_shape": list(lse_v.shape)}
         except Exception as e:
             variants[vtag] = {"ok": False, "error": repr(e)[:220]}
     out["variants"] = variants

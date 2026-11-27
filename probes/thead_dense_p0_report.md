@@ -60,23 +60,29 @@ gelu 自研裁定依据: gelu 为逐 elementwise, 不踩 PPU Triton `tl.dot`
 上游 PR flagos-ai/FlagGems#1700 已关闭（合并提交承接）, 需要智源侧
 确认承接提交与目标版本。
 
-**真机直调证据（本单要求回报项 2）**:
+**布局修正与证据状态（复审更新）**: 复审指出首轮探针把 `[B,H,S,D]`
+直接传给低层接口的 `[B,S,H,D]` 契约。当前 JSON
+（`probes/out/thead_dense_p0_probe.json`）已标记
+`probe_status=stale-layout-before-pr61-fix`，其中 max_seqlen=4、输出
+误差 2.8–3.7、bias 形状结论均为错误布局产物，**不能用于 #56 判定**。
+探针已改为：数学输入保留 BHSD、调用前 Q/K/V transpose 到 BSHD、
+输出 transpose 回 BHSD；固定 seed，断言 max_seqlen=64，并单独比较
+有效 H 区间 LSE。真机复跑命令不变：
+`PPU_PROBE_DEVICE=cuda:6 python3 probes/thead_dense_p0_probe.py --item efficient_attention`。
+当前环境无 PPU，本轮不以推测结果替代原始真机 JSON；复跑后按实际
+输出撤回或收口 #56。
+
+**首轮直调证据（仅作布局错误归因，不作缺口结论）**:
 
 - op 存在: schema 与上游 v2.11.0 一致（10 位置参 + 4 kw 参,
   6 返回值: output/logsumexp/philox_seed/philox_offset/
   max_seqlen_batch_q/max_seqlen_batch_k; philox_seed 为 int64）。
 - 代表用例（B=2,H=4,S=64,D=32 fp16, 无 bias, dropout=0,
   custom_mask_type=0, compute_log_sumexp=True, scale=默认 1/√D）:
-  **调用可执行**（6 返回值齐备）, 但 **output 与 `F.sdpa` 参考误差
-  2.8-3.7**——跨全部变体（no_lse / 显式 scale / fp32 / D=64 / S=128）
-  均为同量级错误值; logsumexp 形状 (2,64,32)（(B,S,H_pad32) 布局,
-  compute=True 时含 Inf）。
-- **bias 形状全部被拒**: `(1,1,S,S)`→wrong shape (batch dimension);
-  `(B,1,S,S)`/`(B,H,S,S)`→wrong shape (head dimension)。仅 bias=None 可用。
-- 结论: **存在可复现的 PPU 缺口**（issue 分支 2）——最小失败输入 =
-  探针 `bias_none` 用例（预期 = F.sdpa 同输入结果; 实际 = 误差 3.1+
-  的错误输出; 原始输出见 probe JSON）。
-- 建议开发范围（与智源侧对齐后执行）: 复用该栈已验证的相邻接口
+  调用可执行且 6 返回值齐备，但 max_seqlen 返回 4/4（等于 H），证明
+  H 被当作 S 使用；因此 output/LSE 语义无效。首轮的“output 误差”和
+  “bias 均被拒”结论撤回。
+- 建议开发范围（仅在正确布局复跑确认缺口后执行）: 复用该栈已验证的相邻接口
   `aten::_scaled_dot_product_efficient_attention`（ops/sdpa PLATFORM §3c
   已交付, err ≤5.62e-4）包装补齐 6 返回值契约（philox/max_seqlen 合成）,
   bias 走该接口的 `_aligned_bias` 路径; **本单先回报证据, 开发 PR 待
