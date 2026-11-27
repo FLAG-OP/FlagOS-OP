@@ -81,6 +81,7 @@ class _LinearFn(torch.autograd.Function):
     反向用 aten::matmul / sum 组合（不同算子名, 与本注册无递归;
     同进程若亦注册 ops.matmul, 则组合自然路由到 matmul 交付——族行为）。
     linear 的 ATen 导数公式即 matmul/sum 组合（ND 输入先 reshape 2D）。
+    1D weight 按矩阵形状 (1,K) 参与，仅在返回前还原其原始形状。
     """
 
     @staticmethod
@@ -97,15 +98,9 @@ class _LinearFn(torch.autograd.Function):
     def backward(ctx, grad_out):
         input, weight = ctx.saved_tensors
         with torch.no_grad():
-            in2d = input.reshape(-1, input.shape[-1])
-            g2d = grad_out.reshape(-1, grad_out.shape[-1])
-            grad_input = grad_weight = grad_bias = None
-            if ctx.needs_input_grad[0]:
-                grad_input = (g2d @ weight).reshape(input.shape)
-            if ctx.needs_input_grad[1]:
-                grad_weight = g2d.t() @ in2d
-            if ctx.has_bias and ctx.needs_input_grad[2]:
-                grad_bias = g2d.sum(0)
+            grad_input, grad_weight, grad_bias = _linear_backward(
+                grad_out, input, weight,
+                ctx.needs_input_grad[:3], ctx.has_bias)
         return grad_input, grad_weight, grad_bias
 
 
@@ -121,6 +116,24 @@ def linear_aten(input, weight, bias=None):
     except ImportError:
         from kernel.thead_ppu import linear_ppu
     return linear_ppu(input, weight, bias)
+
+
+def _linear_backward(grad_out, input, weight, needs_input_grad, has_bias):
+    """linear 导数组合（1D 输入/1D weight 均保持原语义）。"""
+    matrix_weight = weight.reshape(1, -1) if weight.dim() == 1 else weight
+    in2d = input.reshape(-1, input.shape[-1])
+    raw_out_shape = in2d.shape[0:1] + matrix_weight.shape[0:1]
+    g2d = grad_out.reshape(raw_out_shape)
+    grad_input = grad_weight = grad_bias = None
+    if needs_input_grad[0]:
+        grad_input = (g2d @ matrix_weight).reshape(input.shape)
+    if needs_input_grad[1]:
+        grad_weight = g2d.t() @ in2d
+        if weight.dim() == 1:
+            grad_weight = grad_weight.reshape(weight.shape)
+    if has_bias and needs_input_grad[2]:
+        grad_bias = g2d.sum(0)
+    return grad_input, grad_weight, grad_bias
 
 
 def register_a1(dispatch_key: str = "AutogradCUDA",

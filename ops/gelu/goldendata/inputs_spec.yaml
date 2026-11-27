@@ -1,7 +1,7 @@
 # gelu 黄金输入规格（声明式, scripts/gen_inputs.py 同构口径）
 #
 # 判卷口径（issue #55 交付要求 3 + docs/acceptance.md）:
-#   - 误差类型: pointwise 有界输出 → 绝对误差
+#   - 误差类型: pointwise 有界输出 → 绝对误差; 权威参考为 fp64
 #   - 容差分档: fp32=1e-5 abs / bf16|fp16=1e-2 abs（唯一权威表）
 #   - 必测矩阵: shape ≥3 组含非 BLOCK 整倍数（3072/5000/5120/4097/1023）、
 #     三 dtype、每组合 ≥3 种子、特殊值（负尾部/近零/非有限/boundary）

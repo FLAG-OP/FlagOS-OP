@@ -4,6 +4,9 @@
 
 - pointwise 有界输出 → abs: fp32=1e-5(2e-5) / fp16|bf16=1e-2
 - GEMM/乘加放大形态 → rel: 5e-2（除以 max|ref|）
+- 参考改为独立 fp64；FlagFix 负尾反例用
+  `python3 script/check_accuracy.py --impl triton --device cuda:6 --flagfix-replay`
+  逐项重放，`none/tanh × forward/backward` 分别记 PASS/FAIL。
 
 ## 黄金校验（真机 cuda:6）
 

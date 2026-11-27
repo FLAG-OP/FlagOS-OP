@@ -105,68 +105,31 @@ class _MatmulFn(torch.autograd.Function):
 
 def _matmul_backward(g, a, b, need_a, need_b):
     """按 aten::matmul 导数公式分形态组合（与 torch native 语义一致）。"""
-    # 1D 形态: 先升 2D
+    # 1D 形态先升维。M/N 被压缩到 batch 维的部分通过 sum_to_size 还原，
+    # 广播批维在同一处归约，因此一维、三维和广播混合形态共用一套逻辑。
     a1d = a.dim() == 1
     b1d = b.dim() == 1
     a2 = a.reshape(1, -1) if a1d else a
     b2 = b.reshape(-1, 1) if b1d else b
-    g2 = g
     if a1d and b1d:          # (K)@(K) -> ()
         g2 = g.reshape(1, 1)
     elif a1d:                # (K)@(K,N) -> (N)
-        g2 = g.reshape(1, -1)
+        g2 = g.reshape(*b2.shape[:-2], 1, b2.shape[-1])
     elif b1d:                # (M,K)@(K) -> (M)
-        g2 = g.reshape(-1, 1)
+        g2 = g.reshape(*a2.shape[:-2], a2.shape[-2], 1)
+    else:
+        g2 = g
 
-    # 广播批维: 确定 a/b 的批形状
     da = db = None
-    if a2.dim() >= 2 and b2.dim() >= 2:
-        M, K = a2.shape[-2], a2.shape[-1]
-        N = b2.shape[-1]
-        a_bat = a2.shape[:-2]
-        b_bat = b2.shape[:-2]
-        g2 = g2.reshape(*g2.shape[:-2], M, N) if g2.dim() > 2 else \
-            g2.reshape(*a_bat, M, N) if a_bat else g2
-        # 统一批（broadcast 形状）
-        g_bat = g2.shape[:-2]
-        bat = torch.broadcast_shapes(a_bat, b_bat, tuple(g_bat))
-        gE = g2.expand(*bat, M, N)
-        aE = a2.expand(*bat, M, K) if a_bat != bat else a2
-        bE = b2.expand(*bat, K, N) if b_bat != bat else b2
-        gF = gE.reshape(-1, M, N)
-        aF = aE.reshape(-1, M, K)
-        bF = bE.reshape(-1, K, N)
-        if need_a:
-            daF = gF @ bF.transpose(-1, -2)          # (B,M,K)
-            da = daF.reshape(*bat, M, K)
-            # 还原 a 的批（被广播/求和）
-            if a_bat != bat:
-                sum_dims = _batch_sum_dims(bat, a_bat, a2.dim())
-                da = da.sum(dim=sum_dims, keepdim=True).expand_as(a2) \
-                    if sum_dims else da.reshape(a2.shape)
-            if a1d:
-                da = da.reshape(-1)
-        if need_b:
-            dbF = aF.transpose(-1, -2) @ gF          # (B,K,N)
-            db = dbF.reshape(*bat, K, N)
-            if b_bat != bat:
-                sum_dims = _batch_sum_dims(bat, b_bat, b2.dim())
-                db = db.sum(dim=sum_dims, keepdim=True).expand_as(b2) \
-                    if sum_dims else db.reshape(b2.shape)
-            if b1d:
-                db = db.reshape(-1)
+    if need_a:
+        da = torch.matmul(g2, b2.transpose(-1, -2)).sum_to_size(a2.shape)
+        if a1d:
+            da = da.reshape(-1)
+    if need_b:
+        db = torch.matmul(a2.transpose(-1, -2), g2).sum_to_size(b2.shape)
+        if b1d:
+            db = db.reshape(-1)
     return da, db
-
-
-def _batch_sum_dims(bat, sub_bat, ndim):
-    """求 expand→被广播侧需要 sum 的维索引（从左对齐批维）。"""
-    if len(sub_bat) == len(bat):
-        return [i for i, (x, y) in enumerate(zip(bat, sub_bat))
-                if x != y and y == 1]
-    off = len(bat) - len(sub_bat)
-    return list(range(off)) + [off + i for i, (x, y)
-                               in enumerate(zip(bat[off:], sub_bat))
-                               if y == 1 and x != 1]
 
 
 def matmul_aten(self, other):

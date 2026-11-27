@@ -105,8 +105,6 @@ class _NativeLayerNormFn(torch.autograd.Function):
             from kernel.thead_ppu import native_layer_norm_backward_ppu
         need_w = weight is not None and ctx.needs_input_grad[2]
         need_b = bias is not None and ctx.needs_input_grad[3]
-        if not (need_w or need_b):
-            weight = bias = None
         gi, gw, gb = native_layer_norm_backward_ppu(
             grad_out.contiguous(), input, ctx.normalized_shape,
             mean, rstd, weight, bias, (True, need_w, need_b))
