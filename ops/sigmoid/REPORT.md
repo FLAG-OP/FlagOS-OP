@@ -7,40 +7,44 @@
 | 算子 | `aten::sigmoid(Tensor self) -> Tensor` |
 | 语义 | `1 / (1 + exp(-x))`；见 [reference.py](reference.py) |
 | 路线 / 级别 | A1 / Triton |
-| 设备 | P800 物理 XPU 2；单卡 `p800-liyanz-local`，软件锁等价于 `p800-kunlunxin-gems5` |
-| 日期 / 状态 | 2026-11-22 / 255 边界修复完成，最终硬件复测待环境恢复 |
+| 设备 | 已提交 profile `p800-kunlunxin-gems5`；物理 XPU 1/2，逻辑 `cuda:0/1`，算子层 `cuda:1`，vLLM TP=2 |
+| 日期 / 状态 | 2026-11-27 / CPU 整改完成，当前硬件全量复测与真实 C2 未完成 |
 
 ## 实现矩阵
 
 | 级别 | 状态 | 文件 |
 |---|---|---|
 | torch | 完成 | [kernel/torch_level.py](kernel/torch_level.py) |
-| Triton | 完成并通过 P800 真机验证 | [kernel/triton_level.py](kernel/triton_level.py) |
+| Triton | 实现完成；2026-11-09 历史真机结果保留，当前提交待全量复测 | [kernel/triton_level.py](kernel/triton_level.py) |
 | 硬件级 | 未实现，本次范围外 | [kernel/hardware_level/BUILD.md](kernel/hardware_level/BUILD.md) |
 
 ## 验证矩阵
 
-| 层级 | 结果 | 关键证据 |
+| 层级 | 当前状态 | 关键证据 |
 |---|---|---|
-| kernel | PASS | 75 例、19 shape、3 优化 dtype、3 回退 dtype；误差 0；哨兵通过 |
-| A1 op | PASS | 9 次拦截，counter=9；布局和 dtype 回退通过 |
-| C1 应用 | PASS | Transformer 激活 `2×64×4096`，fp16/bf16/fp32，3/3 |
-| C2 vLLM | 待复测 | 真实 EngineCore 等价消费者脚本已具备；当前 P800 运行时阻塞 |
-| 黄金 | PASS | 93/93；最差 abs `1.192e-07`、rel `1.680e-07` |
-| 性能矩阵 | 完成 | 4 shape × 3 dtype × 3 实现 = 36 个独立子进程 |
-| dispatch | 完成 | 直调 `47.970 μs`，注册 `55.877 μs`，增量 `7.908 μs` |
-| 中央性能入口 | PASS | `ops.sigmoid.triton=0.058 ms`；无历史 baseline，NEW，0 FAIL |
+| kernel | 待当前提交复测 | 75 例为 2026-11-09 修改前历史 PASS |
+| A1 op | 待当前提交复测 | 9 次命中为 2026-11-09 修改前历史 PASS；计数器 CPU 契约已修复 |
+| C1 应用 | 待当前提交复测 | 3/3 dtype 为 2026-11-09 修改前历史 PASS |
+| C2 vLLM | FAIL（环境初始化） | 2026-11-27 baseline TP worker 初始化报 NCCL error，未进入生成/注入 |
+| 黄金 | CPU 当前通过 / Triton 待复测 | CPU reference/torch 93/93；历史硬件 93/93 不作为当前结论 |
+| 性能矩阵 | 待当前提交复测 | 36/36 为 2026-11-09 历史采集，原始 JSON 未入库且不可访问 |
+| dispatch | 待当前提交复测 | `47.970/55.877 μs` 为 2026-11-09 历史摘要 |
+| 中央性能入口 | 无有效回归门禁 | 历史 `NEW + 0 FAIL` 无 baseline，只表示成功入表 |
 
-## 性能结论
+## 2026-11-09 历史性能摘要（不可独立复核）
 
 - 正式 FlagGems 5.0 环境中，自研 12 个组合均未超过原生。
 - 最接近原生的是 `2048×2048 bf16`：自研 `0.077650 ms`、原生 `0.067039 ms`，比值 `1.158×`。
 - 小尺寸受约 49～58 μs 自研启动固定成本影响，最差为 `1×14336 bf16` 的 `4.276×`。
 - 自研仅在大张量 bf16/fp32 两项略快于 FlagGems 5.0，原生仍是当前最佳基线。
 
+上述性能原始 JSON 仅曾存放在旧服务器 `/data2/liyanz/results/`，未提交
+到仓库且现已不可访问。因此这些数字不构成当前提交的可复核性能证据，
+默认路由继续使用 native，直至当前代码重新采集矩阵并通过独立复测。
+
 ## 结论
 
-表中 75/9/3、93/93、36/36 为 2026-11-09 修改前历史基线。2026-11-22 当前代码已通过环境锁 9/9、182 项基础单测、17/17 包化替代扫描、CPU 黄金 reference/torch 各 93/93，以及 255 专用路径 3 dtype × 2 shape 的代表点真机检查。普通 `1×14336` Triton 烟测同样超时，表明当前阻塞不限于 255；修改后的三层、Triton 黄金、C2 与性能矩阵仍待运行时恢复后复测。因此当前可继续代码评审，但不能标记为最终硬件验收完成。
+表中 75/9/3、硬件 93/93、36/36 均为 2026-11-09 修改前历史基线。2026-11-27 当前 PR 已通过 197 项 CPU 单测、证据检查和 CPU 黄金两路径 93/93；真实 C2 baseline 在 TP worker 初始化阶段因 NCCL 错误失败，未进入生成或 sigmoid 注入。修改后的三层、Triton 黄金、C2 与性能矩阵仍待环境恢复后复测，因此当前只能继续代码评审，不能标记为最终硬件验收完成。
 
 | 交付物 | 位置 |
 |---|---|

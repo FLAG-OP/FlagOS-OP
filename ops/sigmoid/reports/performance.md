@@ -4,6 +4,10 @@
 
 ## 1. 测试口径
 
+> 本节及第 2～4 节均为 **2026-11-09 修改前历史摘要**。采集时使用的
+> 本地单卡 profile 未提交；原始 JSON 也未入库，不能作为当前提交的
+> 独立可复核性能证据。
+
 | 项 | 值 |
 |---|---|
 | 设备 | Kunlunxin P800 OAM 96 GiB，物理 XPU 2 |
@@ -39,7 +43,9 @@
 
 ## 4. 中央性能入口
 
-`perf_run.py --device p800-liyanz-local --pattern sigmoid` 记录 `ops.sigmoid.triton=0.058 ms`、`577.26 GB/s`。当前不存在历史 baseline，因此 `perf_compare.py` 给出 0 FAIL、0 WARN、1 NEW；NEW 仅表示成功入表。
+历史 `perf_run.py` 记录 `ops.sigmoid.triton=0.058 ms`、`577.26 GB/s`。
+当时不存在 baseline，因此 `perf_compare.py` 给出 0 FAIL、0 WARN、1 NEW；
+`NEW` 仅表示成功入表，不能解释为已有性能回归保护或门禁通过。
 
 ## 5. 分析
 
@@ -48,8 +54,22 @@
 - 自研仅在 throughput bf16/fp32 两项略快于 FlagGems 5.0，原生仍是当前最佳基线。
 - 后续优化应先测安全的 `numel/dtype` 原生路由，或降低 P800 pointwise launch 成本；不得沿用旧 5.3 环境中曾出现的加速数字。
 
-原始 JSON：服务器 `/data2/liyanz/results/sigmoid-p800-gems5-matrix-final.json`（生成物不入库）。
+历史原始 JSON 曾位于旧服务器
+`/data2/liyanz/results/sigmoid-p800-gems5-matrix-final.json`，未提交仓库且
+服务器已到期，当前不可访问。上表只能作为不可独立复核的历史摘要；
+默认路由继续使用 native，直至当前代码重新采集并通过独立复测。
 
-## 6. 2026-11-22 复测状态
+## 6. 当前复测状态（2026-11-27）
 
-以上数据是 255 边界修改前的 2026-11-09 历史基线。当前代码尝试以 `1×14336 / fp16 / Triton / warmup 1 / iters 1` 做不含 255 的最小烟测，仍在 60 秒硬超时内未返回；因此阻塞属于更广泛的 P800/XMLIR 运行时状态，而非本次 255 专用路径。未启动完整 36 组合矩阵，当前代码不得沿用历史数字宣称性能已复验。
+以上数据是 255 边界修改前的 2026-11-09 历史基线。当前代码此前以 `1×14336 / fp16 / Triton / warmup 1 / iters 1` 做不含 255 的最小烟测，仍在 60 秒硬超时内未返回；2026-11-27 使用已提交的双卡 profile 运行真实 C2 时，baseline EngineCore worker 又在 NCCL 通信初始化阶段失败。未启动当前提交的完整 36 组合矩阵，不得沿用历史数字宣称性能已复验。
+
+当前可复现命令只使用仓库 profile：
+
+```bash
+export XPU_VISIBLE_DEVICES=1,2
+export CUDA_VISIBLE_DEVICES=1,2
+python ops/sigmoid/script/bench_matrix.py \
+  --profile p800-kunlunxin-gems5 --warmup 20 --iters 100
+python ops/sigmoid/script/bench_dispatch.py \
+  --device p800-kunlunxin-gems5
+```

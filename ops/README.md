@@ -64,7 +64,7 @@ grep -rl my_op . | xargs sed -i 's/my_op/<你的算子名>/g'
 
 | 算子 | 作用 | 交付路线 | 证据 | 关键结论 |
 |---|---|---|---|---|
-| [sigmoid](sigmoid/) | 标准 aten sigmoid 推理前向，覆盖 LLM 激活形状和安全 dtype 回退。 | A1 · native 默认 / Triton 验证 | C1（p800-kunlunxin-gems5） | P800 kernel 75 例、黄金 93/93；默认保持原生路由，Triton 实现用于功能、精度和性能验证。 |
+| [sigmoid](sigmoid/) | 标准 aten sigmoid 推理前向，覆盖 LLM 激活形状和安全 dtype 回退。 | A1 · native 默认 / Triton 验证 | C1（p800-kunlunxin-gems5） | 2026-11-09 历史 P800 kernel 75 例、硬件黄金 93/93；当前 PR 的 CPU 回归通过、硬件全量复测待完成，默认保持原生路由。 |
 
 ### 布局、复制与类型转换
 

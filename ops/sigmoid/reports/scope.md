@@ -24,7 +24,9 @@
 
 非连续 strided 输入会先连续化，输出数值、shape 和 dtype 保持一致，但不承诺保留输入 stride。
 
-## 3. 已验证尺寸
+## 3. 历史验证范围与当前状态
+
+下列清单来自 2026-11-09 修改前历史硬件基线：
 
 - 0D 标量、空张量、1D/2D/3D/4D；
 - 极小输入 `1`、`17`；
@@ -47,7 +49,7 @@
 
 | 平台 | 状态 |
 |---|---|
-| 昆仑芯 P800 | 已完成本页 C1 forward 验证 |
+| 昆仑芯 P800 | 2026-11-09 历史 C1 forward 通过；当前提交硬件全量复测待完成 |
 | 华为昇腾、寒武纪、平头哥、燧原、壁仞 | 未验证，不能由 P800 结果外推 |
 
 通用 Triton fallback 只表示代码结构可移植；平台必须完成真实硬件测试、环境锁、三层验证和性能报告后才能登记支持。
@@ -55,8 +57,10 @@
 ## 6. 验收入口
 
 ```bash
-python ops/sigmoid/example.py p800-liyanz-local
+export XPU_VISIBLE_DEVICES=1,2
+export CUDA_VISIBLE_DEVICES=1,2
+python ops/sigmoid/example.py p800-kunlunxin-gems5
 python ops/sigmoid/script/gen_golden.py --device cpu
-python ops/sigmoid/script/check_accuracy.py --impl triton --device p800-liyanz-local
-python ops/sigmoid/script/bench_matrix.py --profile p800-liyanz-local --warmup 20 --iters 100
+python ops/sigmoid/script/check_accuracy.py --impl triton --device p800-kunlunxin-gems5
+python ops/sigmoid/script/bench_matrix.py --profile p800-kunlunxin-gems5 --warmup 20 --iters 100
 ```
