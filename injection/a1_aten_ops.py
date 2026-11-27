@@ -326,7 +326,10 @@ def install_sigmoid_consumer() -> bool:
                 with open(evidence_path, "a", encoding="utf-8") as handle:
                     handle.write(_json.dumps({
                         "type": "consume",
+                        "consumer_type": "sampler_logits",
                         "consumer": "vllm.v1.sample.Sampler.forward",
+                        "phase": "generation",
+                        "run_id": os.environ.get("FLAGOS_C2_RUN_ID"),
                         "pid": os.getpid(),
                         "shape": list(logits.shape),
                         "dtype": str(logits.dtype),

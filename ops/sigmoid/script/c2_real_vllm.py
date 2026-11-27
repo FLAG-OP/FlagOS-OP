@@ -34,6 +34,207 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _positive_int(value) -> bool:
+    return (isinstance(value, int) and not isinstance(value, bool)
+            and value > 0)
+
+
+def _validate_run(name: str, run) -> list[str]:
+    """校验一次 vLLM 生成确实完成预期请求并产出有效 token。"""
+    errors: list[str] = []
+    if not isinstance(run, dict):
+        return [f"{name}: run record missing"]
+    run_id = run.get("run_id")
+    if not isinstance(run_id, str) or not run_id:
+        errors.append(f"{name}: run_id missing")
+    expected = run.get("expected_request_count")
+    generated = run.get("generated_request_count")
+    outputs = run.get("output_token_ids")
+    if not _positive_int(expected):
+        errors.append(f"{name}: expected_request_count must be positive")
+    if not isinstance(generated, int) or isinstance(generated, bool):
+        errors.append(f"{name}: generated_request_count invalid")
+    elif _positive_int(expected) and generated != expected:
+        errors.append(
+            f"{name}: generated {generated}/{expected} requests")
+    if not isinstance(outputs, list):
+        errors.append(f"{name}: output_token_ids missing")
+        outputs = []
+    elif _positive_int(expected) and len(outputs) != expected:
+        errors.append(
+            f"{name}: output count {len(outputs)} != {expected}")
+    valid_total = 0
+    for index, token_ids in enumerate(outputs):
+        if (not isinstance(token_ids, list) or not token_ids
+                or any(not isinstance(token, int) or isinstance(token, bool)
+                       for token in token_ids)):
+            errors.append(f"{name}: request {index} has invalid/empty tokens")
+            continue
+        valid_total += len(token_ids)
+    recorded_total = run.get("generated_token_count")
+    if not _positive_int(recorded_total) or recorded_total != valid_total:
+        errors.append(
+            f"{name}: generated_token_count {recorded_total!r} "
+            f"!= valid token total {valid_total}")
+    started = run.get("generation_started_at")
+    finished = run.get("generation_finished_at")
+    if (not isinstance(started, (int, float))
+            or isinstance(started, bool)
+            or not isinstance(finished, (int, float))
+            or isinstance(finished, bool) or finished < started):
+        errors.append(f"{name}: invalid generation window")
+    return errors
+
+
+def validate_c2_result(result: dict) -> dict:
+    """对 sigmoid C2 证据做严格、可单测的验收判定。"""
+    errors: list[str] = []
+    runs = result.get("runs")
+    if not isinstance(runs, dict):
+        runs = {}
+        errors.append("runs missing")
+    baseline = runs.get("baseline")
+    injected = runs.get("injected")
+    errors.extend(_validate_run("baseline", baseline))
+    errors.extend(_validate_run("injected", injected))
+    baseline = baseline if isinstance(baseline, dict) else {}
+    injected = injected if isinstance(injected, dict) else {}
+
+    baseline_run_id = baseline.get("run_id")
+    injected_run_id = injected.get("run_id")
+    if baseline_run_id == injected_run_id:
+        errors.append("baseline/injected run_id must be distinct")
+    if baseline.get("injection_enabled") is not False:
+        errors.append("baseline inherited injection switch")
+    if injected.get("injection_enabled") is not True:
+        errors.append("injected run did not enable injection")
+
+    base_tokens = baseline.get("output_token_ids")
+    injected_tokens = injected.get("output_token_ids")
+    output_match = bool(
+        result.get("output_match") is True
+        and isinstance(base_tokens, list)
+        and base_tokens == injected_tokens
+    )
+    if not output_match:
+        errors.append("baseline/injected generated tokens mismatch")
+
+    for key in ("sigmoid_consumer_errors", "sigmoid_counter_errors",
+                "baseline_counter_errors", "baseline_consumer_errors"):
+        value = result.get(key, [])
+        if not isinstance(value, list) or value:
+            errors.append(f"{key}: {value!r}")
+    if result.get("baseline_counter_records"):
+        errors.append("baseline produced injected counter evidence")
+    if result.get("baseline_consumer_records"):
+        errors.append("baseline produced injected consumer evidence")
+
+    started = injected.get("generation_started_at")
+    finished = injected.get("generation_finished_at")
+    valid_window = (
+        isinstance(started, (int, float)) and not isinstance(started, bool)
+        and isinstance(finished, (int, float))
+        and not isinstance(finished, bool) and finished >= started
+    )
+    runner_pid = injected.get("runner_pid")
+    generation_hits = 0
+    hit_pids: set[int] = set()
+    counters = result.get("sigmoid_counter_records")
+    if not isinstance(counters, list) or not counters:
+        errors.append("sigmoid counter evidence missing")
+        counters = []
+    for index, record in enumerate(counters):
+        prefix = f"counter[{index}]"
+        if not isinstance(record, dict):
+            errors.append(f"{prefix}: expected object")
+            continue
+        if record.get("op") != "sigmoid":
+            errors.append(f"{prefix}: op mismatch")
+        if record.get("run_id") != injected_run_id:
+            errors.append(f"{prefix}: run_id mismatch")
+        pid = record.get("pid")
+        if not _positive_int(pid):
+            errors.append(f"{prefix}: pid invalid")
+            continue
+        if pid == runner_pid:
+            errors.append(f"{prefix}: hit came from outer runner")
+        hit_times = record.get("hit_times")
+        hits = record.get("hits")
+        if (not isinstance(hit_times, list)
+                or any(not isinstance(t, (int, float))
+                       or isinstance(t, bool) for t in hit_times)):
+            errors.append(f"{prefix}: hit_times invalid")
+            continue
+        if (not isinstance(hits, int) or isinstance(hits, bool) or hits < 0
+                or hits != len(hit_times)):
+            errors.append(f"{prefix}: hits do not match hit_times")
+        in_generation = (
+            sum(started <= t <= finished for t in hit_times)
+            if valid_window else 0
+        )
+        if in_generation:
+            generation_hits += in_generation
+            hit_pids.add(pid)
+    if generation_hits <= 0:
+        errors.append("no sigmoid hit increment in generation window")
+
+    consumers = result.get("sigmoid_consumer")
+    if not isinstance(consumers, list) or not consumers:
+        errors.append("sigmoid consumer evidence missing")
+        consumers = []
+    matched_consumers = 0
+    for index, record in enumerate(consumers):
+        prefix = f"consumer[{index}]"
+        if not isinstance(record, dict):
+            errors.append(f"{prefix}: expected object")
+            continue
+        expected_fields = {
+            "type": "consume",
+            "consumer_type": "sampler_logits",
+            "consumer": "vllm.v1.sample.Sampler.forward",
+            "phase": "generation",
+            "run_id": injected_run_id,
+        }
+        for key, expected in expected_fields.items():
+            if record.get(key) != expected:
+                errors.append(f"{prefix}: {key} mismatch")
+        pid = record.get("pid")
+        timestamp = record.get("timestamp")
+        pid_matches = _positive_int(pid) and pid in hit_pids
+        time_matches = (
+            valid_window and isinstance(timestamp, (int, float))
+            and not isinstance(timestamp, bool)
+            and started <= timestamp <= finished
+        )
+        if not pid_matches:
+            errors.append(f"{prefix}: pid has no generation hit")
+        if not time_matches:
+            errors.append(f"{prefix}: timestamp outside generation window")
+        if (pid_matches and time_matches
+                and all(record.get(k) == v
+                        for k, v in expected_fields.items())):
+            matched_consumers += 1
+    if matched_consumers <= 0:
+        errors.append("no consumer record matches run/PID/generation phase")
+
+    sigmoid_hits = result.get("counts", {}).get("sigmoid", 0)
+    if not _positive_int(sigmoid_hits):
+        errors.append("aggregate sigmoid hit count is zero/invalid")
+    return {
+        "passed": not errors,
+        "errors": errors,
+        "output_match": output_match,
+        "expected_requests": injected.get("expected_request_count", 0),
+        "generated_requests": injected.get("generated_request_count", 0),
+        "generated_tokens": injected.get("generated_token_count", 0),
+        "sigmoid_hits": sigmoid_hits,
+        "generation_hits": generation_hits,
+        "worker_process_hit": bool(hit_pids),
+        "consumer_records": len(consumers),
+        "matched_consumer_records": matched_consumers,
+    }
+
+
 def _write_report(path: Path, bundle: dict, evidence_path: Path) -> None:
     acceptance = bundle["acceptance"]
     environment = bundle["environment"]
@@ -64,8 +265,11 @@ def _write_report(path: Path, bundle: dict, evidence_path: Path) -> None:
 | 默认 / 验证路由 | `{bundle['default_route']}` / `{bundle['verification_route']}` |
 | 物理可见卡 | `{environment['visible_devices']}`；TP={environment['tensor_parallel_size']} |
 | sigmoid 命中 | `{acceptance['sigmoid_hits']}`；{processes} |
+| 生成阶段命中增量 | `{acceptance['generation_hits']}` |
+| 请求 / token | `{acceptance['generated_requests']}/{acceptance['expected_requests']}` 请求；`{acceptance['generated_tokens']}` token |
 | worker 命中 | `{acceptance['worker_process_hit']}`（命中 PID 与 runner PID 分离） |
 | 输出一致 | `{acceptance['output_match']}` |
+| 证据错误 | `{json.dumps(acceptance['errors'], ensure_ascii=False)}` |
 
 ## 消费路径
 
@@ -129,22 +333,8 @@ def main() -> int:
     os.environ["FLAGOS_A1_IMPL"] = "triton"
     result = run_real_vllm(profile)
 
-    sigmoid_hits = int(result.get("counts", {}).get("sigmoid", 0))
-    injected_runner_pid = result.get("runner_pids", {}).get("injected")
-    worker_records = [
-        item for item in result.get("count_processes", [])
-        if item.get("op") == "sigmoid" and item.get("hits", 0) > 0
-    ]
-    worker_only = bool(worker_records) and all(
-        item.get("pid") != injected_runner_pid for item in worker_records
-    )
-    consumer_records = result.get("sigmoid_consumer", [])
-    passed = bool(
-        result.get("output_match")
-        and sigmoid_hits > 0
-        and worker_only
-        and consumer_records
-    )
+    acceptance = validate_c2_result(result)
+    passed = acceptance["passed"]
 
     lock = ROOT / "configs" / "env" / f"{profile.name}.lock.yaml"
     device_profile = ROOT / "configs" / "devices" / f"{profile.name}.yaml"
@@ -200,12 +390,7 @@ def main() -> int:
                 "distributed_executor_backend"),
         },
         "result": result,
-        "acceptance": {
-            "output_match": bool(result.get("output_match")),
-            "sigmoid_hits": sigmoid_hits,
-            "worker_process_hit": worker_only,
-            "consumer_records": len(consumer_records),
-        },
+        "acceptance": acceptance,
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(bundle, indent=2, ensure_ascii=False) + "\n",

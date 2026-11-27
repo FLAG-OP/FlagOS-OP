@@ -17,6 +17,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -96,14 +97,27 @@ def ensure_model() -> str:
 
 
 def _run(model: str, out_json: str, *, inject: bool, count_dir: str,
-         dispatch_key: str, extra_env: dict | None = None) -> dict:
+         dispatch_key: str, run_id: str,
+         extra_env: dict | None = None) -> dict:
     env = os.environ.copy()
+    # 父 shell 可能残留注入/计数开关。每次运行先清空，再显式设置，避免
+    # baseline 继承 FLAGOS_A1_ATEN_INJECT=1 或复用 injected 的证据目录。
+    for name in (
+        "FLAGOS_A1_ATEN_INJECT", "FLAGOS_TEMPLATES_ROOT",
+        "A1_DISPATCH_KEY", "FLAGOS_C2_COUNT_DIR", "FLAGOS_C2_RUN_ID",
+        "A1_SIGMOID_CONSUMER", "A1_SIGMOID_EVIDENCE_FILE",
+        "A1_SDPA_CONSUMER", "A1_SDPA_EVIDENCE_FILE",
+        *COUNT_ENV.values(),
+    ):
+        env.pop(name, None)
     env["PYTHONPATH"] = f"{INJECTION}{os.pathsep}{ROOT}"
     env["VLLM_LOGGING_LEVEL"] = "WARNING"
+    env["FLAGOS_A1_ATEN_INJECT"] = "1" if inject else "0"
+    env["FLAGOS_C2_COUNT_DIR"] = count_dir
+    env["FLAGOS_C2_RUN_ID"] = run_id
     for k, v in (extra_env or {}).items():
         env[k] = v
     if inject:
-        env["FLAGOS_A1_ATEN_INJECT"] = "1"
         env["FLAGOS_TEMPLATES_ROOT"] = str(ROOT)
         env["A1_DISPATCH_KEY"] = dispatch_key
         for op, var in COUNT_ENV.items():
@@ -179,13 +193,58 @@ def _jsonl_records(path: str) -> list[dict]:
     return records
 
 
+def _jsonl_evidence(path: str) -> tuple[list[dict], list[str]]:
+    """严格读取 C2 JSONL；损坏行必须进入验收错误，不能静默丢弃。"""
+    records: list[dict] = []
+    errors: list[str] = []
+    try:
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        return records, [f"consumer evidence unreadable: {exc}"]
+    for lineno, line in enumerate(lines, 1):
+        try:
+            value = json.loads(line)
+        except (ValueError, TypeError) as exc:
+            errors.append(f"consumer evidence line {lineno}: {exc}")
+            continue
+        if not isinstance(value, dict):
+            errors.append(
+                f"consumer evidence line {lineno}: expected object")
+            continue
+        records.append(value)
+    return records, errors
+
+
+def _counter_evidence(count_dir: str) -> tuple[list[dict], list[str]]:
+    """读取注入 counter 的 run_id/PID/命中时间证据。"""
+    records: list[dict] = []
+    errors: list[str] = []
+    for path in sorted(Path(count_dir).glob("*_hits_*.json")):
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError) as exc:
+            errors.append(f"counter evidence {path.name}: {exc}")
+            continue
+        if not isinstance(value, dict):
+            errors.append(f"counter evidence {path.name}: expected object")
+            continue
+        value = dict(value)
+        value["file"] = path.name
+        records.append(value)
+    return records, errors
+
+
 def run_real_vllm(profile) -> dict:
     model = ensure_model()
     with tempfile.TemporaryDirectory() as d:
         out_base = os.path.join(d, "base.json")
         out_inj = os.path.join(d, "inj.json")
-        count_dir = os.path.join(d, "counts")
-        os.makedirs(count_dir, exist_ok=True)
+        baseline_count_dir = os.path.join(d, "baseline-counts")
+        injected_count_dir = os.path.join(d, "injected-counts")
+        os.makedirs(baseline_count_dir, exist_ok=True)
+        os.makedirs(injected_count_dir, exist_ok=True)
+        baseline_run_id = f"baseline-{uuid.uuid4().hex}"
+        injected_run_id = f"injected-{uuid.uuid4().hex}"
         extra_env = {}
         selected_devices = os.environ.get(
             "CUDA_VISIBLE_DEVICES", profile.visible_devices)
@@ -204,8 +263,6 @@ def run_real_vllm(profile) -> dict:
                os.environ.get("FLAGOS_A1_OPS", "").split(",") if o.strip()]
         if "sigmoid" in ops:
             common_env["A1_SIGMOID_CONSUMER"] = "sampler_logits"
-            common_env["A1_SIGMOID_EVIDENCE_FILE"] = os.path.join(
-                count_dir, "sigmoid_consumer.jsonl")
         if profile.name.startswith("p800"):
             # P800 上 sdpa_math 走 vendor O/LSE + exact-P 实现（与 op 层交付一致）
             extra_env["A1_SDPA_MATH_IMPL"] = "p800"
@@ -214,20 +271,45 @@ def run_real_vllm(profile) -> dict:
                 # 证据 = 命中计数 + 概率图统计 JSONL + 梯度 probe。
                 extra_env["A1_SDPA_CONSUMER"] = "prefill"
                 extra_env["A1_SDPA_EVIDENCE_FILE"] = os.path.join(
-                    count_dir, "sdpa_evidence.jsonl")
+                    injected_count_dir, "sdpa_evidence.jsonl")
                 extra_env["A1_SDPA_GRADPROBE"] = "1"
-        base = _run(model, out_base, inject=False, count_dir=count_dir,
+        baseline_env = dict(common_env)
+        if "sigmoid" in ops:
+            baseline_env["A1_SIGMOID_EVIDENCE_FILE"] = os.path.join(
+                baseline_count_dir, "sigmoid_consumer.jsonl")
+        base = _run(model, out_base, inject=False,
+                    count_dir=baseline_count_dir,
                     dispatch_key=profile.dispatch_key,
-                    extra_env=common_env)
+                    run_id=baseline_run_id, extra_env=baseline_env)
         inject_env = dict(common_env)
         inject_env.update(extra_env)
-        inj = _run(model, out_inj, inject=True, count_dir=count_dir,
-                    dispatch_key=profile.dispatch_key, extra_env=inject_env)
-        counts = _agg_counts(count_dir)
-        count_processes = _count_processes(count_dir)
-        sigmoid_consumer = _jsonl_records(
-            os.path.join(count_dir, "sigmoid_consumer.jsonl"))
-        sdpa = _agg_sdpa_evidence(count_dir, inj)
+        if "sigmoid" in ops:
+            inject_env["A1_SIGMOID_EVIDENCE_FILE"] = os.path.join(
+                injected_count_dir, "sigmoid_consumer.jsonl")
+        inj = _run(model, out_inj, inject=True,
+                   count_dir=injected_count_dir,
+                   dispatch_key=profile.dispatch_key,
+                   run_id=injected_run_id, extra_env=inject_env)
+        counts = _agg_counts(injected_count_dir)
+        count_processes = _count_processes(injected_count_dir)
+        counter_records, counter_errors = _counter_evidence(
+            injected_count_dir)
+        consumer_path = os.path.join(
+            injected_count_dir, "sigmoid_consumer.jsonl")
+        if "sigmoid" in ops:
+            sigmoid_consumer, consumer_errors = _jsonl_evidence(consumer_path)
+        else:
+            sigmoid_consumer, consumer_errors = [], []
+        baseline_counters, baseline_counter_errors = _counter_evidence(
+            baseline_count_dir)
+        baseline_consumer_path = os.path.join(
+            baseline_count_dir, "sigmoid_consumer.jsonl")
+        if Path(baseline_consumer_path).is_file():
+            baseline_consumers, baseline_consumer_errors = _jsonl_evidence(
+                baseline_consumer_path)
+        else:
+            baseline_consumers, baseline_consumer_errors = [], []
+        sdpa = _agg_sdpa_evidence(injected_count_dir, inj)
 
     match = base["output_token_ids"] == inj["output_token_ids"]
     total = sum(counts.values())
@@ -244,7 +326,15 @@ def run_real_vllm(profile) -> dict:
         "total_calls": total,
         "runner_pids": {"baseline": base.get("runner_pid"),
                         "injected": inj.get("runner_pid")},
+        "runs": {"baseline": base, "injected": inj},
         "sigmoid_consumer": sigmoid_consumer,
+        "sigmoid_consumer_errors": consumer_errors,
+        "sigmoid_counter_records": counter_records,
+        "sigmoid_counter_errors": counter_errors,
+        "baseline_counter_records": baseline_counters,
+        "baseline_counter_errors": baseline_counter_errors,
+        "baseline_consumer_records": baseline_consumers,
+        "baseline_consumer_errors": baseline_consumer_errors,
         "sdpa": sdpa,
         "latency_s": {"base": base.get("latency_s"),
                       "inj": inj.get("latency_s")},

@@ -43,15 +43,27 @@ def main() -> None:
               tensor_parallel_size=tensor_parallel_size,
               gpu_memory_utilization=0.2, trust_remote_code=True,
               disable_log_stats=True, **engine_kwargs)
+    prompts = ["the future of AI is", "hello world"]
+    generation_started_at = time.time()
     t0 = time.perf_counter()
     outs = llm.generate(
-        ["the future of AI is", "hello world"],
+        prompts,
         SamplingParams(max_tokens=16, temperature=0.0, detokenize=False),
     )
     latency = time.perf_counter() - t0
+    generation_finished_at = time.time()
+    output_token_ids = [list(o.outputs[0].token_ids) for o in outs]
     result = {
         "runner_pid": os.getpid(),
-        "output_token_ids": [list(o.outputs[0].token_ids) for o in outs],
+        "run_id": os.environ.get("FLAGOS_C2_RUN_ID"),
+        "injection_enabled": os.environ.get(
+            "FLAGOS_A1_ATEN_INJECT") == "1",
+        "expected_request_count": len(prompts),
+        "generated_request_count": len(output_token_ids),
+        "generated_token_count": sum(len(ids) for ids in output_token_ids),
+        "generation_started_at": round(generation_started_at, 6),
+        "generation_finished_at": round(generation_finished_at, 6),
+        "output_token_ids": output_token_ids,
         "latency_s": round(latency, 4),
     }
     # sdpa_math 框架级梯度证据（仅注入运行；A1 已由 sitecustomize 注册）
