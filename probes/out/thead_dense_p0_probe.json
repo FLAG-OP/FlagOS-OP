@@ -1,0 +1,228 @@
+{
+  "device": "cuda:6",
+  "device_name": "PPU-ZW810E",
+  "torch": "2.10.0",
+  "items": {
+    "efficient_attention": {
+      "op_exists": true,
+      "schema": "aten::_efficient_attention_forward(Tensor query, Tensor key, Tensor value, Tensor? bias, Tensor? cu_seqlens_q, Tensor? cu_seqlens_k, SymInt? max_seqlen_q, SymInt? max_seqlen_k, float dropout_p, int custom_mask_type, bool compute_log_sumexp=False, *, float? scale=None, Tensor? seqlen_k=None, int? window_size=None) -> (Tensor output, Tensor logsumexp, Tensor philox_seed, Tensor philox_offset, SymInt max_seqlen_batch_q, SymInt max_seqlen_batch_k)",
+      "layout": {
+        "math": "BHSD",
+        "low_level": "BSHD",
+        "seed": 20261126,
+        "note": "Q/K/V transpose before the low-level call; output is transposed back after the low-level contract"
+      },
+      "bias_none": {
+        "ok": true,
+        "n_returns": 6,
+        "out_shape": [
+          2,
+          4,
+          64,
+          32
+        ],
+        "raw_out_layout_shape": [
+          2,
+          64,
+          4,
+          32
+        ],
+        "lse_shape": [
+          2,
+          4,
+          64
+        ],
+        "philox_seed_dtype": "torch.int64",
+        "philox_offset_dtype": "torch.int64",
+        "philox_shapes": [
+          [],
+          []
+        ],
+        "max_seqlen": [
+          64,
+          64
+        ],
+        "err_bhsd_default": 0.0003535747528076172,
+        "lse_valid_err": 4.76837158203125e-07,
+        "max_seqlen_expected": [
+          64,
+          64
+        ],
+        "max_seqlen_match": true
+      },
+      "bias_1_1": {
+        "ok": false,
+        "error": "RuntimeError('attn_bias: wrong shape (batch dimension)')"
+      },
+      "bias_b_1": {
+        "ok": false,
+        "error": "RuntimeError('attn_bias: wrong shape (head dimension)')"
+      },
+      "bias_b_h": {
+        "ok": true,
+        "n_returns": 6,
+        "out_shape": [
+          2,
+          4,
+          64,
+          32
+        ],
+        "raw_out_layout_shape": [
+          2,
+          64,
+          4,
+          32
+        ],
+        "lse_shape": [
+          2,
+          4,
+          64
+        ],
+        "philox_seed_dtype": "torch.int64",
+        "philox_offset_dtype": "torch.int64",
+        "philox_shapes": [
+          [],
+          []
+        ],
+        "max_seqlen": [
+          64,
+          64
+        ],
+        "err_bhsd_default": 0.0003535747528076172,
+        "lse_valid_err": 4.76837158203125e-07,
+        "max_seqlen_expected": [
+          64,
+          64
+        ],
+        "max_seqlen_match": true
+      },
+      "variants": {
+        "no_lse": {
+          "ok": true,
+          "out_shape": [
+            2,
+            4,
+            64,
+            32
+          ],
+          "raw_out_layout_shape": [
+            2,
+            64,
+            4,
+            32
+          ],
+          "err_bhsd_default": 0.00032258033752441406,
+          "max_seqlen": [
+            64,
+            64
+          ],
+          "lse_shape": [
+            2,
+            4,
+            0
+          ]
+        },
+        "scale_explicit": {
+          "ok": true,
+          "out_shape": [
+            2,
+            4,
+            64,
+            32
+          ],
+          "raw_out_layout_shape": [
+            2,
+            64,
+            4,
+            32
+          ],
+          "err_bhsd_default": 0.00032258033752441406,
+          "max_seqlen": [
+            64,
+            64
+          ],
+          "lse_shape": [
+            2,
+            4,
+            64
+          ]
+        },
+        "fp32": {
+          "ok": true,
+          "out_shape": [
+            2,
+            4,
+            64,
+            32
+          ],
+          "raw_out_layout_shape": [
+            2,
+            64,
+            4,
+            32
+          ],
+          "err_bhsd_default": 1.9669532775878906e-06,
+          "max_seqlen": [
+            64,
+            64
+          ],
+          "lse_shape": [
+            2,
+            4,
+            64
+          ]
+        },
+        "d64": {
+          "ok": true,
+          "out_shape": [
+            2,
+            4,
+            64,
+            64
+          ],
+          "raw_out_layout_shape": [
+            2,
+            64,
+            4,
+            64
+          ],
+          "err_bhsd_default": 0.00045228004455566406,
+          "max_seqlen": [
+            64,
+            64
+          ],
+          "lse_shape": [
+            2,
+            4,
+            64
+          ]
+        },
+        "s128": {
+          "ok": true,
+          "out_shape": [
+            2,
+            4,
+            128,
+            32
+          ],
+          "raw_out_layout_shape": [
+            2,
+            128,
+            4,
+            32
+          ],
+          "err_bhsd_default": 0.0002506375312805176,
+          "max_seqlen": [
+            128,
+            128
+          ],
+          "lse_shape": [
+            2,
+            4,
+            128
+          ]
+        }
+      }
+    }
+  }
+}
