@@ -14,6 +14,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,13 @@ COUNT_ENV = {
     "_local_scalar_dense": "A1_LSD_COUNT_FILE",
     "embedding": "A1_EMBEDDING_COUNT_FILE",
     "sdpa_math": "A1_SDPA_MATH_COUNT_FILE",
+    "linear": "A1_LINEAR_COUNT_FILE",
+    "layer_norm": "A1_LAYER_NORM_COUNT_FILE",
+    "native_layer_norm": "A1_NATIVE_LAYER_NORM_COUNT_FILE",
+    "matmul": "A1_MATMUL_COUNT_FILE",
+    "gelu": "A1_GELU_COUNT_FILE",
+    "softmax": "A1_SOFTMAX_COUNT_FILE",
+    "_softmax": "A1_SOFTMAX_PRIVATE_COUNT_FILE",
 }
 
 
@@ -81,12 +89,14 @@ def ensure_model() -> str:
 def _run(model: str, out_json: str, *, inject: bool, count_dir: str,
          dispatch_key: str, extra_env: dict | None = None) -> dict:
     env = os.environ.copy()
-    env["PYTHONPATH"] = f"{INJECTION}{os.pathsep}{ROOT}"
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(INJECTION), str(ROOT), env.get("PYTHONPATH", "")])
     env["VLLM_LOGGING_LEVEL"] = "WARNING"
     if inject:
         env["FLAGOS_A1_ATEN_INJECT"] = "1"
         env["FLAGOS_TEMPLATES_ROOT"] = str(ROOT)
         env["A1_DISPATCH_KEY"] = dispatch_key
+        env["FLAGOS_C2_COUNT_DIR"] = count_dir
         for op, var in COUNT_ENV.items():
             env[var] = str(Path(count_dir) / op)
         for k, v in (extra_env or {}).items():
@@ -103,8 +113,21 @@ def _agg_counts(count_dir: str) -> dict:
         stem, dot, tail = op.rpartition(".")
         if dot and tail.isdigit():      # 计数文件带 pid 后缀 → 还原算子名
             op = stem
+        match = re.match(r"(.+)_hits_\d+$", op)
+        if match:
+            op = match.group(1)
         try:
-            agg[op] = agg.get(op, 0) + sum(json.load(open(p)).values())
+            data = json.load(open(p))
+            if isinstance(data, dict) and "hits" in data:
+                value = data["hits"]
+                value = value if isinstance(value, (int, float)) else 0
+            else:
+                value = sum(
+                    item for item in data.values()
+                    if isinstance(item, (int, float))
+                    and not isinstance(item, bool)
+                )
+            agg[op] = agg.get(op, 0) + value
         except (OSError, ValueError):
             continue
     return agg
@@ -112,6 +135,7 @@ def _agg_counts(count_dir: str) -> dict:
 
 def run_real_vllm(profile) -> dict:
     model = ensure_model()
+    dispatch_key = os.environ.get("A1_DISPATCH_KEY", profile.dispatch_key)
     with tempfile.TemporaryDirectory() as d:
         out_base = os.path.join(d, "base.json")
         out_inj = os.path.join(d, "inj.json")
@@ -131,9 +155,9 @@ def run_real_vllm(profile) -> dict:
                     count_dir, "sdpa_evidence.jsonl")
                 extra_env["A1_SDPA_GRADPROBE"] = "1"
         base = _run(model, out_base, inject=False, count_dir=count_dir,
-                    dispatch_key=profile.dispatch_key)
+                    dispatch_key=dispatch_key)
         inj = _run(model, out_inj, inject=True, count_dir=count_dir,
-                    dispatch_key=profile.dispatch_key, extra_env=extra_env)
+                    dispatch_key=dispatch_key, extra_env=extra_env)
         counts = _agg_counts(count_dir)
         sdpa = _agg_sdpa_evidence(count_dir, inj)
 
