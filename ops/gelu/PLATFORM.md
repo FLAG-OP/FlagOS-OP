@@ -11,4 +11,4 @@
 | schema | `approximate` 为 **keyword-only**（位置传参在 C++ boxed redispatch 层同样报错） |
 | 非有限值 | `gelu(+inf, none)`: 官方 CPU=NaN（golden 锚）vs 设备 erf 公式=+Inf——不定式两种合法 IEEE 解释, INFO case 不硬判（gen_golden 注） |
 | FlagFix #5867 | 修复对象=ascend 后端 CANN pow 查表（geglu/gelu_and_mul/gelu.py）; **平台边界=昇腾**; PPU 不消费 CANN libdevice, 不可复现; 迁移的是写法规约（fp32 显式常量/无 int 指数）; 真武验收按本算子三层+黄金独立完成 |
-| 性能 | `1.088×` 仅限 8192×8192 半精度（fp16=1.102×, bf16=1.098×）; 小形状/4096×4096/fp32 走 native |
+| 性能 | `1.08–1.10×` 仅限 8192×8192 半精度（复跑 fp16=1.082×, 历史 JSON bf16=1.098×）; 小形状/4096×4096/fp32 走 native |

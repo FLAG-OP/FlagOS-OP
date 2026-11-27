@@ -21,3 +21,5 @@
 - dtype: fp32 / fp16 / bf16
 - 特殊值: 负尾部 / 近零 / 非有限（parity 锚定官方, 见 gen_golden 注）/ 特征值
 - 哨兵: 同输入确定性 + 输入敏感（#11 静默 no-op / 不写输出类缺陷）
+- 2026-11-27 复审回归: 冻结非单位 weight、仅 input 需梯度时，PPU
+  input grad 对照 CPU 误差 `7.1526e-7`。
