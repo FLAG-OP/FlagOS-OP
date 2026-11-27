@@ -1,0 +1,118 @@
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched BlockTable.compute_slot_mapping to XPU torch path for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Registered KunlunxinAttentionBackend as CUSTOM attention backend
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched apply_top_k_top_p to use PyTorch-native path for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched fused_moe for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched BlockTable.compute_slot_mapping to XPU torch path for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Registered KunlunxinAttentionBackend as CUSTOM attention backend
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched apply_top_k_top_p to use PyTorch-native path for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched fused_moe for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch] Registering vendor backends for current platform: kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.manager] OpManager initialized: 40 ops with 70 implementations
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.policy] Using custom config from '/workspace/vllm-plugin-FL/vllm_fl/dispatch/config/kunlunxin.yaml'
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched causal_conv1d ops for Kunlunxin (including gdn_linear_attn)
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched FLA ops for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched fused_gdn_gating for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patches.patch_forward_core] Patched GatedDeltaNetAttention._forward_core for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched GatedDeltaNetAttention._forward_core for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched sampler random_sample for TP-consistent sampling on Kunlunxin (broadcast only)
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched KunlunxinPagedAttention.forward_decode: using prefill_attention (prefix_cache) to fix decode NaN
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Applied all Kunlunxin patches
+/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch/library.py:364: UserWarning: Warning only once for all operators,  other operators may also be overridden.
+  Overriding a previously registered kernel for the same operator and the same dispatch key
+  operator: aten::_log_softmax(Tensor self, int dim, bool half_to_float) -> Tensor
+    registered at /pytorch/build/aten/src/ATen/RegisterSchema.cpp:6
+  dispatch key: CUDA
+  previous kernel: registered at /pytorch/build/aten/src/ATen/RegisterCPU_3.cpp:3798
+       new kernel: registered at /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/flag_gems/__init__.py:20 (Triggered internally at /pytorch/aten/src/ATen/core/dispatch/OperatorEntry.cpp:218.)
+  self.m.impl(
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch] Registering vendor backends for current platform: kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.manager] OpManager initialized: 40 ops with 70 implementations
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.policy] Using custom config from '/workspace/vllm-plugin-FL/vllm_fl/dispatch/config/kunlunxin.yaml'
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched causal_conv1d ops for Kunlunxin (including gdn_linear_attn)
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched FLA ops for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched fused_gdn_gating for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patches.patch_forward_core] Patched GatedDeltaNetAttention._forward_core for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched GatedDeltaNetAttention._forward_core for Kunlunxin
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched sampler random_sample for TP-consistent sampling on Kunlunxin (broadcast only)
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Patched KunlunxinPagedAttention.forward_decode: using prefill_attention (prefix_cache) to fix decode NaN
+[2026-11-27 23:09:41] [INFO] [vllm_fl.dispatch.backends.vendor.kunlunxin.patch] Applied all Kunlunxin patches
+/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch/library.py:364: UserWarning: Warning only once for all operators,  other operators may also be overridden.
+  Overriding a previously registered kernel for the same operator and the same dispatch key
+  operator: aten::_log_softmax(Tensor self, int dim, bool half_to_float) -> Tensor
+    registered at /pytorch/build/aten/src/ATen/RegisterSchema.cpp:6
+  dispatch key: CUDA
+  previous kernel: registered at /pytorch/build/aten/src/ATen/RegisterCPU_3.cpp:3798
+       new kernel: registered at /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/flag_gems/__init__.py:20 (Triggered internally at /pytorch/aten/src/ATen/core/dispatch/OperatorEntry.cpp:218.)
+  self.m.impl(
+[rank0]:[W1127 23:09:43.612326198 ProcessGroupXCCL.cpp:1152] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+(EngineCore pid=3951) Process EngineCore:
+(EngineCore pid=3951) Traceback (most recent call last):
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+(EngineCore pid=3951)     self.run()
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/multiprocessing/process.py", line 108, in run
+(EngineCore pid=3951)     self._target(*self._args, **self._kwargs)
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 1140, in run_engine_core
+(EngineCore pid=3951)     raise e
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 1110, in run_engine_core
+(EngineCore pid=3951)     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 876, in __init__
+(EngineCore pid=3951)     super().__init__(
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 118, in __init__
+(EngineCore pid=3951)     self.model_executor = executor_class(vllm_config)
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 107, in __init__
+(EngineCore pid=3951)     super().__init__(vllm_config)
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/abstract.py", line 109, in __init__
+(EngineCore pid=3951)     self._init_executor()
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 200, in _init_executor
+(EngineCore pid=3951)     self.workers = WorkerProc.wait_for_ready(unready_workers)
+(EngineCore pid=3951)   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 747, in wait_for_ready
+(EngineCore pid=3951)     raise e from None
+(EngineCore pid=3951) Exception: WorkerProc initialization failed due to an exception in a background process. See stack trace for root cause.
+Traceback (most recent call last):
+  File "/data1/liyanz/FlagOS-OP-sigmoid/tests/framework_level/_aten_runner.py", line 81, in <module>
+    main()
+  File "/data1/liyanz/FlagOS-OP-sigmoid/tests/framework_level/_aten_runner.py", line 42, in main
+    llm = LLM(model=args.model, enforce_eager=True, max_model_len=128,
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 381, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/llm_engine.py", line 170, in from_engine_args
+    return cls(
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/llm_engine.py", line 104, in __init__
+    self.engine_core = EngineCoreClient.make_client(
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core_client.py", line 101, in make_client
+    return SyncMPClient(vllm_config, executor_class, log_stats)
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core_client.py", line 723, in __init__
+    super().__init__(
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core_client.py", line 535, in __init__
+    with launch_core_engines(
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/utils.py", line 1119, in launch_core_engines
+    wait_for_engine_startup(
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/utils.py", line 1178, in wait_for_engine_startup
+    raise RuntimeError(
+RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
+Traceback (most recent call last):
+  File "/data1/liyanz/FlagOS-OP-sigmoid/ops/sigmoid/script/c2_real_vllm.py", line 406, in <module>
+    raise SystemExit(main())
+  File "/data1/liyanz/FlagOS-OP-sigmoid/ops/sigmoid/script/c2_real_vllm.py", line 334, in main
+    result = run_real_vllm(profile)
+  File "/data1/liyanz/FlagOS-OP-sigmoid/tests/framework_level/_aten_harness.py", line 280, in run_real_vllm
+    base = _run(model, out_base, inject=False,
+  File "/data1/liyanz/FlagOS-OP-sigmoid/tests/framework_level/_aten_harness.py", line 126, in _run
+    subprocess.run(cmd, check=True, env=env, cwd=str(ROOT))
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/root/miniconda/envs/python310_torch29_cuda/bin/python', '/data1/liyanz/FlagOS-OP-sigmoid/tests/framework_level/_aten_runner.py', '/tmp/tmpik8ywk59/base.json', '/tmp/flagos_tiny_llama']' returned non-zero exit status 1.

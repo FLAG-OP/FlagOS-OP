@@ -1,0 +1,55 @@
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+[01/36] tail_hidden float16 triton
+[02/36] tail_hidden float16 flaggems
+[03/36] tail_hidden float16 native
+[04/36] tail_hidden bfloat16 triton
+[05/36] tail_hidden bfloat16 flaggems
+[06/36] tail_hidden bfloat16 native
+[07/36] tail_hidden float32 triton
+[08/36] tail_hidden float32 flaggems
+[09/36] tail_hidden float32 native
+[10/36] small_activation float16 triton
+[11/36] small_activation float16 flaggems
+[12/36] small_activation float16 native
+[13/36] small_activation bfloat16 triton
+[14/36] small_activation bfloat16 flaggems
+[15/36] small_activation bfloat16 native
+[16/36] small_activation float32 triton
+[17/36] small_activation float32 flaggems
+[18/36] small_activation float32 native
+[19/36] transformer float16 triton
+[20/36] transformer float16 flaggems
+[21/36] transformer float16 native
+[22/36] transformer bfloat16 triton
+[23/36] transformer bfloat16 flaggems
+[24/36] transformer bfloat16 native
+[25/36] transformer float32 triton
+[26/36] transformer float32 flaggems
+[27/36] transformer float32 native
+[28/36] throughput float16 triton
+[29/36] throughput float16 flaggems
+[30/36] throughput float16 native
+[31/36] throughput bfloat16 triton
+[32/36] throughput bfloat16 flaggems
+[33/36] throughput bfloat16 native
+[34/36] throughput float32 triton
+[35/36] throughput float32 flaggems
+[36/36] throughput float32 native
+
+| case | shape | dtype | Triton ms | FlagGems ms | 原生 ms | Triton/原生 |
+|---|---|---:|---:|---:|---:|---:|
+| tail_hidden | 1×14336 | float16 | 0.050742 | 0.043601 | 0.015571 | 3.259× |
+| tail_hidden | 1×14336 | bfloat16 | 0.051213 | 0.042455 | 0.018835 | 2.719× |
+| tail_hidden | 1×14336 | float32 | 0.049878 | 0.042427 | 0.018835 | 2.648× |
+| small_activation | 64×1024 | float16 | 0.049079 | 0.079435 | 0.008556 | 5.736× |
+| small_activation | 64×1024 | bfloat16 | 0.049626 | 0.074710 | 0.008882 | 5.587× |
+| small_activation | 64×1024 | float32 | 0.050788 | 0.082006 | 0.019129 | 2.655× |
+| transformer | 2×64×4096 | float16 | 0.050160 | 0.081243 | 0.010646 | 4.712× |
+| transformer | 2×64×4096 | bfloat16 | 0.052827 | 0.082255 | 0.018987 | 2.782× |
+| transformer | 2×64×4096 | float32 | 0.052441 | 0.079457 | 0.019351 | 2.710× |
+| throughput | 2048×2048 | float16 | 0.083111 | 0.083063 | 0.055273 | 1.504× |
+| throughput | 2048×2048 | bfloat16 | 0.097012 | 0.079541 | 0.066860 | 1.451× |
+| throughput | 2048×2048 | float32 | 0.058315 | 0.075914 | 0.048688 | 1.198× |
+
+JSON: ops/sigmoid/evidence/p800-current-validation-2026-11-27/bench_matrix.json

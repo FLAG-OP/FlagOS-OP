@@ -1,0 +1,26 @@
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+Traceback (most recent call last):
+  File "/data1/liyanz/FlagOS-OP-sigmoid/ops/sigmoid/script/p800_runtime_probe.py", line 428, in <module>
+    raise SystemExit(main())
+  File "/data1/liyanz/FlagOS-OP-sigmoid/ops/sigmoid/script/p800_runtime_probe.py", line 378, in main
+    _run_worker(args.worker, args.numel)
+  File "/data1/liyanz/FlagOS-OP-sigmoid/ops/sigmoid/script/p800_runtime_probe.py", line 215, in _run_worker
+    _worker_generic_triton(numel)
+  File "/data1/liyanz/FlagOS-OP-sigmoid/ops/sigmoid/script/p800_runtime_probe.py", line 178, in _worker_generic_triton
+    add_one_kernel[(triton.cdiv(numel, block),)](
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/triton/runtime/jit.py", line 359, in <lambda>
+    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/triton/runtime/jit.py", line 795, in run
+    kernel = self.default_run(*args, **kwargs)
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/triton/runtime/jit.py", line 688, in default_run
+    kernel = self.compile(
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/triton/compiler/compiler.py", line 300, in compile
+    module = src.make_ir(options, codegen_fns, context)
+  File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/triton/compiler/compiler.py", line 120, in make_ir
+    return ast_to_ttir(self.fn, self, context=context, options=options, codegen_fns=codegen_fns)
+triton.compiler.errors.CompilationError: at 2:31:
+def add_one_kernel(x_ptr, y_ptr, n_elements,
+                   block_size: tl.constexpr):
+                               ^
+NameError('tl is not defined')

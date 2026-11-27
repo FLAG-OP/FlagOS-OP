@@ -1,0 +1,1 @@
+{"pid": 2946, "torch": "2.9.0+cu129", "device_count": 2, "devices": [{"index": 0, "name": "GPU"}, {"index": 1, "name": "GPU"}], "selected_device": "cuda:1"}
