@@ -1,0 +1,10 @@
+op: native_layer_norm
+seed_base: 20261125
+
+cases:
+  basic:
+    dtypes: [float32, float16, bfloat16]
+    input_shapes: [[16, 128], [16, 5000], [4, 7, 4097], [8, 16, 512]]
+    weight_scale: 0.1     # 典型 LN 分布（1 bf16 ulp 守 1e-2 判卷线）
+    eps: 1.0e-5
+    seeds_per_case: 2

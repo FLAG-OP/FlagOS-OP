@@ -1,0 +1,11 @@
+op: _softmax
+seed_base: 20261125
+scale: 8.0
+
+cases:
+  basic:
+    dtypes: [float32, float16, bfloat16]
+    shapes: [[32, 512], [8, 5000], [128, 5120], [4, 64, 128]]
+    dim: -1
+    half_to_float: false
+    seeds_per_case: 2

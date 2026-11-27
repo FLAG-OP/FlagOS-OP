@@ -1,0 +1,116 @@
+{
+  "op": "matmul",
+  "device": "cuda:6",
+  "device_name": "PPU-ZW810E",
+  "method": "warmup20+iters100+synchronize",
+  "rows": [
+    {
+      "M": 4096,
+      "K": 4096,
+      "N": 4096,
+      "dtype": "float16",
+      "native_impl_ms": 1.0394,
+      "native_impl_TFLOPS": 132.22,
+      "native_direct_ms": 1.0391,
+      "native_direct_TFLOPS": 132.26,
+      "reference_ms": 4.2391,
+      "reference_TFLOPS": 32.42
+    },
+    {
+      "M": 4096,
+      "K": 4096,
+      "N": 4096,
+      "dtype": "bfloat16",
+      "native_impl_ms": 1.0395,
+      "native_impl_TFLOPS": 132.21,
+      "native_direct_ms": 1.0397,
+      "native_direct_TFLOPS": 132.19,
+      "reference_ms": 4.2657,
+      "reference_TFLOPS": 32.22
+    },
+    {
+      "M": 4096,
+      "K": 4096,
+      "N": 4096,
+      "dtype": "float32",
+      "native_impl_ms": 4.0248,
+      "native_impl_TFLOPS": 34.15,
+      "native_direct_ms": 4.0248,
+      "native_direct_TFLOPS": 34.15,
+      "reference_ms": 4.0247,
+      "reference_TFLOPS": 34.15
+    },
+    {
+      "M": 8192,
+      "K": 8192,
+      "N": 8192,
+      "dtype": "float16",
+      "native_impl_ms": 8.1144,
+      "native_impl_TFLOPS": 135.5,
+      "native_direct_ms": 8.1124,
+      "native_direct_TFLOPS": 135.53,
+      "reference_ms": 32.6484,
+      "reference_TFLOPS": 33.68
+    },
+    {
+      "M": 8192,
+      "K": 8192,
+      "N": 8192,
+      "dtype": "bfloat16",
+      "native_impl_ms": 8.1469,
+      "native_impl_TFLOPS": 134.96,
+      "native_direct_ms": 8.1485,
+      "native_direct_TFLOPS": 134.93,
+      "reference_ms": 32.7654,
+      "reference_TFLOPS": 33.56
+    },
+    {
+      "M": 8192,
+      "K": 8192,
+      "N": 8192,
+      "dtype": "float32",
+      "native_impl_ms": 31.8405,
+      "native_impl_TFLOPS": 34.53,
+      "native_direct_ms": 31.8425,
+      "native_direct_TFLOPS": 34.53,
+      "reference_ms": 31.8413,
+      "reference_TFLOPS": 34.53
+    },
+    {
+      "M": 4096,
+      "K": 11008,
+      "N": 4096,
+      "dtype": "float16",
+      "native_impl_ms": 2.7572,
+      "native_impl_TFLOPS": 133.97,
+      "native_direct_ms": 2.7554,
+      "native_direct_TFLOPS": 134.05,
+      "reference_ms": 11.2629,
+      "reference_TFLOPS": 32.79
+    },
+    {
+      "M": 4096,
+      "K": 11008,
+      "N": 4096,
+      "dtype": "bfloat16",
+      "native_impl_ms": 2.7587,
+      "native_impl_TFLOPS": 133.89,
+      "native_direct_ms": 2.7573,
+      "native_direct_TFLOPS": 133.96,
+      "reference_ms": 11.3395,
+      "reference_TFLOPS": 32.57
+    },
+    {
+      "M": 4096,
+      "K": 11008,
+      "N": 4096,
+      "dtype": "float32",
+      "native_impl_ms": 10.7922,
+      "native_impl_TFLOPS": 34.23,
+      "native_direct_ms": 10.7929,
+      "native_direct_TFLOPS": 34.22,
+      "reference_ms": 10.7933,
+      "reference_TFLOPS": 34.22
+    }
+  ]
+}

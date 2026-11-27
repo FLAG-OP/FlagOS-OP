@@ -1,0 +1,24 @@
+# linear 黄金输入规格（issue #55; 判卷口径 docs/acceptance.md）
+#
+# GEMM 形态 → 相对误差 5e-2 rel（唯一权威表）; 三 dtype × 多 shape
+# 含非整倍数特征维（5000/5120/4097）; 有/无 bias; 每组合 ≥3 种子。
+op: linear
+seed_base: 20261125
+
+cases:
+  basic:
+    dtypes: [float32, float16, bfloat16]
+    input_shapes: [[64, 512], [4, 8, 5000], [7, 4097], [1, 1023]]
+    out_features: [128, 5120]
+    bias: [true, false]
+    weight_scale: 0.05
+    input_scale: 1.0
+    seeds_per_case: 3
+  large:
+    dtypes: [float16, bfloat16]
+    input_shapes: [[4096, 4096]]
+    out_features: [4096]
+    bias: [true]
+    weight_scale: 0.02
+    input_scale: 1.0
+    seeds_per_case: 1

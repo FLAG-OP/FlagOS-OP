@@ -267,6 +267,9 @@ def register_all(dispatch_key: str = "PrivateUse1",
             if _impl and accepts("impl"):
                 kwargs["impl"] = _impl
                 impl_applied = True
+            platform = os.environ.get("A1_PLATFORM") or None
+            if platform and accepts("platform"):
+                kwargs["platform"] = platform
             libs = mod.register_a1(dispatch_key, **kwargs)
             _REG_INFO[op] = {
                 "impl_requested": _impl,

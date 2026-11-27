@@ -25,10 +25,16 @@ def main() -> None:
 
     import torch  # noqa: F401
     # 先于 vllm 导入绑定后端：MLU 走 torch_mlu，P800/XPU 走 torch_xmlir。
+    # Vendor wheels activate CUDA-compatible device stacks. Other devices
+    # (including PPU) bind through their installed torch build and must not
+    # fail merely because both optional wheels are absent.
     try:
         import torch_mlu  # noqa: F401
     except ImportError:
-        import torch_xmlir  # noqa: F401
+        try:
+            import torch_xmlir  # noqa: F401
+        except ImportError:
+            pass
     from vllm import LLM, SamplingParams
 
     llm = LLM(model=args.model, enforce_eager=True, max_model_len=128,
