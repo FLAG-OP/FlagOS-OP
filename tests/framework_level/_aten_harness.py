@@ -42,6 +42,19 @@ COUNT_ENV = {
     "sigmoid": "A1_SIGMOID_COUNT_FILE",
 }
 
+# 计数分片文件名使用仓库算子名，JSON payload 则有两种历史格式：
+# 多数算子写短名，embedding/sdpa_math 写完整 aten schema。显式列出
+# canonical key 和兼容 key，避免把 PID、时间戳等整数元数据误算成命中。
+COUNT_PAYLOAD_KEYS = {
+    op: (op,) for op in COUNT_ENV
+}
+COUNT_PAYLOAD_KEYS.update({
+    "embedding": ("aten::embedding", "embedding"),
+    "sdpa_math": (
+        "aten::_scaled_dot_product_attention_math", "sdpa_math"),
+    "sigmoid": ("sigmoid", "aten::sigmoid"),
+})
+
 
 def vllm_available() -> bool:
     import importlib.util
@@ -100,6 +113,21 @@ def _run(model: str, out_json: str, *, inject: bool, count_dir: str,
     return json.loads(Path(out_json).read_text())
 
 
+def _count_value(op: str, payload) -> int | None:
+    """返回单个算子分片的合法命中数；格式不合法时返回 ``None``。"""
+    if not isinstance(payload, dict):
+        return None
+    for key in COUNT_PAYLOAD_KEYS.get(op, (op,)):
+        if key not in payload:
+            continue
+        value = payload[key]
+        if (isinstance(value, int) and not isinstance(value, bool)
+                and value >= 0):
+            return value
+        return None
+    return None
+
+
 def _agg_counts(count_dir: str) -> dict:
     agg: dict[str, int] = {}
     for p in glob.glob(str(Path(count_dir) / "*")):
@@ -108,9 +136,10 @@ def _agg_counts(count_dir: str) -> dict:
         if dot and tail.isdigit():      # 计数文件带 pid 后缀 → 还原算子名
             op = stem
         try:
-            payload = json.load(open(p, encoding="utf-8"))
-            value = payload.get(op) if isinstance(payload, dict) else None
-            if isinstance(value, int) and not isinstance(value, bool):
+            with open(p, encoding="utf-8") as f:
+                payload = json.load(f)
+            value = _count_value(op, payload)
+            if value is not None:
                 agg[op] = agg.get(op, 0) + value
         except (OSError, ValueError, TypeError):
             continue
@@ -125,13 +154,15 @@ def _count_processes(count_dir: str) -> list[dict]:
         if not (dot and tail.isdigit()):
             continue
         try:
-            payload = json.load(open(p, encoding="utf-8"))
-        except (OSError, ValueError):
+            with open(p, encoding="utf-8") as f:
+                payload = json.load(f)
+        except (OSError, ValueError, TypeError):
             continue
-        numeric = [v for v in payload.values()
-                   if isinstance(v, int) and not isinstance(v, bool)]
+        value = _count_value(stem, payload)
+        if value is None:
+            continue
         details.append({"op": stem, "pid": int(tail),
-                        "hits": sum(numeric), "file": name})
+                        "hits": value, "file": name})
     return sorted(details, key=lambda item: (item["op"], item["pid"]))
 
 
