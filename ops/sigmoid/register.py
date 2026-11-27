@@ -90,8 +90,6 @@ def register_a1(
             f"unknown platform={platform!r}; supported: "
             f"{sorted(_SUPPORTED_PLATFORMS)}"
         )
-    if counter is not None and counter not in _COUNTERS:
-        _COUNTERS.append(counter)
     _load_impl(impl)  # validate before mutating registration state
     keys = pairs[dispatch_key]
     if _LIBS:
@@ -100,14 +98,24 @@ def register_a1(
                 f"sigmoid already registered for {_REGISTERED_KEYS} with "
                 f"impl={_ACTIVE_IMPL!r}; cannot switch to {keys}/impl={impl!r}"
             )
+        if (counter is not None
+                and all(saved is not counter for saved in _COUNTERS)):
+            _COUNTERS.append(counter)
         return [_LIBS[key] for key in _REGISTERED_KEYS]
 
-    _ACTIVE_IMPL = impl
-    _REGISTERED_KEYS = keys
+    # 先完成两把 dispatch key 的注册，再一次性提交模块状态。这样参数、
+    # 已有注册冲突或 Library.impl 失败都不会留下孤立 counter/半提交字典。
+    new_libs: dict[str, torch.library.Library] = {}
     for key in keys:
         lib = torch.library.Library("aten", "IMPL")
         lib.impl("sigmoid", sigmoid_aten, key)
-        _LIBS[key] = lib
+        new_libs[key] = lib
+    _LIBS.update(new_libs)
+    _ACTIVE_IMPL = impl
+    _REGISTERED_KEYS = keys
+    if (counter is not None
+            and all(saved is not counter for saved in _COUNTERS)):
+        _COUNTERS.append(counter)
     return [_LIBS[key] for key in _REGISTERED_KEYS]
 
 
