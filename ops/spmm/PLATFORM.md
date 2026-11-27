@@ -9,5 +9,6 @@
 | 注册 key | `AutogradCUDA`（thead 范式, COO 组合反向） |
 | 原生缺口 | `cusparseSpMM_bufferSize not implemented`（fp16 稳定/fp32 冷启动不稳定）+ 组合探针 **C++ abort**（returncode -6）——原生不可作生产, 证据见 probes/thead_dense_p0_report.md §三 |
 | 累加精度 | fp32 累加后 cast（与 CUDA 稀疏惯例一致; bf16 逐加序噪声实测 0.0625）; 判卷用 **fp64 独立参考 + 5e-2 rel**（乘加放大档） |
-| CSR 边界 | 空行→零行 / 重复列索引→值累加（手工构造对拍）/ 无序索引→序无关; CSR `.t()` 返回 CSC（layout 翻转, 测试已对齐） |
+| CSR 边界 | 空行→零行 / 重复列索引→值累加（手工构造对拍）/ 无序索引→序无关; CSR `.t()` 返回 CSC（layout 翻转, 测试已对齐）; CSR values/dense 必须 dtype/device 匹配，dense 为 strided，索引 dtype 为 int32/int64 |
+| 反向精度 | d_vals 与 dB 的乘加域升 fp32，归约后转回目标 dtype；fp16 大值反例不产生 NaN |
 | 宿主绑定 | torch.sparse.mm → `aten::_sparse_mm`; torch.spmm = torch.mm 别名（稠密行为保留, 不注册——op 层 dense_mm_untouched 断言） |

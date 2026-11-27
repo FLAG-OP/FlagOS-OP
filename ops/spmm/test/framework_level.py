@@ -66,16 +66,20 @@ def _run_mode(profile, mode):
         lib = register_a1(profile.dispatch_key, counter=_CALLS)
         assert lib is not None
         registered = True
-        calls = _CALLS["n"]
 
     with torch.no_grad():
         output = model(adj, x).detach().cpu()
+        propagation = model(adj, x).detach()
+        for _ in range(2):
+            propagation = model(adj, propagation).detach()
+        propagation = propagation.cpu()
 
     model = _build_model(dev)
     out = model(adj, x)
     loss = out.float().pow(2).mean()
     loss.backward()
     grads = [model.w1.grad, model.w2.grad]
+    calls = _CALLS["n"]
     grad_finite = [bool(g is not None and torch.isfinite(g).all()) for g in grads]
     assert all(grad_finite), f"{mode} gradients are missing or non-finite"
 
@@ -83,7 +87,7 @@ def _run_mode(profile, mode):
         f"spmm-{mode}-{id(profile)}-output.pt")
     grads_path = Path(tempfile.gettempdir()) / (
         f"spmm-{mode}-{id(profile)}-grads.pt")
-    torch.save(output, output_path)
+    torch.save({"model": output, "propagation": propagation}, output_path)
     torch.save(grads, grads_path)
     return {
         "mode": mode,
@@ -117,7 +121,9 @@ def run(profile):
         inj_out = torch.load(injected["output_path"])
         base_grads = torch.load(baseline["grads_path"])
         inj_grads = torch.load(injected["grads_path"])
-        diff = (inj_out.float() - base_out.float()).abs().max().item()
+        model_diff = (inj_out["model"].float() - base_out["model"].float()).abs().max().item()
+        prop_diff = (inj_out["propagation"].float() - base_out["propagation"].float()).abs().max().item()
+        diff = max(model_diff, prop_diff)
         # 实现替换型算子（cusparse → index_add 组合）: 累加序不同 →
         # 容差断言不追位级（docs/testing.md 断言策略）
         assert diff < 1e-5, f"GCN output diff={diff}"
@@ -130,7 +136,8 @@ def run(profile):
 
         return {"ok": True,
                 "consumer": "2-layer GCN feature propagation (fp32, 4k nodes)",
-                "out_diff": diff,
+                "out_diff": model_diff,
+                "propagation_diff": prop_diff,
                 "grad_diff": grad_diffs,
                 "baseline_calls": baseline["calls"],
                 "injected_calls": injected["calls"],
