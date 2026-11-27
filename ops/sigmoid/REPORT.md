@@ -25,7 +25,7 @@
 | kernel | 待当前提交复测 | 75 例为 2026-11-09 修改前历史 PASS |
 | A1 op | 待当前提交复测 | 9 次命中为 2026-11-09 修改前历史 PASS；计数器 CPU 契约已修复 |
 | C1 应用 | 待当前提交复测 | 3/3 dtype 为 2026-11-09 修改前历史 PASS |
-| C2 vLLM | FAIL（环境初始化） | 2026-11-27 baseline TP worker 初始化报 NCCL error，未进入生成/注入 |
+| C2 vLLM | FAIL（环境初始化） | 2026-11-27 baseline TP worker 在 `ncclCommInitRank` 报 NCCL error，未进入生成/注入；见[可复核材料](evidence/p800-runtime-failure-2026-11-27/ANALYSIS.md) |
 | 黄金 | CPU 当前通过 / Triton 待复测 | CPU reference/torch 93/93；历史硬件 93/93 不作为当前结论 |
 | 性能矩阵 | 待当前提交复测 | 36/36 为 2026-11-09 历史采集，原始 JSON 未入库且不可访问 |
 | dispatch | 待当前提交复测 | `47.970/55.877 μs` 为 2026-11-09 历史摘要 |
@@ -44,7 +44,7 @@
 
 ## 结论
 
-表中 75/9/3、硬件 93/93、36/36 均为 2026-11-09 修改前历史基线。2026-11-27 当前 PR 已通过 197 项 CPU 单测、证据检查和 CPU 黄金两路径 93/93；真实 C2 baseline 在 TP worker 初始化阶段因 NCCL 错误失败，未进入生成或 sigmoid 注入。修改后的三层、Triton 黄金、C2 与性能矩阵仍待环境恢复后复测，因此当前只能继续代码评审，不能标记为最终硬件验收完成。
+表中 75/9/3、硬件 93/93、36/36 均为 2026-11-09 修改前历史基线。2026-11-27 当前 PR 已通过 200 项 CPU 单测、证据检查和 CPU 黄金两路径 93/93；分阶段探测中基础 copy、native sigmoid 及仓库 sigmoid Triton 的 257/255 最小用例通过，真实 C2 baseline 则在 TP worker 的 `ncclCommInitRank` 阶段因 NCCL 错误失败，未进入生成或 sigmoid 注入。探针中的 generic Triton 项因自身 `tl` 作用域错误无效，不归因于平台。修改后的三层、Triton 黄金、C2 与性能矩阵仍待复测，因此当前只能继续代码评审，不能标记为最终硬件验收完成。完整原始日志、哈希与归因见[运行时故障材料](evidence/p800-runtime-failure-2026-11-27/ANALYSIS.md)。
 
 | 交付物 | 位置 |
 |---|---|

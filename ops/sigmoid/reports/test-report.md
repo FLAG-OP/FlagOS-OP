@@ -16,7 +16,7 @@
 | kernel | 19 shape、3 优化 dtype、3 回退 dtype、布局、IEEE、哨兵 | 当前待硬件复测；2026-11-09 历史 PASS 75 例 |
 | A1 op | 包态注册、counter、非连续/空张量和回退 | 当前待硬件复测；历史 PASS 9 次命中 |
 | C1 应用 | `2×64×4096` Transformer 激活，3 dtype | 当前待硬件复测；历史 PASS 3/3 |
-| C2 vLLM | 真实 EngineCore 等价消费者双跑 | 2026-11-27 baseline worker 初始化 NCCL error，未进入生成 |
+| C2 vLLM | 真实 EngineCore 等价消费者双跑 | 2026-11-27 baseline worker 在 `ncclCommInitRank` 报 NCCL error，未进入生成；见[故障材料](../evidence/p800-runtime-failure-2026-11-27/ANALYSIS.md) |
 | 黄金 | 边界、长尾、Transformer、饱和值 | CPU 当前 93/93；硬件 93/93 为历史、当前待复测 |
 | 性能矩阵 | 4 shape × 3 dtype × 3 实现，20+100 | 当前待复测；历史 36/36 原始产物不可访问 |
 | 中央门禁 | `ops.sigmoid.triton` | 无 baseline；历史 1 NEW + 0 FAIL 不构成门禁通过 |
@@ -50,4 +50,4 @@ kernel 层自研与参考逐位一致，max abs/rel 均为 0。黄金回归最�
 
 ## 6. 结论
 
-表中 75/9/3、硬件 93/93、36/36 是 2026-11-09 修改前历史基线。2026-11-27 当前 PR 已通过 197 项 CPU 单测、证据检查和 CPU 黄金两路径各 93/93。真实 C2 baseline 在 TP worker 初始化阶段因 NCCL 错误退出；修改后的三层、Triton 黄金、C2 和性能矩阵尚未完成。当前可以继续代码评审，但必须在最终合并前补齐硬件复测，且不声明普遍加速、其他平台支持或 backward。
+表中 75/9/3、硬件 93/93、36/36 是 2026-11-09 修改前历史基线。2026-11-27 当前 PR 已通过 200 项 CPU 单测、证据检查和 CPU 黄金两路径各 93/93。分阶段探测中基础 copy、native sigmoid 及仓库 sigmoid Triton 的 257/255 最小用例通过；真实 C2 baseline 在 TP worker 的 `ncclCommInitRank` 阶段因 NCCL 错误退出。generic Triton 探针因自身 `tl` 作用域错误无效，不作为平台结论。修改后的三层、Triton 黄金、C2 和性能矩阵尚未完成。当前可以继续代码评审，但必须在最终合并前补齐硬件复测，且不声明普遍加速、其他平台支持或 backward。原始日志与归因见[运行时故障材料](../evidence/p800-runtime-failure-2026-11-27/ANALYSIS.md)。

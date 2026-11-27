@@ -1,0 +1,97 @@
+WARNING 11-27 23:09:15 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:16 [registry.py:945] Model architecture DeepseekV4ForCausalLM is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4:DeepseekV4ForCausalLM.
+WARNING 11-27 23:09:16 [registry.py:945] Model architecture DeepSeekV4MTPModel is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4_mtp:DeepSeekV4MTP.
+WARNING 11-27 23:09:16 [vllm.py:896] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+WARNING 11-27 23:09:16 [vllm.py:914] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+WARNING 11-27 23:09:28 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:28 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+(EngineCore pid=3951) WARNING 11-27 23:09:29 [registry.py:945] Model architecture DeepseekV4ForCausalLM is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4:DeepseekV4ForCausalLM.
+(EngineCore pid=3951) WARNING 11-27 23:09:29 [registry.py:945] Model architecture DeepSeekV4MTPModel is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4_mtp:DeepSeekV4MTP.
+(EngineCore pid=3951) WARNING 11-27 23:09:29 [multiproc_executor.py:1029] Reducing Torch parallelism from 192 threads to 1 to avoid unnecessary CPU contention. Set OMP_NUM_THREADS in the external environment to tune this value as needed.
+WARNING 11-27 23:09:40 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:40 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:41 [registry.py:945] Model architecture DeepseekV4ForCausalLM is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4:DeepseekV4ForCausalLM.
+WARNING 11-27 23:09:41 [registry.py:945] Model architecture DeepSeekV4MTPModel is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4_mtp:DeepSeekV4MTP.
+WARNING 11-27 23:09:41 [registry.py:945] Model architecture DeepseekV4ForCausalLM is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4:DeepseekV4ForCausalLM.
+WARNING 11-27 23:09:41 [registry.py:945] Model architecture DeepSeekV4MTPModel is already registered, and will be overwritten by the new model class vllm_fl.models.deepseek_v4_mtp:DeepSeekV4MTP.
+WARNING 11-27 23:09:41 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:41 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:41 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:41 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:41 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+WARNING 11-27 23:09:41 [interface.py:240] Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870] WorkerProc failed to start.
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870] Traceback (most recent call last):
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 837, in worker_main
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     worker = WorkerProc(*args, **kwargs)
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 611, in __init__
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.worker.init_device()
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/worker/worker_base.py", line 317, in init_device
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.worker.init_device()  # type: ignore
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/workspace/vllm-plugin-FL/vllm_fl/worker/worker.py", line 383, in init_device
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     init_worker_distributed_environment(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/workspace/vllm-plugin-FL/vllm_fl/worker/worker.py", line 1203, in init_worker_distributed_environment
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     ensure_model_parallel_initialized(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 1747, in ensure_model_parallel_initialized
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     initialize_model_parallel(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 1578, in initialize_model_parallel
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     _TP = init_model_parallel_group(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 1159, in init_model_parallel_group
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     return GroupCoordinator(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 376, in __init__
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.device_communicator = device_comm_cls(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/cuda_communicator.py", line 75, in __init__
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.pynccl_comm = PyNcclCommunicator(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/pynccl.py", line 135, in __init__
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.comm: ncclComm_t = self.nccl.ncclCommInitRank(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/pynccl_wrapper.py", line 416, in ncclCommInitRank
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.NCCL_CHECK(
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/pynccl_wrapper.py", line 382, in NCCL_CHECK
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     raise RuntimeError(f"NCCL error: {error_str}")
+(Worker pid=4249) ERROR 11-27 23:09:42 [multiproc_executor.py:870] RuntimeError: NCCL error: unhandled cuda error (run with NCCL_DEBUG=INFO for details)
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870] WorkerProc failed to start.
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870] Traceback (most recent call last):
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 837, in worker_main
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     worker = WorkerProc(*args, **kwargs)
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 611, in __init__
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.worker.init_device()
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/worker/worker_base.py", line 317, in init_device
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.worker.init_device()  # type: ignore
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/workspace/vllm-plugin-FL/vllm_fl/worker/worker.py", line 383, in init_device
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     init_worker_distributed_environment(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/workspace/vllm-plugin-FL/vllm_fl/worker/worker.py", line 1203, in init_worker_distributed_environment
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     ensure_model_parallel_initialized(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 1747, in ensure_model_parallel_initialized
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     initialize_model_parallel(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 1578, in initialize_model_parallel
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     _TP = init_model_parallel_group(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 1159, in init_model_parallel_group
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     return GroupCoordinator(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/parallel_state.py", line 376, in __init__
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.device_communicator = device_comm_cls(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/cuda_communicator.py", line 75, in __init__
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.pynccl_comm = PyNcclCommunicator(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/pynccl.py", line 135, in __init__
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.comm: ncclComm_t = self.nccl.ncclCommInitRank(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/pynccl_wrapper.py", line 416, in ncclCommInitRank
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     self.NCCL_CHECK(
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/distributed/device_communicators/pynccl_wrapper.py", line 382, in NCCL_CHECK
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870]     raise RuntimeError(f"NCCL error: {error_str}")
+(Worker pid=4248) ERROR 11-27 23:09:42 [multiproc_executor.py:870] RuntimeError: NCCL error: unhandled cuda error (run with NCCL_DEBUG=INFO for details)
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136] EngineCore failed to start.
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136] Traceback (most recent call last):
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 1110, in run_engine_core
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 876, in __init__
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]     super().__init__(
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/engine/core.py", line 118, in __init__
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]     self.model_executor = executor_class(vllm_config)
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 107, in __init__
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]     super().__init__(vllm_config)
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/abstract.py", line 109, in __init__
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]     self._init_executor()
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 200, in _init_executor
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]     self.workers = WorkerProc.wait_for_ready(unready_workers)
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]   File "/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/vllm/v1/executor/multiproc_executor.py", line 747, in wait_for_ready
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136]     raise e from None
+(EngineCore pid=3951) ERROR 11-27 23:09:43 [core.py:1136] Exception: WorkerProc initialization failed due to an exception in a background process. See stack trace for root cause.
