@@ -1,0 +1,11 @@
+XCCL /root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch_xmlir/libbkcl.so loaded
+[35mSYMBOL_REWRITE [0m[32mtorch success[0m
+/root/miniconda/envs/python310_torch29_cuda/lib/python3.10/site-packages/torch/library.py:364: UserWarning: Warning only once for all operators,  other operators may also be overridden.
+  Overriding a previously registered kernel for the same operator and the same dispatch key
+  operator: aten::sigmoid(Tensor self) -> Tensor
+    registered at /pytorch/build/aten/src/ATen/RegisterSchema.cpp:6
+  dispatch key: CUDA
+  previous kernel: registered at /pytorch/aten/src/ATen/LegacyBatchingRegistrations.cpp:1079
+       new kernel: registered at /data1/liyanz/FlagOS-OP-sigmoid/ops/sigmoid/register.py:110 (Triggered internally at /pytorch/aten/src/ATen/core/dispatch/OperatorEntry.cpp:218.)
+  self.m.impl(
+{'ok': True, 'registered': 'aten::sigmoid@AutogradCUDA+CUDA', 'impl': 'triton', 'intercepted_calls': 9, 'contract_counter': 9, 'optimized_dtypes': ['float16', 'bfloat16', 'float32'], 'fallback_dtypes': ['int32', 'int64', 'bool'], 'layout': 'contiguous+noncontiguous+empty'}

@@ -104,9 +104,9 @@ operators:
     group: pointwise-activation
     purpose: 标准 aten sigmoid 推理前向，覆盖 LLM 激活形状和安全 dtype 回退。
     route: A1 · native 默认 / Triton 验证
-    key_result: 2026-11-09 历史 P800 kernel 75 例、硬件黄金 93/93；当前 PR 的 CPU 回归通过、硬件全量复测待完成，默认保持原生路由。
+    key_result: 2026-11-27 当前 P800 kernel 75 例、硬件黄金 93/93、C1 三种 dtype 通过；36 项性能中自研 0/12 快于原生，默认保持原生路由。
     evidence: C1
-    evidence_basis: 2026-11-09 历史 P800 FlagGems 5.0 三层测试与 Transformer 激活等价消费者对拍；当前提交尚未完成硬件全量复测，2026-11-27 真实 vLLM baseline 在 TP worker NCCL 初始化失败。
+    evidence_basis: 2026-11-27 当前提交在 P800 FlagGems 5.0 完成 kernel/op/framework 三层、Triton 黄金与性能矩阵；真实 vLLM baseline 仍在 TP worker NCCL 初始化失败，C2 未通过。
     evidence_paths:
       - ops/sigmoid/reports/test-report.md
     platforms:
@@ -116,7 +116,7 @@ operators:
         evidence:
           - profile: p800-kunlunxin-gems5
             level: C1
-            basis: 2026-11-09 历史 kernel/op/framework 三层测试与 mini Transformer 对拍；当前提交硬件复测待完成
+            basis: 2026-11-27 当前 kernel 75 例、A1 9 次命中、mini Transformer 三种 dtype 与 Triton 黄金 93/93 通过；C2 受 NCCL 初始化阻塞
 
   - name: sdpa
     directory: sdpa

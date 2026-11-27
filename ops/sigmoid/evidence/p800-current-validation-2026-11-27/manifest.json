@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "operator": "aten.sigmoid",
+  "profile": "p800-kunlunxin-gems5",
+  "collected_at": "2026-11-27T23:18:00+08:00/2026-11-27T23:27:00+08:00",
+  "git_commit": "8a99186c841f52b9cd2428071619737ef7b564ec",
+  "git_status_before": [],
+  "container": "liyanz-flaggems-p800",
+  "container_image": "sha256:e180a0dd4267ebdfbce4ea5434710870a6ea7e96118457538cc02442907d54b1",
+  "device": "cuda:1",
+  "visible_devices": "1,2",
+  "policy": {
+    "run_each_stage_once": true,
+    "stop_and_record_on_failure": true,
+    "performance_after_correctness_only": true
+  },
+  "summary": {
+    "environment_lock": "PASS",
+    "kernel": "PASS: 75 cases",
+    "op": "PASS: 9 intercepted calls",
+    "c1": "PASS: 3 dtypes",
+    "golden": "PASS: 93/93",
+    "performance": "COLLECTED: 36/36; Triton faster than native 0/12",
+    "dispatch": "COLLECTED: 4.714 us / 8.6% overhead",
+    "c2": "NOT_RERUN: blocked by separately archived TP=2 NCCL initialization failure"
+  },
+  "stages": [
+    {
+      "name": "check_env",
+      "command": "python scripts/check_env.py --device p800-kunlunxin-gems5",
+      "status": "PASS",
+      "evidence": "check_env.log",
+      "sha256": "f921d42519efddab9760b0f7f655a1808afac64efe31dbd100176d47f985c3a3"
+    },
+    {
+      "name": "kernel_level",
+      "command": "python ops/sigmoid/test/kernel_level.py p800-kunlunxin-gems5",
+      "status": "PASS",
+      "evidence": "kernel_level.log",
+      "sha256": "32c19777e3fcbdda3cfef71d9e19dd58c923dc36d4c4549205bd06b9c8ca617c"
+    },
+    {
+      "name": "op_level",
+      "command": "python ops/sigmoid/test/op_level.py p800-kunlunxin-gems5",
+      "status": "PASS",
+      "evidence": "op_level.log",
+      "sha256": "652177cd57ec94dc90eb948b4e398a0e689eed807f8247c47f247e0104cf07bd"
+    },
+    {
+      "name": "framework_level_c1",
+      "command": "python ops/sigmoid/test/framework_level.py p800-kunlunxin-gems5",
+      "status": "PASS",
+      "evidence": "framework_level.log",
+      "sha256": "bb580834ce5c3d047cce6c39d964b78485d355a6b4f13380da8510bad0d445cf"
+    },
+    {
+      "name": "golden_triton",
+      "command": "python ops/sigmoid/script/check_accuracy.py --impl triton --device p800-kunlunxin-gems5",
+      "status": "PASS",
+      "evidence": "golden_triton.log",
+      "sha256": "30c0091585d818d3f18d5af91549dbadd00a2bfaf808260e8a80c4471e2047a9"
+    },
+    {
+      "name": "bench_matrix",
+      "command": "python ops/sigmoid/script/bench_matrix.py --profile p800-kunlunxin-gems5 --warmup 20 --iters 100 --out ops/sigmoid/evidence/p800-current-validation-2026-11-27/bench_matrix.json",
+      "status": "PASS",
+      "evidence": "bench_matrix.log",
+      "sha256": "20e42251972c9f4943c8d25c2742f1484436c2ef4cdd87ff8ccd8d5a56908b18",
+      "result": "bench_matrix.json",
+      "result_sha256": "b01c6b933b5e229fedb48765b818f7dcbcf918d4f56fde868223fd1931532935"
+    },
+    {
+      "name": "bench_dispatch",
+      "command": "python ops/sigmoid/script/bench_dispatch.py --device p800-kunlunxin-gems5",
+      "status": "PASS",
+      "evidence": "bench_dispatch.log",
+      "sha256": "7ee5e204867924d7b9ab70b7c807bb3578ae7da0f83a0aa810a6dfb57055ed40"
+    }
+  ]
+}

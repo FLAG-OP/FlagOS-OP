@@ -6,7 +6,7 @@
 |---|---|
 | 路线 / 级别 | A1 / torch + Triton（P800 backend） |
 | 目标设备 | 已提交 profile `p800-kunlunxin-gems5`；物理 XPU 1/2，算子层 `cuda:1`，vLLM TP=2 |
-| 日期 / 状态 | 2026-11-27 / CPU 整改完成，当前提交硬件复测待完成 |
+| 日期 / 状态 | 2026-11-27 / 当前 P800 非 C2 验收完成；C2 受 NCCL 初始化阻塞 |
 
 ## 1. 环境
 
@@ -45,15 +45,15 @@ A1 在 profile 指定的 CUDA dispatch key 上注册。P800 后端使用 FlagGem
 
 | 层级 | 结果 | 明细 |
 |---|---|---|
-| kernel | 当前待硬件复测 | 2026-11-09 历史 PASS 75 例 |
-| A1 op | 当前待硬件复测 | 历史 PASS 9 次命中；当前 CPU counter 契约已修复 |
-| C1 应用 | 当前待硬件复测 | 2026-11-09 历史 PASS 3/3 dtype |
+| kernel | 当前 PASS | 75 例、19 shape，max abs/rel=0，哨兵通过 |
+| A1 op | 当前 PASS | 9 次命中、契约计数 9 次，布局与回退通过 |
+| C1 应用 | 当前 PASS | `2×64×4096` 的 fp16/bf16/fp32 3/3 通过 |
 | C2 vLLM | 环境初始化失败 | 2026-11-27 baseline TP worker 报 NCCL error，未进入生成/注入 |
-| 黄金 | CPU 当前通过 / 硬件待复测 | CPU reference/torch 93/93；硬件误差数字为历史 |
+| 黄金 | 当前 PASS | P800 Triton 93/93；最差 abs `1.192e-07` |
 
 ## 5. 性能
 
-2026-11-09 历史口径为每组合独立子进程、warmup 20、计时 100 次并显式同步。历史 36/36 组合中，自研 12 个 shape/dtype 组合均慢于原生，比值范围 `1.158–4.276×`。原始 JSON 未入库且旧服务器路径不可访问，这些数字是不可独立复核的历史摘要，不代表当前提交已通过性能验收。详见 [performance.md](performance.md)。
+2026-11-27 当前口径为每组合独立子进程、warmup 20、计时 100 次并显式同步。当前 36/36 组合中，自研 12 个 shape/dtype 组合均慢于原生，比值范围 `1.198–5.736×`；原始 JSON 已入库。详见 [performance.md](performance.md)。
 
 中央性能入口记录 `ops.sigmoid.triton=0.058 ms`，因没有历史 baseline 标记 NEW；结果为 0 FAIL，但不能据此宣称已有回归保护。
 
@@ -63,13 +63,13 @@ A1 在 profile 指定的 CUDA dispatch key 上注册。P800 后端使用 FlagGem
 |---|---|---|---|
 | 1 | 当前 12 个组合均未超过原生 | 不适合默认替换所有 sigmoid | 本次如实记录；后续路由或 kernel 优化 |
 | 2 | 只在 P800 实机验证 | 不能外推其他五个平台 | 本次范围仅 P800，其他平台独立复测 |
-| 3 | 当前只保留历史 forward/C1 硬件基线 | backward 范围外；真实 vLLM C2 未完成 | C2 脚本已具备，通信环境恢复后采集 |
+| 3 | 当前 forward/C1 已完成，真实 vLLM C2 未完成 | backward 范围外；不能宣称 C2 通过 | C2 脚本已具备，通信环境恢复后采集 |
 | 4 | 非连续输入会连续化 | 不保留原 stride | 数值与 shape 已验证 |
-| 5 | 普通 Triton 曾超时；2026-11-27 TP=2 vLLM worker 又在 NCCL 初始化失败 | 无法完成修改后硬件全量复测 | CPU 整改完成；等待平台通信环境恢复 |
+| 5 | TP=2 vLLM worker 在 `ncclCommInitRank` 阶段失败 | 只阻塞 C2；不影响已完成的单卡三层、黄金和性能证据 | 已归档故障材料；等待平台通信环境恢复 |
 
 ## 7. 结论与后续
 
-2026-11-09 历史基线仅作为背景，不作为当前提交的硬件验收。2026-11-27 当前 PR 已通过 197 项 CPU 单测与证据检查，但修改后三层、Triton 黄金、C2 和性能矩阵仍待环境恢复。后续优先完成这些最终复测，再评估按 `numel/dtype` 的路由或启动成本优化。
+2026-11-27 当前 PR 已通过 200 项 CPU 单测与证据检查，并完成 P800 三层、Triton 黄金和性能矩阵；可复核材料见[当前验收记录](../evidence/p800-current-validation-2026-11-27/ANALYSIS.md)。C2 仍受 TP=2 NCCL 初始化问题阻塞。后续在环境恢复后补 C2，并基于当前性能结果评估按 `numel/dtype` 的 native 路由或启动成本优化。
 
 ## 复现命令
 

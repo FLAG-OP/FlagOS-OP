@@ -1,0 +1,542 @@
+{
+  "schema": 1,
+  "operator": "aten.sigmoid",
+  "profile": "p800-kunlunxin-gems5",
+  "collected_at": "2026-11-27T15:26:16.389954+00:00",
+  "git_commit": "8a99186c841f52b9cd2428071619737ef7b564ec",
+  "command": "python3 ops/sigmoid/script/bench_matrix.py --profile p800-kunlunxin-gems5 --warmup 20 --iters 100 --out ops/sigmoid/evidence/p800-current-validation-2026-11-27/bench_matrix.json",
+  "device": "cuda:1",
+  "visible_devices": "1,2",
+  "profile_visible_devices": "1,2",
+  "environment": {
+    "python": "3.10.18",
+    "torch": "2.9.0+cu129",
+    "triton": "3.0.0+f69a5406",
+    "flag_gems": "5.0.0"
+  },
+  "default_route": "native",
+  "verification_route": "triton",
+  "isolated_subprocess_per_case": true,
+  "summary": {
+    "cases": 36,
+    "triton_combinations": 12,
+    "triton_faster_than_native": 0,
+    "triton_native_ratio_min": 1.197728,
+    "triton_native_ratio_max": 5.736209
+  },
+  "records": [
+    {
+      "impl": "triton",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "float16",
+      "latency_ms": 0.050742,
+      "GBps": 1.13,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "float16",
+      "latency_ms": 0.043601,
+      "GBps": 1.32,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "float16",
+      "latency_ms": 0.015571,
+      "GBps": 3.68,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "bfloat16",
+      "latency_ms": 0.051213,
+      "GBps": 1.12,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "bfloat16",
+      "latency_ms": 0.042455,
+      "GBps": 1.35,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "bfloat16",
+      "latency_ms": 0.018835,
+      "GBps": 3.04,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "float32",
+      "latency_ms": 0.049878,
+      "GBps": 2.3,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "float32",
+      "latency_ms": 0.042427,
+      "GBps": 2.7,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        1,
+        14336
+      ],
+      "numel": 14336,
+      "dtype": "float32",
+      "latency_ms": 0.018835,
+      "GBps": 6.09,
+      "warmup": 20,
+      "iters": 100,
+      "case": "tail_hidden"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "float16",
+      "latency_ms": 0.049079,
+      "GBps": 5.34,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "float16",
+      "latency_ms": 0.079435,
+      "GBps": 3.3,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "float16",
+      "latency_ms": 0.008556,
+      "GBps": 30.64,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "bfloat16",
+      "latency_ms": 0.049626,
+      "GBps": 5.28,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "bfloat16",
+      "latency_ms": 0.07471,
+      "GBps": 3.51,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "bfloat16",
+      "latency_ms": 0.008882,
+      "GBps": 29.51,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "float32",
+      "latency_ms": 0.050788,
+      "GBps": 10.32,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "float32",
+      "latency_ms": 0.082006,
+      "GBps": 6.39,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        64,
+        1024
+      ],
+      "numel": 65536,
+      "dtype": "float32",
+      "latency_ms": 0.019129,
+      "GBps": 27.41,
+      "warmup": 20,
+      "iters": 100,
+      "case": "small_activation"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "float16",
+      "latency_ms": 0.05016,
+      "GBps": 41.81,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "float16",
+      "latency_ms": 0.081243,
+      "GBps": 25.81,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "float16",
+      "latency_ms": 0.010646,
+      "GBps": 196.98,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "bfloat16",
+      "latency_ms": 0.052827,
+      "GBps": 39.7,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "bfloat16",
+      "latency_ms": 0.082255,
+      "GBps": 25.5,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "bfloat16",
+      "latency_ms": 0.018987,
+      "GBps": 110.45,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "float32",
+      "latency_ms": 0.052441,
+      "GBps": 79.98,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "float32",
+      "latency_ms": 0.079457,
+      "GBps": 52.79,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        2,
+        64,
+        4096
+      ],
+      "numel": 524288,
+      "dtype": "float32",
+      "latency_ms": 0.019351,
+      "GBps": 216.75,
+      "warmup": 20,
+      "iters": 100,
+      "case": "transformer"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "float16",
+      "latency_ms": 0.083111,
+      "GBps": 201.87,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "float16",
+      "latency_ms": 0.083063,
+      "GBps": 201.98,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "float16",
+      "latency_ms": 0.055273,
+      "GBps": 303.53,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "bfloat16",
+      "latency_ms": 0.097012,
+      "GBps": 172.94,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "bfloat16",
+      "latency_ms": 0.079541,
+      "GBps": 210.93,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "bfloat16",
+      "latency_ms": 0.06686,
+      "GBps": 250.93,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "triton",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "float32",
+      "latency_ms": 0.058315,
+      "GBps": 575.4,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "flaggems",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "float32",
+      "latency_ms": 0.075914,
+      "GBps": 442.0,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    },
+    {
+      "impl": "native",
+      "shape": [
+        2048,
+        2048
+      ],
+      "numel": 4194304,
+      "dtype": "float32",
+      "latency_ms": 0.048688,
+      "GBps": 689.18,
+      "warmup": 20,
+      "iters": 100,
+      "case": "throughput"
+    }
+  ]
+}
