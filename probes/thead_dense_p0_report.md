@@ -53,40 +53,39 @@ gelu 自研裁定依据: gelu 为逐 elementwise, 不踩 PPU Triton `tl.dot`
    `Library.impl` 必须按 `softmax.int` 重载名绑定——按裸名 `softmax`
    绑定注册到无 schema 空壳, 调用永不命中（op 层实证）。
 
-## 二、issue #56: `aten::_efficient_attention_forward` 缺口证据
+## 二、issue #56: `aten::_efficient_attention_forward` 真机证据
 
 **认领信息（本单要求回报项 1）**: 本单由 FlagOS-OP thead-ppu 线认领;
 智源侧在途实现对齐项（关联分支/PR、目标版本）**待智源侧回复**——
 上游 PR flagos-ai/FlagGems#1700 已关闭（合并提交承接）, 需要智源侧
 确认承接提交与目标版本。
 
-**布局修正与证据状态（复审更新）**: 复审指出首轮探针把 `[B,H,S,D]`
-直接传给低层接口的 `[B,S,H,D]` 契约。当前 JSON
-（`probes/out/thead_dense_p0_probe.json`）已标记
-`probe_status=stale-layout-before-pr61-fix`，其中 max_seqlen=4、输出
-误差 2.8–3.7、bias 形状结论均为错误布局产物，**不能用于 #56 判定**。
-探针已改为：数学输入保留 BHSD、调用前 Q/K/V transpose 到 BSHD、
-输出 transpose 回 BHSD；固定 seed，断言 max_seqlen=64，并单独比较
-有效 H 区间 LSE。真机复跑命令不变：
+**正确布局复跑（2026-11-27, PPU-ZW810E 卡 6, torch 2.10.0 / FlagOS）**:
+
+命令:
 `PPU_PROBE_DEVICE=cuda:6 python3 probes/thead_dense_p0_probe.py --item efficient_attention`。
-当前环境无 PPU，本轮不以推测结果替代原始真机 JSON；复跑后按实际
-输出撤回或收口 #56。
+原始 JSON: `probes/out/thead_dense_p0_probe.json`。
 
-**首轮直调证据（仅作布局错误归因，不作缺口结论）**:
+探针契约: 数学输入保留 `[B,H,S,D]`，低层调用前 Q/K/V transpose 到
+`[B,S,H,D]`；低层输出转回 BHSD 后按同一输入比较。seed=20261126。
 
-- op 存在: schema 与上游 v2.11.0 一致（10 位置参 + 4 kw 参,
-  6 返回值: output/logsumexp/philox_seed/philox_offset/
-  max_seqlen_batch_q/max_seqlen_batch_k; philox_seed 为 int64）。
-- 代表用例（B=2,H=4,S=64,D=32 fp16, 无 bias, dropout=0,
-  custom_mask_type=0, compute_log_sumexp=True, scale=默认 1/√D）:
-  调用可执行且 6 返回值齐备，但 max_seqlen 返回 4/4（等于 H），证明
-  H 被当作 S 使用；因此 output/LSE 语义无效。首轮的“output 误差”和
-  “bias 均被拒”结论撤回。
-- 建议开发范围（仅在正确布局复跑确认缺口后执行）: 复用该栈已验证的相邻接口
-  `aten::_scaled_dot_product_efficient_attention`（ops/sdpa PLATFORM §3c
-  已交付, err ≤5.62e-4）包装补齐 6 返回值契约（philox/max_seqlen 合成）,
-  bias 走该接口的 `_aligned_bias` 路径; **本单先回报证据, 开发 PR 待
-  范围商定后另行提交**。
+- 代表用例 `B=2,H=4,S=64,D=32`、fp16、bias=None、dropout=0、
+  `custom_mask_type=0`、`compute_log_sumexp=True`、默认 scale:
+  **6 返回值齐备**；raw output shape `(2,64,4,32)`，BHSD 输出
+  `(2,4,64,32)`；output err `3.5357e-4`，LSE err `4.7684e-7`；
+  `max_seqlen=(64,64)`，与预期一致。
+- LSE raw 契约为 `(B,H,S)`，本轮有效区全为 H=4，无 padding 区；
+  philox seed/offset 均为 0-d `int64`。
+- bias: `(B,H,S,S)` 通过且与 bias=None 同精度；`(1,1,S,S)` /
+  `(B,1,S,S)` 被低层拒绝。**广播 bias 不在当前契约支持范围**，
+  如目标模型依赖广播，需要另行包装扩展。
+- 变体: 显式 scale、fp32、D=64、S=128 的 output 误差分别为
+  `3.2258e-4`、`1.9670e-6`、`4.5228e-4`、`2.5064e-4`；S=128 的
+  `max_seqlen=(128,128)`。`no_lse` 仅判 output，不判 LSE。
+
+结论: 正确布局下，该目标稠密代表形状**已有实现覆盖**，未构成
+新的 PPU 开发缺口。若模型实际使用 broadcast bias / packed / mask /
+dropout，请按上述边界单独取证后决定是否需要包装扩展。
 
 ## 三、issue #57: CSR SpMM 原生缺口证据
 

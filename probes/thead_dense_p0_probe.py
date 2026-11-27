@@ -191,11 +191,13 @@ def probe_efficient_attention(dev):
 
     def run_low_level(q_bhsd, k_bhsd, v_bhsd, bias=None,
                       compute_log_sumexp=True, scale=None):
+        seqlen_q = q_bhsd.shape[-2]
+        seqlen_k = k_bhsd.shape[-2]
         q_bshd = q_bhsd.transpose(1, 2).contiguous()
         k_bshd = k_bhsd.transpose(1, 2).contiguous()
         v_bshd = v_bhsd.transpose(1, 2).contiguous()
         result = torch.ops.aten._efficient_attention_forward(
-            q_bshd, k_bshd, v_bshd, bias, None, None, S, S,
+            q_bshd, k_bshd, v_bshd, bias, None, None, seqlen_q, seqlen_k,
             0.0, 0, compute_log_sumexp, scale=scale)
         return result[0].transpose(1, 2).contiguous(), result[1], result
 
@@ -222,24 +224,21 @@ def probe_efficient_attention(dev):
             res = run_low_level(q, k, v, bias)
             o, lse = res[0], res[1]
             raw = res[2]
-            entry = {"ok": True, "n_returns": len(res),
+            entry = {"ok": True, "n_returns": len(raw),
                      "out_shape": list(o.shape),
                      "raw_out_layout_shape": list(raw[0].shape),
                      "lse_shape": list(lse.shape),
-                     "philox_seed_dtype": str(res[2].dtype),
-                     "philox_offset_dtype": str(res[3].dtype),
-                     "philox_shapes": [list(res[2].shape),
-                                       list(res[3].shape)],
-                     "max_seqlen": [int(res[4]), int(res[5])]}
+                     "philox_seed_dtype": str(raw[2].dtype),
+                     "philox_offset_dtype": str(raw[3].dtype),
+                     "philox_shapes": [list(raw[2].shape),
+                                       list(raw[3].shape)],
+                     "max_seqlen": [int(raw[4]), int(raw[5])]}
             entry["err_bhsd_default"] = maxerr(o, ref)
-            if lse.dim() == 3 and lse.shape[1] == S and lse.shape[2] >= H:
-                lse_valid = lse[:, :, :H].transpose(1, 2)
-                entry["lse_valid_shape"] = list(lse_valid.shape)
-                entry["lse_valid_err"] = maxerr(
-                    lse_valid, reference_lse(q, k, bias))
+            if lse.dim() == 3 and lse.shape == (B, H, S):
+                entry["lse_valid_err"] = maxerr(lse, reference_lse(q, k, bias))
             entry["max_seqlen_expected"] = [S, S]
             entry["max_seqlen_match"] = (
-                int(res[4]) == S and int(res[5]) == S)
+                int(raw[4]) == S and int(raw[5]) == S)
             out[tag] = entry
         except Exception as e:
             out[tag] = {"ok": False, "error": repr(e)[:250]}
@@ -268,7 +267,7 @@ def probe_efficient_attention(dev):
                 scale=scale_v).to(dev)
             o_v, lse_v, raw_v = run_low_level(
                 qv, kv, vv, None,
-                compute_log_sumexp=not kw.pop("cls", True), scale=scale_v)
+                compute_log_sumexp=kw.pop("cls", True), scale=scale_v)
             variants[vtag] = {
                 "ok": True, "out_shape": list(o_v.shape),
                 "raw_out_layout_shape": list(raw_v[0].shape),
